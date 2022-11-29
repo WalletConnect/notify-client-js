@@ -31,6 +31,10 @@
     "test:watch": "vitest watch --dir test",
     "prepublishOnly": "npm run build"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "@walletconnect/core": "^2.1.4",
+    "@walletconnect/jsonrpc-utils": "^1.0.4",
+    "@walletconnect/types": "^2.1.4",
+    "@walletconnect/utils": "^2.1.4"
+  }
 }
