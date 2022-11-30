@@ -7,7 +7,7 @@
   "homepage": "https://github.com/walletconnect/push-client-js/",
   "license": "Apache-2.0",
   "workspaces": [
-    "packages/auth-client"
+    "packages/push-client"
   ],
   "scripts": {
     "clean": "npm run clean --workspaces",
