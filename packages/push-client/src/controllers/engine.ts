@@ -26,6 +26,9 @@ export class PushEngine extends IPushEngine {
   public init: IPushEngine["init"] = () => {
     if (!this.initialized) {
       this.registerRelayerEvents();
+      this.client.core.pairing.register({
+        methods: Object.keys(ENGINE_RPC_OPTS),
+      });
       this.initialized = true;
     }
   };
