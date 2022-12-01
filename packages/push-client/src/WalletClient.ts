@@ -1,17 +1,17 @@
 import pino from "pino";
-import { Core } from "@walletconnect/core";
+import { Core, Store } from "@walletconnect/core";
 import {
   generateChildLogger,
   getDefaultLoggerOptions,
   getLoggerContext,
 } from "@walletconnect/logger";
-import { getAppMetadata } from "@walletconnect/utils";
 import { EventEmitter } from "events";
 
 import { PushEngine } from "./controllers";
 import { IWalletClient, PushClientTypes } from "./types";
 import {
   PUSH_CLIENT_PROTOCOL,
+  PUSH_CLIENT_STORAGE_PREFIX,
   PUSH_CLIENT_VERSION,
   PUSH_WALLET_CLIENT_DEFAULT_NAME,
 } from "./constants";
@@ -27,6 +27,7 @@ export class WalletClient extends IWalletClient {
   public logger: IWalletClient["logger"];
   public events: IWalletClient["events"] = new EventEmitter();
   public engine: IWalletClient["engine"];
+  public requests: IWalletClient["requests"];
 
   static async init(opts: PushClientTypes.Options) {
     const client = new WalletClient(opts);
@@ -38,20 +39,26 @@ export class WalletClient extends IWalletClient {
   constructor(opts: PushClientTypes.Options) {
     super(opts);
 
-    this.name = opts?.name || PUSH_WALLET_CLIENT_DEFAULT_NAME;
-    this.metadata = opts?.metadata || getAppMetadata();
+    this.name = opts.name || PUSH_WALLET_CLIENT_DEFAULT_NAME;
+    this.metadata = opts.metadata;
 
     const logger =
-      typeof opts?.logger !== "undefined" && typeof opts?.logger !== "string"
+      typeof opts.logger !== "undefined" && typeof opts.logger !== "string"
         ? opts.logger
         : pino(
             getDefaultLoggerOptions({
-              level: opts?.logger || "error",
+              level: opts.logger || "error",
             })
           );
 
-    this.core = opts?.core || new Core(opts);
+    this.core = opts.core || new Core(opts);
     this.logger = generateChildLogger(logger, this.name);
+    this.requests = new Store(
+      this.core,
+      this.logger,
+      "requests",
+      PUSH_CLIENT_STORAGE_PREFIX
+    );
     this.engine = new PushEngine(this);
   }
 
@@ -62,6 +69,17 @@ export class WalletClient extends IWalletClient {
   get pairing() {
     return this.core.pairing.pairings;
   }
+
+  // ---------- Engine ----------------------------------------------- //
+
+  public approve: IWalletClient["approve"] = async (params) => {
+    try {
+      return await this.engine.approve(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
 
   // ---------- Events ----------------------------------------------- //
 
@@ -85,14 +103,13 @@ export class WalletClient extends IWalletClient {
     return this.events.removeListener(name, listener);
   };
 
-  // ---------- Engine ----------------------------------------------- //
-
   // ---------- Private ----------------------------------------------- //
 
   private async initialize() {
     this.logger.trace(`Initialized`);
     try {
       await this.core.start();
+      await this.requests.init();
       await this.engine.init();
       this.logger.info(`PushWalletClient Initialization Success`);
     } catch (error: any) {

@@ -1,11 +1,10 @@
 import pino from "pino";
-import { Core } from "@walletconnect/core";
+import { Core, Store } from "@walletconnect/core";
 import {
   generateChildLogger,
   getDefaultLoggerOptions,
   getLoggerContext,
 } from "@walletconnect/logger";
-import { getAppMetadata } from "@walletconnect/utils";
 import { EventEmitter } from "events";
 
 import { PushEngine } from "./controllers";
@@ -14,8 +13,10 @@ import {
   PUSH_DAPP_CLIENT_DEFAULT_NAME,
   PUSH_CLIENT_PROTOCOL,
   PUSH_CLIENT_VERSION,
+  PUSH_CLIENT_STORAGE_PREFIX,
 } from "./constants";
 
+// @ts-expect-error - `IDappClient` not yet fully implemented.
 export class DappClient extends IDappClient {
   public readonly protocol = PUSH_CLIENT_PROTOCOL;
   public readonly version = PUSH_CLIENT_VERSION;
@@ -27,6 +28,7 @@ export class DappClient extends IDappClient {
   public logger: IDappClient["logger"];
   public events: IDappClient["events"] = new EventEmitter();
   public engine: IDappClient["engine"];
+  public requests: IDappClient["requests"];
 
   static async init(opts: PushClientTypes.Options) {
     const client = new DappClient(opts);
@@ -38,21 +40,27 @@ export class DappClient extends IDappClient {
   constructor(opts: PushClientTypes.Options) {
     super(opts);
 
-    this.name = opts?.name || PUSH_DAPP_CLIENT_DEFAULT_NAME;
-    this.metadata = opts?.metadata || getAppMetadata();
+    this.name = opts.name || PUSH_DAPP_CLIENT_DEFAULT_NAME;
+    this.metadata = opts.metadata;
     this.projectId = opts.projectId;
 
     const logger =
-      typeof opts?.logger !== "undefined" && typeof opts?.logger !== "string"
+      typeof opts.logger !== "undefined" && typeof opts.logger !== "string"
         ? opts.logger
         : pino(
             getDefaultLoggerOptions({
-              level: opts?.logger || "error",
+              level: opts.logger || "error",
             })
           );
 
-    this.core = opts?.core || new Core(opts);
+    this.core = opts.core || new Core(opts);
     this.logger = generateChildLogger(logger, this.name);
+    this.requests = new Store(
+      this.core,
+      this.logger,
+      "requests",
+      PUSH_CLIENT_STORAGE_PREFIX
+    );
     this.engine = new PushEngine(this);
   }
 
@@ -63,6 +71,17 @@ export class DappClient extends IDappClient {
   get pairing() {
     return this.core.pairing.pairings;
   }
+
+  // ---------- Engine ----------------------------------------------- //
+
+  public request: IDappClient["request"] = async (params) => {
+    try {
+      return await this.engine.request(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
 
   // ---------- Events ----------------------------------------------- //
 
@@ -86,14 +105,13 @@ export class DappClient extends IDappClient {
     return this.events.removeListener(name, listener);
   };
 
-  // ---------- Engine ----------------------------------------------- //
-
   // ---------- Private ----------------------------------------------- //
 
   private async initialize() {
     this.logger.trace(`Initialized`);
     try {
       await this.core.start();
+      await this.requests.init();
       await this.engine.init();
       this.logger.info(`PushDappClient Initialization Success`);
     } catch (error: any) {

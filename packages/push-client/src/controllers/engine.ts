@@ -9,7 +9,7 @@ import {
   isJsonRpcError,
 } from "@walletconnect/jsonrpc-utils";
 import { RelayerTypes } from "@walletconnect/types";
-import { getInternalError } from "@walletconnect/utils";
+import { getInternalError, hashKey } from "@walletconnect/utils";
 
 import { ENGINE_RPC_OPTS } from "../constants";
 import { IPushEngine, JsonRpcTypes } from "../types";
@@ -35,11 +35,74 @@ export class PushEngine extends IPushEngine {
 
   // ---------- Public (Dapp) ----------------------------------------- //
 
-  public request: IPushEngine["request"] = async (params) => {
-    return Promise.resolve({ id: "mockId" });
+  public request: IPushEngine["request"] = async ({
+    account,
+    pairingTopic,
+  }) => {
+    this.isInitialized();
+
+    // SPEC: Dapp generates public key X
+    const publicKey = await this.client.core.crypto.generateKeyPair();
+
+    // SPEC: Dapp sends push proposal on known pairing P
+    const payload = {
+      publicKey,
+      account,
+      metadata: this.client.metadata,
+    };
+    const id = await this.sendRequest(pairingTopic, "wc_pushRequest", payload);
+
+    // Store the push subscription request so we can later reference `publicKey` when we get a response.
+    await this.client.requests.set(id, {
+      topic: pairingTopic,
+      payload,
+    });
+
+    return { id };
   };
 
   // ---------- Public (Wallet) --------------------------------------- //
+
+  public approve: IPushEngine["approve"] = async ({ id }) => {
+    this.isInitialized();
+
+    const { topic: pairingTopic, payload } = this.client.requests.get(id);
+
+    // SPEC: Wallet generates key pair Y
+    const selfPublicKey = await this.client.core.crypto.generateKeyPair();
+
+    this.client.logger.info(
+      "[Push] Engine.approve > generating shared key from selfPublicKey %s and proposer publicKey %s",
+      selfPublicKey,
+      payload.params.publicKey
+    );
+
+    // SPEC: Wallet derives symmetric key from keys X and Y
+    const symKeyTopic = await this.client.core.crypto.generateSharedKey(
+      selfPublicKey,
+      payload.params.publicKey
+    );
+    const symKey = this.client.core.crypto.keychain.get(symKeyTopic);
+
+    // SPEC: Push topic is derived from sha256 hash of symmetric key
+    const pushTopic = hashKey(symKey);
+
+    this.client.logger.info(
+      "[Push] Engine.approve > derived pushTopic: %s",
+      pushTopic
+    );
+
+    // SPEC: Wallet subscribes to push topic
+    await this.client.core.relayer.subscribe(pushTopic);
+
+    // TODO: write to client.subscriptions store
+    // TODO: delete from client.requests store
+
+    // SPEC: Wallet sends proposal response on pairing P with publicKey Y
+    await this.sendResult<"wc_pushRequest">(id, pairingTopic, {
+      publicKey: selfPublicKey,
+    });
+  };
 
   // ---------- Public (Common) --------------------------------------- //
 
@@ -185,16 +248,21 @@ export class PushEngine extends IPushEngine {
     topic,
     payload
   ) => {
-    this.client.logger.debug("onPushRequest:", topic, payload);
+    this.client.logger.info("onPushRequest:", topic, payload);
 
     try {
-      // TODO: handle incoming push request
+      // Store the push subscription request so we can reference later for a response.
+      await this.client.requests.set(payload.id, {
+        topic,
+        payload,
+      });
 
       this.client.emit("push_request", {
         id: payload.id,
         topic,
         params: {
-          // TODO:
+          id: payload.id,
+          metadata: payload.params.metadata,
         },
       });
     } catch (err: any) {
@@ -207,14 +275,51 @@ export class PushEngine extends IPushEngine {
     topic,
     response
   ) => {
-    const { id } = response;
-
-    this.client.logger.debug("onPushResponse", topic, response);
+    this.client.logger.info("onPushResponse", topic, response);
 
     if (isJsonRpcResult(response)) {
-      this.client.emit("push_response", { id, topic, params: response });
+      const { id, result } = response;
+
+      const { payload } = this.client.requests.get(id);
+      const selfPublicKey = payload.publicKey;
+
+      this.client.logger.info(
+        "[Push] Engine.onPushResponse > generating shared key from selfPublicKey %s and responder publicKey %s",
+        selfPublicKey,
+        result.publicKey
+      );
+
+      const symKeyTopic = await this.client.core.crypto.generateSharedKey(
+        selfPublicKey,
+        result.publicKey
+      );
+      const symKey = this.client.core.crypto.keychain.get(symKeyTopic);
+
+      // SPEC: Push topic is derived from sha256 hash of symmetric key
+      const pushTopic = hashKey(symKey);
+
+      this.client.logger.info(
+        "[Push] Engine.onPushResponse > derived pushTopic: %s",
+        pushTopic
+      );
+
+      // (?) DappClient subscribes to pushTopic. Is this needed/missing in spec?
+      // await this.client.core.relayer.subscribe(pushTopic);
+
+      // TODO: write to client.subscriptions store
+      // TODO: delete from client.requests store
+
+      this.client.emit("push_response", {
+        id,
+        topic,
+        params: response,
+      });
     } else if (isJsonRpcError(response)) {
-      this.client.emit("push_response", { id, topic, params: response });
+      this.client.emit("push_response", {
+        id: response.id,
+        topic,
+        params: response,
+      });
     }
   };
 }

@@ -8,6 +8,8 @@ import {
   JsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
 import { JsonRpcTypes } from "./jsonrpc";
+import { IWalletClient } from "./walletClient";
+import { IDappClient } from "./dappClient";
 
 export interface RpcOpts {
   req: RelayerTypes.PublishOptions;
@@ -22,8 +24,7 @@ export declare namespace PushEngineTypes {
 }
 
 export abstract class IPushEngine {
-  // FIXME: add client types
-  constructor(public client: any /*IWalletPushClient | IDappPushClient*/) {}
+  constructor(public client: IWalletClient | IDappClient) {}
 
   public abstract init(): void;
 
@@ -45,10 +46,10 @@ export abstract class IPushEngine {
   // ---------- Public Methods (wallet) --------------------------------- //
 
   // approve push subscription
-  public abstract approve(params: {}): Promise<boolean>;
+  public abstract approve(params: { id: number }): Promise<void>;
 
   // reject push subscription
-  public abstract reject(params: { reason: string }): Promise<boolean>;
+  public abstract reject(params: { reason: string }): Promise<void>;
 
   // decrypt push subscription message
   // FIXME: add PushMessage type

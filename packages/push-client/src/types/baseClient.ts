@@ -1,4 +1,4 @@
-import { ICore, CoreTypes } from "@walletconnect/types";
+import { ICore, CoreTypes, IStore } from "@walletconnect/types";
 import { JsonRpcError, JsonRpcResult } from "@walletconnect/jsonrpc-utils";
 import EventEmitter from "events";
 import { Logger } from "pino";
@@ -54,6 +54,8 @@ export abstract class IBaseClient {
   public abstract events: EventEmitter;
   public abstract logger: Logger;
   public abstract engine: IPushEngine;
+  // FIXME: replace any typing here.
+  public abstract requests: IStore<number, { topic: string; payload: any }>;
 
   constructor(public opts: PushClientTypes.Options) {}
 
