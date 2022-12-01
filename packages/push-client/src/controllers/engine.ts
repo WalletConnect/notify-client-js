@@ -30,7 +30,15 @@ export class PushEngine extends IPushEngine {
     }
   };
 
-  // ---------- Public ------------------------------------------------ //
+  // ---------- Public (Dapp) ----------------------------------------- //
+
+  public request: IPushEngine["request"] = async (params) => {
+    return Promise.resolve({ id: "mockId" });
+  };
+
+  // ---------- Public (Wallet) --------------------------------------- //
+
+  // ---------- Public (Common) --------------------------------------- //
 
   // ---------- Private Helpers --------------------------------------- //
 
