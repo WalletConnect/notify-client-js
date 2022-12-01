@@ -11,15 +11,16 @@ import { EventEmitter } from "events";
 import { PushEngine } from "./controllers";
 import { IWalletClient, PushClientTypes } from "./types";
 import {
-  PUSH_DAPP_CLIENT_DEFAULT_NAME,
   PUSH_CLIENT_PROTOCOL,
   PUSH_CLIENT_VERSION,
+  PUSH_WALLET_CLIENT_DEFAULT_NAME,
 } from "./constants";
 
+// @ts-expect-error - `IWalletClient` not yet fully implemented.
 export class WalletClient extends IWalletClient {
   public readonly protocol = PUSH_CLIENT_PROTOCOL;
   public readonly version = PUSH_CLIENT_VERSION;
-  public readonly name: IWalletClient["name"] = PUSH_DAPP_CLIENT_DEFAULT_NAME;
+  public readonly name: IWalletClient["name"] = PUSH_WALLET_CLIENT_DEFAULT_NAME;
   public readonly metadata: IWalletClient["metadata"];
 
   public core: IWalletClient["core"];
@@ -37,7 +38,7 @@ export class WalletClient extends IWalletClient {
   constructor(opts: PushClientTypes.Options) {
     super(opts);
 
-    this.name = opts?.name || PUSH_DAPP_CLIENT_DEFAULT_NAME;
+    this.name = opts?.name || PUSH_WALLET_CLIENT_DEFAULT_NAME;
     this.metadata = opts?.metadata || getAppMetadata();
 
     const logger =
@@ -93,9 +94,9 @@ export class WalletClient extends IWalletClient {
     try {
       await this.core.start();
       await this.engine.init();
-      this.logger.info(`PushDappClient Initialization Success`);
+      this.logger.info(`PushWalletClient Initialization Success`);
     } catch (error: any) {
-      this.logger.info(`PushDappClient Initialization Failure`);
+      this.logger.info(`PushWalletClient Initialization Failure`);
       this.logger.error(error.message);
       throw error;
     }
