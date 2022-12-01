@@ -33,7 +33,7 @@ export abstract class IPushEngine {
   public abstract request(params: {
     account: string;
     pairingTopic: string;
-  }): Promise<{ id: string }>;
+  }): Promise<{ id: number }>;
 
   // send push notification message
   // FIXME: add PushMessage type
