@@ -64,6 +64,10 @@ export class WalletClient extends IWalletClient {
 
   // ---------- Events ----------------------------------------------- //
 
+  public emit: IWalletClient["emit"] = (name, listener) => {
+    return this.events.emit(name, listener);
+  };
+
   public on: IWalletClient["on"] = (name, listener) => {
     return this.events.on(name, listener);
   };

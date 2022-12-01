@@ -64,6 +64,11 @@ export abstract class IBaseClient {
 
   // ---------- Event Handlers ----------------------------------------------- //
 
+  public abstract emit: <E extends PushClientTypes.Event>(
+    event: E,
+    args: PushClientTypes.EventArguments[E]
+  ) => boolean;
+
   public abstract on: <E extends PushClientTypes.Event>(
     event: E,
     listener: (args: PushClientTypes.EventArguments[E]) => void

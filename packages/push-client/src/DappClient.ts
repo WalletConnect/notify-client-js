@@ -66,6 +66,10 @@ export class DappClient extends IDappClient {
 
   // ---------- Events ----------------------------------------------- //
 
+  public emit: IDappClient["emit"] = (name, listener) => {
+    return this.events.emit(name, listener);
+  };
+
   public on: IDappClient["on"] = (name, listener) => {
     return this.events.on(name, listener);
   };
