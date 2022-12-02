@@ -1,4 +1,4 @@
-import { ICore, CoreTypes, IStore } from "@walletconnect/types";
+import { ICore, CoreTypes, IStore, RelayerTypes } from "@walletconnect/types";
 import { JsonRpcError, JsonRpcResult } from "@walletconnect/jsonrpc-utils";
 import EventEmitter from "events";
 import { Logger } from "pino";
@@ -41,6 +41,19 @@ export declare namespace PushClientTypes {
       universal?: string;
     };
   }
+
+  interface PushSubscription {
+    topic: string;
+    relay: RelayerTypes.ProtocolOptions;
+    metadata?: Metadata;
+  }
+
+  interface PushMessage {
+    title: string;
+    body: string;
+    icon: string;
+    url: string;
+  }
 }
 
 export abstract class IBaseClient {
@@ -56,6 +69,11 @@ export abstract class IBaseClient {
   public abstract engine: IPushEngine;
   // FIXME: replace any typing here.
   public abstract requests: IStore<number, { topic: string; payload: any }>;
+  // FIXME: replace any typing here.
+  public abstract subscriptions: IStore<
+    string,
+    PushClientTypes.PushSubscription
+  >;
 
   constructor(public opts: PushClientTypes.Options) {}
 
