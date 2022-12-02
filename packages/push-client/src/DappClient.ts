@@ -29,6 +29,7 @@ export class DappClient extends IDappClient {
   public events: IDappClient["events"] = new EventEmitter();
   public engine: IDappClient["engine"];
   public requests: IDappClient["requests"];
+  public subscriptions: IDappClient["subscriptions"];
 
   static async init(opts: PushClientTypes.Options) {
     const client = new DappClient(opts);
@@ -59,6 +60,12 @@ export class DappClient extends IDappClient {
       this.core,
       this.logger,
       "requests",
+      PUSH_CLIENT_STORAGE_PREFIX
+    );
+    this.subscriptions = new Store(
+      this.core,
+      this.logger,
+      "subscriptions",
       PUSH_CLIENT_STORAGE_PREFIX
     );
     this.engine = new PushEngine(this);
@@ -112,6 +119,7 @@ export class DappClient extends IDappClient {
     try {
       await this.core.start();
       await this.requests.init();
+      await this.subscriptions.init();
       await this.engine.init();
       this.logger.info(`PushDappClient Initialization Success`);
     } catch (error: any) {

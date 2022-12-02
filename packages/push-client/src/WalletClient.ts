@@ -28,6 +28,7 @@ export class WalletClient extends IWalletClient {
   public events: IWalletClient["events"] = new EventEmitter();
   public engine: IWalletClient["engine"];
   public requests: IWalletClient["requests"];
+  public subscriptions: IWalletClient["subscriptions"];
 
   static async init(opts: PushClientTypes.Options) {
     const client = new WalletClient(opts);
@@ -57,6 +58,12 @@ export class WalletClient extends IWalletClient {
       this.core,
       this.logger,
       "requests",
+      PUSH_CLIENT_STORAGE_PREFIX
+    );
+    this.subscriptions = new Store(
+      this.core,
+      this.logger,
+      "subscriptions",
       PUSH_CLIENT_STORAGE_PREFIX
     );
     this.engine = new PushEngine(this);
@@ -110,6 +117,7 @@ export class WalletClient extends IWalletClient {
     try {
       await this.core.start();
       await this.requests.init();
+      await this.subscriptions.init();
       await this.engine.init();
       this.logger.info(`PushWalletClient Initialization Success`);
     } catch (error: any) {

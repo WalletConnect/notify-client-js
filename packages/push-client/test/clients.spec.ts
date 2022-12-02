@@ -77,6 +77,8 @@ describe("DappClient", () => {
     expect(client.core).toBeDefined();
     expect(client.events).toBeDefined();
     expect(client.logger).toBeDefined();
+    expect(client.requests).toBeDefined();
+    expect(client.subscriptions).toBeDefined();
     expect(client.core.expirer).toBeDefined();
     expect(client.core.history).toBeDefined();
     expect(client.core.pairing).toBeDefined();
@@ -137,6 +139,8 @@ describe("WalletClient", () => {
     expect(wallet.core).toBeDefined();
     expect(wallet.events).toBeDefined();
     expect(wallet.logger).toBeDefined();
+    expect(wallet.requests).toBeDefined();
+    expect(wallet.subscriptions).toBeDefined();
     expect(wallet.core.expirer).toBeDefined();
     expect(wallet.core.history).toBeDefined();
     expect(wallet.core.pairing).toBeDefined();
@@ -171,6 +175,13 @@ describe("WalletClient", () => {
       await waitForEvent(() => gotResponse);
 
       expect(responseEvent.params.result.publicKey).toBeDefined();
+
+      // Check that wallet is in expected state.
+      expect(wallet.subscriptions.length).toBe(1);
+      expect(wallet.requests.length).toBe(0);
+      // Check that dapp is in expected state.
+      expect(dapp.subscriptions.length).toBe(1);
+      expect(dapp.requests.length).toBe(0);
     });
   });
 });

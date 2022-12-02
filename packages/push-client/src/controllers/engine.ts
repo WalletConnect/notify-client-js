@@ -1,4 +1,4 @@
-import { RELAYER_EVENTS } from "@walletconnect/core";
+import { RELAYER_EVENTS, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
 import {
   formatJsonRpcRequest,
   formatJsonRpcResult,
@@ -95,12 +95,22 @@ export class PushEngine extends IPushEngine {
     // SPEC: Wallet subscribes to push topic
     await this.client.core.relayer.subscribe(pushTopic);
 
-    // TODO: write to client.subscriptions store
-    // TODO: delete from client.requests store
-
     // SPEC: Wallet sends proposal response on pairing P with publicKey Y
     await this.sendResult<"wc_pushRequest">(id, pairingTopic, {
       publicKey: selfPublicKey,
+    });
+
+    // Store the new PushSubscription.
+    await this.client.subscriptions.set(pushTopic, {
+      topic: pushTopic,
+      relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
+      metadata: payload.params.metadata,
+    });
+
+    // Clean up the original request.
+    await this.client.requests.delete(id, {
+      code: -1,
+      message: "Cleaning up approved request.",
     });
   };
 
@@ -306,8 +316,17 @@ export class PushEngine extends IPushEngine {
       // (?) DappClient subscribes to pushTopic. Is this needed/missing in spec?
       // await this.client.core.relayer.subscribe(pushTopic);
 
-      // TODO: write to client.subscriptions store
-      // TODO: delete from client.requests store
+      // Store the new PushSubscription.
+      await this.client.subscriptions.set(pushTopic, {
+        topic: pushTopic,
+        relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
+      });
+
+      // Clean up the original request.
+      await this.client.requests.delete(id, {
+        code: -1,
+        message: "Cleaning up approved request.",
+      });
 
       this.client.emit("push_response", {
         id,
