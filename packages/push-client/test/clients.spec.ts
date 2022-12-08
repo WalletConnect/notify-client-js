@@ -33,6 +33,36 @@ const setupKnownPairing = async (
   return pairingTopic;
 };
 
+const createPushSubscription = async (
+  dapp: IDappClient,
+  wallet: IWalletClient
+) => {
+  const pairingTopic = await setupKnownPairing(wallet, dapp);
+  let gotPushRequest = false;
+  let pushRequestEvent: any;
+  let gotResponse = false;
+  let responseEvent: any;
+
+  wallet.on("push_request", (event) => {
+    gotPushRequest = true;
+    pushRequestEvent = event;
+  });
+  dapp.on("push_response", (event) => {
+    gotResponse = true;
+    responseEvent = event;
+  });
+
+  const { id } = await dapp.request({
+    account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+    pairingTopic,
+  });
+
+  await waitForEvent(() => gotPushRequest);
+
+  await wallet.approve({ id });
+  await waitForEvent(() => gotResponse);
+};
+
 // Polls boolean value every interval to check for an event callback having been triggered.
 const waitForEvent = async (checkForEvent: (...args: any[]) => boolean) => {
   await new Promise((resolve) => {
@@ -84,26 +114,55 @@ describe("DappClient", () => {
     expect(dapp.core.pairing).toBeDefined();
   });
 
-  it("can issue a `push_request` on a known pairing topic", async () => {
-    // Set up known pairing.
-    const pairingTopic = await setupKnownPairing(dapp, wallet);
-    let gotPushRequest = false;
-    let pushRequestEvent: any;
+  describe("request", () => {
+    it("can issue a `push_request` on a known pairing topic", async () => {
+      // Set up known pairing.
+      const pairingTopic = await setupKnownPairing(dapp, wallet);
+      let gotPushRequest = false;
+      let pushRequestEvent: any;
 
-    wallet.on("push_request", (event) => {
-      gotPushRequest = true;
-      pushRequestEvent = event;
+      wallet.on("push_request", (event) => {
+        gotPushRequest = true;
+        pushRequestEvent = event;
+      });
+
+      const { id } = await dapp.request({
+        account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        pairingTopic,
+      });
+
+      await waitForEvent(() => gotPushRequest);
+
+      expect(pushRequestEvent.params.metadata).to.deep.equal(dappMetadata);
+      expect(wallet.requests.get(id)).toBeDefined();
     });
+  });
 
-    const { id } = await dapp.request({
-      account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
-      pairingTopic,
+  describe("notify", () => {
+    it("can send a `push_message` on an established push topic", async () => {
+      let gotPushMessage = false;
+      let pushMessageEvent: any;
+
+      await createPushSubscription(dapp, wallet);
+      const [subscription] = dapp.subscriptions.getAll();
+      const { topic } = subscription;
+      const message = {
+        title: "Test Push",
+        body: "This is a test push notification",
+        icon: "xyz.png",
+        url: "https://walletconnect.com",
+      };
+
+      wallet.on("push_message", (event) => {
+        gotPushMessage = true;
+        pushMessageEvent = event;
+      });
+
+      await dapp.notify({ topic, message });
+      await waitForEvent(() => gotPushMessage);
+
+      expect(pushMessageEvent.params.message).to.deep.equal(message);
     });
-
-    await waitForEvent(() => gotPushRequest);
-
-    expect(pushRequestEvent.params.metadata).to.deep.equal(dappMetadata);
-    expect(wallet.requests.get(id)).toBeDefined();
   });
 });
 
