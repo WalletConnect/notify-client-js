@@ -313,8 +313,8 @@ export class PushEngine extends IPushEngine {
         pushTopic
       );
 
-      // (?) DappClient subscribes to pushTopic. Is this needed/missing in spec?
-      // await this.client.core.relayer.subscribe(pushTopic);
+      // DappClient subscribes to pushTopic.
+      await this.client.core.relayer.subscribe(pushTopic);
 
       // Store the new PushSubscription.
       await this.client.subscriptions.set(pushTopic, {
