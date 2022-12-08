@@ -46,11 +46,11 @@ const waitForEvent = async (checkForEvent: (...args: any[]) => boolean) => {
 };
 
 describe("DappClient", () => {
-  let client: IDappClient;
-  let peer: IWalletClient;
+  let dapp: IDappClient;
+  let wallet: IWalletClient;
 
   beforeEach(async () => {
-    client = await DappClient.init({
+    dapp = await DappClient.init({
       name: "testDappClient",
       logger: "error",
       relayUrl:
@@ -58,7 +58,7 @@ describe("DappClient", () => {
       projectId: process.env.TEST_PROJECT_ID!,
       metadata: dappMetadata,
     });
-    peer = await WalletClient.init({
+    wallet = await WalletClient.init({
       name: "testWalletClientAsPeer",
       logger: "error",
       relayUrl:
@@ -68,34 +68,34 @@ describe("DappClient", () => {
     });
   });
   afterEach(async () => {
-    await disconnectSocket(client.core);
-    await disconnectSocket(peer.core);
+    await disconnectSocket(dapp.core);
+    await disconnectSocket(wallet.core);
   });
 
   it("can be instantiated", () => {
-    expect(client instanceof DappClient).toBe(true);
-    expect(client.core).toBeDefined();
-    expect(client.events).toBeDefined();
-    expect(client.logger).toBeDefined();
-    expect(client.requests).toBeDefined();
-    expect(client.subscriptions).toBeDefined();
-    expect(client.core.expirer).toBeDefined();
-    expect(client.core.history).toBeDefined();
-    expect(client.core.pairing).toBeDefined();
+    expect(dapp instanceof DappClient).toBe(true);
+    expect(dapp.core).toBeDefined();
+    expect(dapp.events).toBeDefined();
+    expect(dapp.logger).toBeDefined();
+    expect(dapp.requests).toBeDefined();
+    expect(dapp.subscriptions).toBeDefined();
+    expect(dapp.core.expirer).toBeDefined();
+    expect(dapp.core.history).toBeDefined();
+    expect(dapp.core.pairing).toBeDefined();
   });
 
   it("can issue a `push_request` on a known pairing topic", async () => {
     // Set up known pairing.
-    const pairingTopic = await setupKnownPairing(client, peer);
+    const pairingTopic = await setupKnownPairing(dapp, wallet);
     let gotPushRequest = false;
     let pushRequestEvent: any;
 
-    peer.on("push_request", (event) => {
+    wallet.on("push_request", (event) => {
       gotPushRequest = true;
       pushRequestEvent = event;
     });
 
-    const { id } = await client.request({
+    const { id } = await dapp.request({
       account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
       pairingTopic,
     });
@@ -103,7 +103,7 @@ describe("DappClient", () => {
     await waitForEvent(() => gotPushRequest);
 
     expect(pushRequestEvent.params.metadata).to.deep.equal(dappMetadata);
-    expect(peer.requests.get(id)).toBeDefined();
+    expect(wallet.requests.get(id)).toBeDefined();
   });
 });
 
