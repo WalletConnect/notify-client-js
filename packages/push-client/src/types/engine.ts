@@ -8,6 +8,7 @@ import {
   JsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
 import { JsonRpcTypes } from "./jsonrpc";
+import { PushClientTypes } from "./baseClient";
 import { IWalletClient } from "./walletClient";
 import { IDappClient } from "./dappClient";
 
@@ -37,10 +38,9 @@ export abstract class IPushEngine {
   }): Promise<{ id: number }>;
 
   // send push notification message
-  // FIXME: add PushMessage type
   public abstract notify(params: {
     topic: string;
-    message: any /*PushMessage*/;
+    message: PushClientTypes.PushMessage;
   }): Promise<void>;
 
   // ---------- Public Methods (wallet) --------------------------------- //
@@ -52,11 +52,10 @@ export abstract class IPushEngine {
   public abstract reject(params: { reason: string }): Promise<void>;
 
   // decrypt push subscription message
-  // FIXME: add PushMessage type
   public abstract decryptMessage(
     topic: string,
     encryptedMessage: string
-  ): Promise</*PushMessage*/ any>;
+  ): Promise<PushClientTypes.PushMessage>;
 
   // ---------- Public Methods (common) --------------------------------- //
 
@@ -115,6 +114,18 @@ export abstract class IPushEngine {
     topic: string,
     payload:
       | JsonRpcResult<JsonRpcTypes.Results["wc_pushRequest"]>
+      | JsonRpcError
+  ): void;
+
+  protected abstract onPushMessageRequest(
+    topic: string,
+    payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_pushMessage"]>
+  ): Promise<void>;
+
+  protected abstract onPushMessageResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_pushMessage"]>
       | JsonRpcError
   ): void;
 }

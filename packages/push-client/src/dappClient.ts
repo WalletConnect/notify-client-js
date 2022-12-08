@@ -90,6 +90,15 @@ export class DappClient extends IDappClient {
     }
   };
 
+  public notify: IDappClient["notify"] = async (params) => {
+    try {
+      return await this.engine.notify(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   // ---------- Events ----------------------------------------------- //
 
   public emit: IDappClient["emit"] = (name, listener) => {

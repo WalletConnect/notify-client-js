@@ -6,13 +6,15 @@ import { Logger } from "pino";
 import { IPushEngine } from "./engine";
 
 export declare namespace PushClientTypes {
-  type Event = "push_request" | "push_response";
+  type Event = "push_request" | "push_response" | "push_message";
 
   // FIXME: specify non-`any` type
   type PushRequestEventArgs = any;
 
   // FIXME: specify non-`any` type
   type PushResponseEventArgs = JsonRpcResult<any> | JsonRpcError;
+
+  type PushMessageRequestEventArgs = { message: PushClientTypes.PushMessage };
 
   interface BaseEventArgs<T = unknown> {
     id: number;
@@ -23,6 +25,7 @@ export declare namespace PushClientTypes {
   interface EventArguments {
     push_request: BaseEventArgs<PushRequestEventArgs>;
     push_response: BaseEventArgs<PushResponseEventArgs>;
+    push_message: BaseEventArgs<PushMessageRequestEventArgs>;
   }
 
   interface Options extends CoreTypes.Options {

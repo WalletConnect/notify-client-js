@@ -61,6 +61,18 @@ export class PushEngine extends IPushEngine {
     return { id };
   };
 
+  public notify: IPushEngine["notify"] = async ({ topic, message }) => {
+    this.isInitialized();
+
+    this.client.logger.info(
+      "[Push] Engine.notify > sending push notification on pairing %s with message %s",
+      topic,
+      message
+    );
+
+    await this.sendRequest(topic, "wc_pushMessage", message);
+  };
+
   // ---------- Public (Wallet) --------------------------------------- //
 
   public approve: IPushEngine["approve"] = async ({ id }) => {
@@ -223,11 +235,11 @@ export class PushEngine extends IPushEngine {
       case "wc_pushRequest":
         return this.onPushRequest(topic, payload);
       case "wc_pushMessage":
-        // TODO: implement `onPushMessageRequest` handler.
+        this.onPushMessageRequest(topic, payload);
         return;
       default:
         return this.client.logger.info(
-          `Unsupported request method ${reqMethod}`
+          `[Push] Unsupported request method ${reqMethod}`
         );
     }
   };
@@ -243,11 +255,10 @@ export class PushEngine extends IPushEngine {
       case "wc_pushRequest":
         return this.onPushResponse(topic, payload);
       case "wc_pushMessage":
-        // TODO: implement `onPushMessageResponse` handler.
-        return;
+        return this.onPushMessageResponse(topic, payload);
       default:
         return this.client.logger.info(
-          `Unsupported response method ${resMethod}`
+          `[Push] Unsupported response method ${resMethod}`
         );
     }
   };
@@ -341,4 +352,38 @@ export class PushEngine extends IPushEngine {
       });
     }
   };
+
+  protected onPushMessageRequest: IPushEngine["onPushMessageRequest"] = async (
+    topic,
+    payload
+  ) => {
+    this.client.logger.info(
+      "[Push] Engine.onPushMessageRequest",
+      topic,
+      payload
+    );
+    await this.sendResult<"wc_pushMessage">(payload.id, topic, true);
+    this.client.emit("push_message", {
+      id: payload.id,
+      topic,
+      params: { message: payload.params },
+    });
+  };
+
+  protected onPushMessageResponse: IPushEngine["onPushMessageResponse"] =
+    async (topic, payload) => {
+      if (isJsonRpcResult(payload)) {
+        this.client.logger.info(
+          "[Push] Engine.onPushMessageResponse > result:",
+          topic,
+          payload
+        );
+      } else if (isJsonRpcError(payload)) {
+        this.client.logger.error(
+          "[Push] Engine.onPushMessageResponse > error:",
+          topic,
+          payload.error
+        );
+      }
+    };
 }
