@@ -31,7 +31,6 @@ export declare namespace PushClientTypes {
   interface Options extends CoreTypes.Options {
     metadata: Metadata;
     core?: ICore;
-    projectId: string;
   }
 
   interface Metadata {
@@ -66,7 +65,6 @@ export abstract class IBaseClient {
 
   public abstract core: ICore;
   public abstract metadata: PushClientTypes.Metadata;
-  public abstract projectId: string;
   public abstract events: EventEmitter;
   public abstract logger: Logger;
   public abstract engine: IPushEngine;

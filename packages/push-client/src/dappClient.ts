@@ -22,7 +22,6 @@ export class DappClient extends IDappClient {
   public readonly version = PUSH_CLIENT_VERSION;
   public readonly name: IDappClient["name"] = PUSH_DAPP_CLIENT_DEFAULT_NAME;
   public readonly metadata: IDappClient["metadata"];
-  public readonly projectId: IDappClient["projectId"];
 
   public core: IDappClient["core"];
   public logger: IDappClient["logger"];
@@ -43,7 +42,6 @@ export class DappClient extends IDappClient {
 
     this.name = opts.name || PUSH_DAPP_CLIENT_DEFAULT_NAME;
     this.metadata = opts.metadata;
-    this.projectId = opts.projectId;
 
     const logger =
       typeof opts.logger !== "undefined" && typeof opts.logger !== "string"
