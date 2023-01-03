@@ -106,6 +106,15 @@ export class DappClient extends IDappClient {
     }
   };
 
+  public delete: IDappClient["delete"] = async (params) => {
+    try {
+      return await this.engine.delete(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   // ---------- Events ----------------------------------------------- //
 
   public emit: IDappClient["emit"] = (name, listener) => {

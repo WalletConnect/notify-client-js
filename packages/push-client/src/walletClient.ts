@@ -98,6 +98,15 @@ export class WalletClient extends IWalletClient {
       }
     };
 
+  public delete: IWalletClient["delete"] = async (params) => {
+    try {
+      return await this.engine.delete(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   // ---------- Events ----------------------------------------------- //
 
   public emit: IWalletClient["emit"] = (name, listener) => {

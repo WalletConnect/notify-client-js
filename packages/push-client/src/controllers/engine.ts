@@ -134,6 +134,20 @@ export class PushEngine extends IPushEngine {
     return Object.fromEntries(this.client.subscriptions.map);
   };
 
+  public delete: IPushEngine["delete"] = async ({ topic }) => {
+    this.isInitialized();
+
+    // Await the unsubscribe first to avoid deleting the symKey too early below.
+    await this.client.core.relayer.unsubscribe(topic);
+    await Promise.all([
+      this.client.subscriptions.delete(topic, {
+        code: -1,
+        message: "Deleting subscription.",
+      }),
+      this.client.core.crypto.deleteSymKey(topic),
+    ]);
+  };
+
   // ---------- Private Helpers --------------------------------------- //
 
   protected setExpiry: IPushEngine["setExpiry"] = async (topic, expiry) => {

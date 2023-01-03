@@ -315,4 +315,54 @@ describe("Common (BaseClient)", () => {
       );
     });
   });
+
+  describe("delete", () => {
+    it("can delete a currently active push subscription", async () => {
+      const pairingTopic = await setupKnownPairing(wallet, dapp);
+      let gotPushRequest = false;
+      let pushRequestEvent: any;
+      let gotResponse = false;
+      let responseEvent: any;
+
+      wallet.on("push_request", (event) => {
+        gotPushRequest = true;
+        pushRequestEvent = event;
+      });
+
+      const { id } = await dapp.request({
+        account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        pairingTopic,
+      });
+
+      await waitForEvent(() => gotPushRequest);
+
+      dapp.on("push_response", (event) => {
+        gotResponse = true;
+        responseEvent = event;
+      });
+
+      await wallet.approve({ id });
+      await waitForEvent(() => gotResponse);
+
+      expect(responseEvent.params.result.publicKey).toBeDefined();
+
+      expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(1);
+      expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(1);
+
+      const walletSubscriptionTopic = Object.keys(
+        wallet.getActiveSubscriptions()
+      )[0];
+      const dappSubscriptionTopic = Object.keys(
+        dapp.getActiveSubscriptions()
+      )[0];
+
+      await wallet.delete({ topic: walletSubscriptionTopic });
+      await dapp.delete({ topic: dappSubscriptionTopic });
+
+      // Check that wallet is in expected state.
+      expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
+      // Check that dapp is in expected state.
+      expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(0);
+    });
+  });
 });
