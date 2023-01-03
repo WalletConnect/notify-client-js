@@ -60,9 +60,9 @@ export abstract class IPushEngine {
   // ---------- Public Methods (common) --------------------------------- //
 
   // query all active subscriptions
-  // FIXME: add PushSubscription type
-  public abstract getActiveSubscriptions(): Promise<
-    Record<string, any /*PushSubscription*/>
+  public abstract getActiveSubscriptions(): Record<
+    string,
+    PushClientTypes.PushSubscription
   >;
 
   // delete active subscription

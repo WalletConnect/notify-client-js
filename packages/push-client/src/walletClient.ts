@@ -88,6 +88,16 @@ export class WalletClient extends IWalletClient {
     }
   };
 
+  public getActiveSubscriptions: IWalletClient["getActiveSubscriptions"] =
+    () => {
+      try {
+        return this.engine.getActiveSubscriptions();
+      } catch (error: any) {
+        this.logger.error(error.message);
+        throw error;
+      }
+    };
+
   // ---------- Events ----------------------------------------------- //
 
   public emit: IWalletClient["emit"] = (name, listener) => {

@@ -128,6 +128,12 @@ export class PushEngine extends IPushEngine {
 
   // ---------- Public (Common) --------------------------------------- //
 
+  public getActiveSubscriptions: IPushEngine["getActiveSubscriptions"] = () => {
+    this.isInitialized();
+
+    return Object.fromEntries(this.client.subscriptions.map);
+  };
+
   // ---------- Private Helpers --------------------------------------- //
 
   protected setExpiry: IPushEngine["setExpiry"] = async (topic, expiry) => {

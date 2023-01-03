@@ -244,3 +244,75 @@ describe("WalletClient", () => {
     });
   });
 });
+
+describe("Common (BaseClient)", () => {
+  let wallet: IWalletClient;
+  let dapp: IDappClient;
+
+  beforeEach(async () => {
+    wallet = await WalletClient.init({
+      name: "testWalletClient",
+      logger: "error",
+      relayUrl:
+        process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
+      projectId: process.env.TEST_PROJECT_ID!,
+      metadata: dappMetadata,
+    });
+    dapp = await DappClient.init({
+      name: "testDappClientAsPeer",
+      logger: "error",
+      relayUrl:
+        process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
+      projectId: process.env.TEST_PROJECT_ID!,
+      metadata: walletMetadata,
+    });
+  });
+  afterEach(async () => {
+    await disconnectSocket(wallet.core);
+    await disconnectSocket(dapp.core);
+  });
+
+  describe("getActiveSubscriptions", () => {
+    it("can query currently active push subscriptions", async () => {
+      const pairingTopic = await setupKnownPairing(wallet, dapp);
+      let gotPushRequest = false;
+      let pushRequestEvent: any;
+      let gotResponse = false;
+      let responseEvent: any;
+
+      wallet.on("push_request", (event) => {
+        gotPushRequest = true;
+        pushRequestEvent = event;
+      });
+
+      const { id } = await dapp.request({
+        account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        pairingTopic,
+      });
+
+      await waitForEvent(() => gotPushRequest);
+
+      dapp.on("push_response", (event) => {
+        gotResponse = true;
+        responseEvent = event;
+      });
+
+      await wallet.approve({ id });
+      await waitForEvent(() => gotResponse);
+
+      expect(responseEvent.params.result.publicKey).toBeDefined();
+
+      const walletSubscriptions = wallet.getActiveSubscriptions();
+      const dappSubscriptions = dapp.getActiveSubscriptions();
+
+      // Check that wallet is in expected state.
+      expect(Object.keys(walletSubscriptions).length).toBe(1);
+      // Check that dapp is in expected state.
+      expect(Object.keys(dappSubscriptions).length).toBe(1);
+      // Check that topics of subscriptions match.
+      expect(Object.keys(walletSubscriptions)).toEqual(
+        Object.keys(dappSubscriptions)
+      );
+    });
+  });
+});

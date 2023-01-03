@@ -97,6 +97,15 @@ export class DappClient extends IDappClient {
     }
   };
 
+  public getActiveSubscriptions: IDappClient["getActiveSubscriptions"] = () => {
+    try {
+      return this.engine.getActiveSubscriptions();
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   // ---------- Events ----------------------------------------------- //
 
   public emit: IDappClient["emit"] = (name, listener) => {
