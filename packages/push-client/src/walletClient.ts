@@ -88,6 +88,15 @@ export class WalletClient extends IWalletClient {
     }
   };
 
+  public reject: IWalletClient["reject"] = async (params) => {
+    try {
+      return await this.engine.reject(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   public getActiveSubscriptions: IWalletClient["getActiveSubscriptions"] =
     () => {
       try {

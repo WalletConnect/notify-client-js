@@ -49,7 +49,7 @@ export abstract class IPushEngine {
   public abstract approve(params: { id: number }): Promise<void>;
 
   // reject push subscription
-  public abstract reject(params: { reason: string }): Promise<void>;
+  public abstract reject(params: { id: number; reason: string }): Promise<void>;
 
   // decrypt push subscription message
   public abstract decryptMessage(

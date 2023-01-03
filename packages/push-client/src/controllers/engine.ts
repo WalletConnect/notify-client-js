@@ -126,6 +126,24 @@ export class PushEngine extends IPushEngine {
     });
   };
 
+  public reject: IPushEngine["reject"] = async ({ id, reason }) => {
+    this.isInitialized();
+
+    const { topic: pairingTopic } = this.client.requests.get(id);
+
+    // SPEC: Wallet sends error response (i.e. proposal rejection) on pairing P
+    await this.sendError(id, pairingTopic, {
+      code: -1,
+      message: reason,
+    });
+
+    // Clean up the original request.
+    await this.client.requests.delete(id, {
+      code: -1,
+      message: "Cleaning up rejected request.",
+    });
+  };
+
   // ---------- Public (Common) --------------------------------------- //
 
   public getActiveSubscriptions: IPushEngine["getActiveSubscriptions"] = () => {
@@ -352,25 +370,22 @@ export class PushEngine extends IPushEngine {
         topic: pushTopic,
         relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
       });
-
-      // Clean up the original request.
-      await this.client.requests.delete(id, {
-        code: -1,
-        message: "Cleaning up approved request.",
-      });
-
-      this.client.emit("push_response", {
-        id,
-        topic,
-        params: response,
-      });
     } else if (isJsonRpcError(response)) {
-      this.client.emit("push_response", {
-        id: response.id,
-        topic,
-        params: response,
-      });
+      //
     }
+
+    // Emit the push response.
+    this.client.emit("push_response", {
+      id: response.id,
+      topic,
+      params: response,
+    });
+
+    // Clean up the original request regardless of concrete result.
+    await this.client.requests.delete(response.id, {
+      code: -1,
+      message: "Cleaning up responded request.",
+    });
   };
 
   protected onPushMessageRequest: IPushEngine["onPushMessageRequest"] = async (

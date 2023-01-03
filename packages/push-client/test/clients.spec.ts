@@ -243,6 +243,47 @@ describe("WalletClient", () => {
       expect(dapp.requests.length).toBe(0);
     });
   });
+
+  describe("reject", () => {
+    it("can reject a previously received `push_request` on a known pairing topic", async () => {
+      const rejectionReason = "this is a rejection reason";
+      const pairingTopic = await setupKnownPairing(wallet, dapp);
+      let gotPushRequest = false;
+      let pushRequestEvent: any;
+      let gotResponse = false;
+      let responseEvent: any;
+
+      wallet.on("push_request", (event) => {
+        gotPushRequest = true;
+        pushRequestEvent = event;
+      });
+
+      const { id } = await dapp.request({
+        account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        pairingTopic,
+      });
+
+      await waitForEvent(() => gotPushRequest);
+
+      dapp.on("push_response", (event) => {
+        gotResponse = true;
+        responseEvent = event;
+      });
+
+      await wallet.reject({ id, reason: rejectionReason });
+      await waitForEvent(() => gotResponse);
+
+      expect(responseEvent.params.error).toBeDefined();
+      expect(responseEvent.params.error.message).toBe(rejectionReason);
+
+      // Check that wallet is in expected state.
+      expect(wallet.subscriptions.length).toBe(0);
+      expect(wallet.requests.length).toBe(0);
+      // Check that dapp is in expected state.
+      expect(dapp.subscriptions.length).toBe(0);
+      expect(dapp.requests.length).toBe(0);
+    });
+  });
 });
 
 describe("Common (BaseClient)", () => {
