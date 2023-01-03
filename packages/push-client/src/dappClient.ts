@@ -16,7 +16,6 @@ import {
   PUSH_CLIENT_STORAGE_PREFIX,
 } from "./constants";
 
-// @ts-expect-error - `IDappClient` not yet fully implemented.
 export class DappClient extends IDappClient {
   public readonly protocol = PUSH_CLIENT_PROTOCOL;
   public readonly version = PUSH_CLIENT_VERSION;
