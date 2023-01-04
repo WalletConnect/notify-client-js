@@ -1,5 +1,5 @@
 export declare namespace JsonRpcTypes {
-  export type WcMethod = "wc_pushRequest" | "wc_pushMessage";
+  export type WcMethod = "wc_pushRequest" | "wc_pushMessage" | "wc_pushDelete";
 
   // ---- JSON-RPC Requests -----------------------------
   export interface RequestParams {
@@ -15,6 +15,10 @@ export declare namespace JsonRpcTypes {
       icon: string;
       url: string;
     };
+    wc_pushDelete: {
+      code: number;
+      message: string;
+    };
   }
 
   // ---- JSON-RPC Responses -----------------------------
@@ -23,5 +27,6 @@ export declare namespace JsonRpcTypes {
       publicKey: string;
     };
     wc_pushMessage: true;
+    wc_pushDelete: true;
   }
 }

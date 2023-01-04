@@ -128,4 +128,9 @@ export abstract class IPushEngine {
       | JsonRpcResult<JsonRpcTypes.Results["wc_pushMessage"]>
       | JsonRpcError
   ): void;
+
+  protected abstract onPushDeleteRequest(
+    topic: string,
+    payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_pushDelete"]>
+  ): Promise<void>;
 }

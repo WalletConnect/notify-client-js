@@ -6,7 +6,11 @@ import { Logger } from "pino";
 import { IPushEngine } from "./engine";
 
 export declare namespace PushClientTypes {
-  type Event = "push_request" | "push_response" | "push_message";
+  type Event =
+    | "push_request"
+    | "push_response"
+    | "push_message"
+    | "push_delete";
 
   // FIXME: specify non-`any` type
   type PushRequestEventArgs = any;
@@ -15,6 +19,8 @@ export declare namespace PushClientTypes {
   type PushResponseEventArgs = JsonRpcResult<any> | JsonRpcError;
 
   type PushMessageRequestEventArgs = { message: PushClientTypes.PushMessage };
+
+  type PushDeleteRequestEventArgs = { id: number; topic: string };
 
   interface BaseEventArgs<T = unknown> {
     id: number;
@@ -26,6 +32,7 @@ export declare namespace PushClientTypes {
     push_request: BaseEventArgs<PushRequestEventArgs>;
     push_response: BaseEventArgs<PushResponseEventArgs>;
     push_message: BaseEventArgs<PushMessageRequestEventArgs>;
+    push_delete: BaseEventArgs<PushDeleteRequestEventArgs>;
   }
 
   interface Options extends CoreTypes.Options {

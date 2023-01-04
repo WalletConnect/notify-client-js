@@ -26,4 +26,16 @@ export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
       tag: 4003,
     },
   },
+  wc_pushDelete: {
+    req: {
+      ttl: ONE_DAY,
+      prompt: true,
+      tag: 4004,
+    },
+    res: {
+      ttl: ONE_DAY,
+      prompt: false,
+      tag: 4005,
+    },
+  },
 };

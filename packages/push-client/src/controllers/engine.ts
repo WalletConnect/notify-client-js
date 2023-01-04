@@ -137,6 +137,10 @@ export class PushEngine extends IPushEngine {
       message: reason,
     });
 
+    this.client.logger.info(
+      `[Push] Engine.reject > rejected push subscription request on pairing topic ${pairingTopic}`
+    );
+
     // Clean up the original request.
     await this.client.requests.delete(id, {
       code: -1,
@@ -155,15 +159,15 @@ export class PushEngine extends IPushEngine {
   public delete: IPushEngine["delete"] = async ({ topic }) => {
     this.isInitialized();
 
-    // Await the unsubscribe first to avoid deleting the symKey too early below.
-    await this.client.core.relayer.unsubscribe(topic);
-    await Promise.all([
-      this.client.subscriptions.delete(topic, {
-        code: -1,
-        message: "Deleting subscription.",
-      }),
-      this.client.core.crypto.deleteSymKey(topic),
-    ]);
+    await this.sendRequest(topic, "wc_pushDelete", {
+      code: -1,
+      message: "Deleted subscription.",
+    });
+    await this.deleteSubscription(topic);
+
+    this.client.logger.info(
+      `[Push] Engine.delete > deleted push subscription on topic ${topic}`
+    );
   };
 
   // ---------- Private Helpers --------------------------------------- //
@@ -273,8 +277,9 @@ export class PushEngine extends IPushEngine {
       case "wc_pushRequest":
         return this.onPushRequest(topic, payload);
       case "wc_pushMessage":
-        this.onPushMessageRequest(topic, payload);
-        return;
+        return this.onPushMessageRequest(topic, payload);
+      case "wc_pushDelete":
+        return this.onPushDeleteRequest(topic, payload);
       default:
         return this.client.logger.info(
           `[Push] Unsupported request method ${reqMethod}`
@@ -294,6 +299,8 @@ export class PushEngine extends IPushEngine {
         return this.onPushResponse(topic, payload);
       case "wc_pushMessage":
         return this.onPushMessageResponse(topic, payload);
+      case "wc_pushDelete":
+        return;
       default:
         return this.client.logger.info(
           `[Push] Unsupported response method ${resMethod}`
@@ -421,4 +428,33 @@ export class PushEngine extends IPushEngine {
         );
       }
     };
+
+  protected onPushDeleteRequest: IPushEngine["onPushDeleteRequest"] = async (
+    topic,
+    payload
+  ) => {
+    const { id } = payload;
+    try {
+      await this.sendResult<"wc_pushDelete">(id, topic, true);
+      await this.deleteSubscription(topic);
+      this.client.events.emit("push_delete", { id, topic });
+    } catch (err: any) {
+      await this.sendError(id, topic, err);
+      this.client.logger.error(err);
+    }
+  };
+
+  // ---------- Private Helpers --------------------------------- //
+
+  private deleteSubscription = async (topic: string) => {
+    // Await the unsubscribe first to avoid deleting the symKey too early below.
+    await this.client.core.relayer.unsubscribe(topic);
+    await Promise.all([
+      this.client.subscriptions.delete(topic, {
+        code: -1,
+        message: "Deleted subscription.",
+      }),
+      this.client.core.crypto.deleteSymKey(topic),
+    ]);
+  };
 }

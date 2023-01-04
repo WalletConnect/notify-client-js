@@ -364,6 +364,8 @@ describe("Common (BaseClient)", () => {
       let pushRequestEvent: any;
       let gotResponse = false;
       let responseEvent: any;
+      let gotPushDelete = false;
+      let pushDeleteEvent: any;
 
       wallet.on("push_request", (event) => {
         gotPushRequest = true;
@@ -393,12 +395,14 @@ describe("Common (BaseClient)", () => {
       const walletSubscriptionTopic = Object.keys(
         wallet.getActiveSubscriptions()
       )[0];
-      const dappSubscriptionTopic = Object.keys(
-        dapp.getActiveSubscriptions()
-      )[0];
+
+      dapp.on("push_delete", (event) => {
+        gotPushDelete = true;
+        pushDeleteEvent = event;
+      });
 
       await wallet.delete({ topic: walletSubscriptionTopic });
-      await dapp.delete({ topic: dappSubscriptionTopic });
+      await waitForEvent(() => gotPushDelete);
 
       // Check that wallet is in expected state.
       expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
