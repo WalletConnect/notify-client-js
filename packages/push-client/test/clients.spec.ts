@@ -43,11 +43,11 @@ const createPushSubscription = async (
   let gotResponse = false;
   let responseEvent: any;
 
-  wallet.on("push_request", (event) => {
+  wallet.once("push_request", (event) => {
     gotPushRequest = true;
     pushRequestEvent = event;
   });
-  dapp.on("push_response", (event) => {
+  dapp.once("push_response", (event) => {
     gotResponse = true;
     responseEvent = event;
   });
@@ -121,7 +121,7 @@ describe("DappClient", () => {
       let gotPushRequest = false;
       let pushRequestEvent: any;
 
-      wallet.on("push_request", (event) => {
+      wallet.once("push_request", (event) => {
         gotPushRequest = true;
         pushRequestEvent = event;
       });
@@ -153,7 +153,7 @@ describe("DappClient", () => {
         url: "https://walletconnect.com",
       };
 
-      wallet.on("push_message", (event) => {
+      wallet.once("push_message", (event) => {
         gotPushMessage = true;
         pushMessageEvent = event;
       });
@@ -213,7 +213,7 @@ describe("WalletClient", () => {
       let gotResponse = false;
       let responseEvent: any;
 
-      wallet.on("push_request", (event) => {
+      wallet.once("push_request", (event) => {
         gotPushRequest = true;
         pushRequestEvent = event;
       });
@@ -225,7 +225,7 @@ describe("WalletClient", () => {
 
       await waitForEvent(() => gotPushRequest);
 
-      dapp.on("push_response", (event) => {
+      dapp.once("push_response", (event) => {
         gotResponse = true;
         responseEvent = event;
       });
@@ -253,7 +253,7 @@ describe("WalletClient", () => {
       let gotResponse = false;
       let responseEvent: any;
 
-      wallet.on("push_request", (event) => {
+      wallet.once("push_request", (event) => {
         gotPushRequest = true;
         pushRequestEvent = event;
       });
@@ -265,7 +265,7 @@ describe("WalletClient", () => {
 
       await waitForEvent(() => gotPushRequest);
 
-      dapp.on("push_response", (event) => {
+      dapp.once("push_response", (event) => {
         gotResponse = true;
         responseEvent = event;
       });
@@ -321,7 +321,7 @@ describe("Common (BaseClient)", () => {
       let gotResponse = false;
       let responseEvent: any;
 
-      wallet.on("push_request", (event) => {
+      wallet.once("push_request", (event) => {
         gotPushRequest = true;
         pushRequestEvent = event;
       });
@@ -333,7 +333,7 @@ describe("Common (BaseClient)", () => {
 
       await waitForEvent(() => gotPushRequest);
 
-      dapp.on("push_response", (event) => {
+      dapp.once("push_response", (event) => {
         gotResponse = true;
         responseEvent = event;
       });
@@ -367,7 +367,7 @@ describe("Common (BaseClient)", () => {
       let gotPushDelete = false;
       let pushDeleteEvent: any;
 
-      wallet.on("push_request", (event) => {
+      wallet.once("push_request", (event) => {
         gotPushRequest = true;
         pushRequestEvent = event;
       });
@@ -379,7 +379,7 @@ describe("Common (BaseClient)", () => {
 
       await waitForEvent(() => gotPushRequest);
 
-      dapp.on("push_response", (event) => {
+      dapp.once("push_response", (event) => {
         gotResponse = true;
         responseEvent = event;
       });
@@ -396,7 +396,7 @@ describe("Common (BaseClient)", () => {
         wallet.getActiveSubscriptions()
       )[0];
 
-      dapp.on("push_delete", (event) => {
+      dapp.once("push_delete", (event) => {
         gotPushDelete = true;
         pushDeleteEvent = event;
       });
