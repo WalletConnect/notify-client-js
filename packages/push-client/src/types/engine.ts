@@ -52,10 +52,10 @@ export abstract class IPushEngine {
   public abstract reject(params: { id: number; reason: string }): Promise<void>;
 
   // decrypt push subscription message
-  public abstract decryptMessage(
-    topic: string,
-    encryptedMessage: string
-  ): Promise<PushClientTypes.PushMessage>;
+  public abstract decryptMessage(params: {
+    topic: string;
+    encryptedMessage: string;
+  }): Promise<PushClientTypes.PushMessage>;
 
   // ---------- Public Methods (common) --------------------------------- //
 

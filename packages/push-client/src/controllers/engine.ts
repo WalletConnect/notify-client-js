@@ -7,6 +7,7 @@ import {
   isJsonRpcResponse,
   isJsonRpcResult,
   isJsonRpcError,
+  JsonRpcPayload,
 } from "@walletconnect/jsonrpc-utils";
 import { RelayerTypes } from "@walletconnect/types";
 import { getInternalError, hashKey } from "@walletconnect/utils";
@@ -14,7 +15,6 @@ import { getInternalError, hashKey } from "@walletconnect/utils";
 import { ENGINE_RPC_OPTS } from "../constants";
 import { IPushEngine, JsonRpcTypes } from "../types";
 
-// @ts-expect-error - `IPushEngine` not yet fully implemented.
 export class PushEngine extends IPushEngine {
   private initialized = false;
   public name = "pushEngine";
@@ -146,6 +146,25 @@ export class PushEngine extends IPushEngine {
       code: -1,
       message: "Cleaning up rejected request.",
     });
+  };
+
+  public decryptMessage: IPushEngine["decryptMessage"] = async ({
+    topic,
+    encryptedMessage,
+  }) => {
+    this.isInitialized();
+
+    const payload: JsonRpcPayload<
+      JsonRpcTypes.RequestParams["wc_pushMessage"]
+    > = await this.client.core.crypto.decode(topic, encryptedMessage);
+
+    if (!("params" in payload)) {
+      throw new Error(
+        "Invalid message payload provided to `decryptMessage`: expected `params` key to be present."
+      );
+    }
+
+    return payload.params;
   };
 
   // ---------- Public (Common) --------------------------------------- //

@@ -1,3 +1,4 @@
+import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import { generateRandomBytes32 } from "@walletconnect/utils";
 import { expect, describe, it, beforeEach, afterEach } from "vitest";
 import { DappClient } from "../src/dappClient";
@@ -282,6 +283,48 @@ describe("WalletClient", () => {
       // Check that dapp is in expected state.
       expect(dapp.subscriptions.length).toBe(0);
       expect(dapp.requests.length).toBe(0);
+    });
+  });
+
+  describe("decryptMessage", () => {
+    it("can decrypt an encrypted message for a known push topic", async () => {
+      const pairingTopic = await setupKnownPairing(wallet, dapp);
+      let gotPushRequest = false;
+      let pushRequestEvent: any;
+      let gotResponse = false;
+      let responseEvent: any;
+
+      wallet.once("push_request", (event) => {
+        gotPushRequest = true;
+        pushRequestEvent = event;
+      });
+
+      const { id } = await dapp.request({
+        account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        pairingTopic,
+      });
+
+      await waitForEvent(() => gotPushRequest);
+
+      dapp.once("push_response", (event) => {
+        gotResponse = true;
+        responseEvent = event;
+      });
+
+      await wallet.approve({ id });
+      await waitForEvent(() => gotResponse);
+
+      const plaintextMessage = "this is a test for decryptMessage";
+      const topic = wallet.subscriptions.keys[0];
+      const payload = formatJsonRpcRequest("wc_pushMessage", plaintextMessage);
+      const encryptedMessage = await wallet.core.crypto.encode(topic, payload);
+
+      const decryptedMessage = await wallet.decryptMessage({
+        topic,
+        encryptedMessage,
+      });
+
+      expect(decryptedMessage).toBe(plaintextMessage);
     });
   });
 });

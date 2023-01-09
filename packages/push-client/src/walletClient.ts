@@ -16,7 +16,6 @@ import {
   PUSH_WALLET_CLIENT_DEFAULT_NAME,
 } from "./constants";
 
-// @ts-expect-error - `IWalletClient` not yet fully implemented.
 export class WalletClient extends IWalletClient {
   public readonly protocol = PUSH_CLIENT_PROTOCOL;
   public readonly version = PUSH_CLIENT_VERSION;
@@ -91,6 +90,15 @@ export class WalletClient extends IWalletClient {
   public reject: IWalletClient["reject"] = async (params) => {
     try {
       return await this.engine.reject(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
+  public decryptMessage: IWalletClient["decryptMessage"] = async (params) => {
+    try {
+      return await this.engine.decryptMessage(params);
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;
