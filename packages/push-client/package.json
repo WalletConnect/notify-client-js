@@ -25,9 +25,7 @@
     "lint": "eslint -c '../../.eslintrc' --fix './src/**/*.ts'",
     "prettier": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}'",
     "prettier:write": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}' --write",
-    "test:pre": "rm -rf ./test/test.db",
-    "test:run": "vitest run --dir test",
-    "test": "npm run test:pre; npm run test:run",
+    "test": "vitest run --dir test",
     "test:watch": "vitest watch --dir test",
     "prepublishOnly": "npm run build"
   },
