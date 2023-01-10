@@ -1,9 +1,5 @@
 import { ICore, CoreTypes, IStore, RelayerTypes } from "@walletconnect/types";
-import {
-  ErrorResponse,
-  JsonRpcError,
-  JsonRpcResult,
-} from "@walletconnect/jsonrpc-utils";
+import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
 import EventEmitter from "events";
 import { Logger } from "pino";
 
