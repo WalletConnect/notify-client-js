@@ -234,7 +234,7 @@ describe("WalletClient", () => {
       await wallet.approve({ id });
       await waitForEvent(() => gotResponse);
 
-      expect(responseEvent.params.result.publicKey).toBeDefined();
+      expect(responseEvent.params.subscription.topic).toBeDefined();
 
       // Check that wallet is in expected state.
       expect(wallet.subscriptions.length).toBe(1);
@@ -384,7 +384,7 @@ describe("Common (BaseClient)", () => {
       await wallet.approve({ id });
       await waitForEvent(() => gotResponse);
 
-      expect(responseEvent.params.result.publicKey).toBeDefined();
+      expect(responseEvent.params.subscription.topic).toBeDefined();
 
       const walletSubscriptions = wallet.getActiveSubscriptions();
       const dappSubscriptions = dapp.getActiveSubscriptions();
@@ -430,7 +430,7 @@ describe("Common (BaseClient)", () => {
       await wallet.approve({ id });
       await waitForEvent(() => gotResponse);
 
-      expect(responseEvent.params.result.publicKey).toBeDefined();
+      expect(responseEvent.params.subscription.topic).toBeDefined();
 
       expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(1);
       expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(1);

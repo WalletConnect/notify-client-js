@@ -13,7 +13,7 @@ import { RelayerTypes } from "@walletconnect/types";
 import { getInternalError, hashKey } from "@walletconnect/utils";
 
 import { ENGINE_RPC_OPTS } from "../constants";
-import { IPushEngine, JsonRpcTypes } from "../types";
+import { IPushEngine, JsonRpcTypes, PushClientTypes } from "../types";
 
 export class PushEngine extends IPushEngine {
   private initialized = false;
@@ -391,21 +391,32 @@ export class PushEngine extends IPushEngine {
       // DappClient subscribes to pushTopic.
       await this.client.core.relayer.subscribe(pushTopic);
 
-      // Store the new PushSubscription.
-      await this.client.subscriptions.set(pushTopic, {
+      const pushSubscription: PushClientTypes.PushSubscription = {
         topic: pushTopic,
         relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
+      };
+
+      // Store the new PushSubscription.
+      await this.client.subscriptions.set(pushTopic, pushSubscription);
+
+      // Emit the PushSubscription at client level.
+      this.client.emit("push_response", {
+        id: response.id,
+        topic,
+        params: {
+          subscription: pushSubscription,
+        },
       });
     } else if (isJsonRpcError(response)) {
-      //
+      // Emit the error response at client level.
+      this.client.emit("push_response", {
+        id: response.id,
+        topic,
+        params: {
+          error: response.error,
+        },
+      });
     }
-
-    // Emit the push response.
-    this.client.emit("push_response", {
-      id: response.id,
-      topic,
-      params: response,
-    });
 
     // Clean up the original request regardless of concrete result.
     await this.client.requests.delete(response.id, {

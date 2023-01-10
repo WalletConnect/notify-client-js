@@ -1,5 +1,9 @@
 import { ICore, CoreTypes, IStore, RelayerTypes } from "@walletconnect/types";
-import { JsonRpcError, JsonRpcResult } from "@walletconnect/jsonrpc-utils";
+import {
+  ErrorResponse,
+  JsonRpcError,
+  JsonRpcResult,
+} from "@walletconnect/jsonrpc-utils";
 import EventEmitter from "events";
 import { Logger } from "pino";
 
@@ -12,11 +16,15 @@ export declare namespace PushClientTypes {
     | "push_message"
     | "push_delete";
 
-  // FIXME: specify non-`any` type
-  type PushRequestEventArgs = any;
+  type PushRequestEventArgs = {
+    id: number;
+    metadata: Metadata;
+  };
 
-  // FIXME: specify non-`any` type
-  type PushResponseEventArgs = JsonRpcResult<any> | JsonRpcError;
+  type PushResponseEventArgs = {
+    error?: ErrorResponse;
+    subscription?: PushClientTypes.PushSubscription;
+  };
 
   type PushMessageRequestEventArgs = { message: PushClientTypes.PushMessage };
 
