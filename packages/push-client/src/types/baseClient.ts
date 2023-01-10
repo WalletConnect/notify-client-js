@@ -51,6 +51,12 @@ export declare namespace PushClientTypes {
     };
   }
 
+  interface PushSubscriptionRequest {
+    publicKey: string;
+    metadata: Metadata;
+    account: string;
+  }
+
   interface PushSubscription {
     topic: string;
     relay: RelayerTypes.ProtocolOptions;
@@ -75,9 +81,10 @@ export abstract class IBaseClient {
   public abstract events: EventEmitter;
   public abstract logger: Logger;
   public abstract engine: IPushEngine;
-  // FIXME: replace any typing here.
-  public abstract requests: IStore<number, { topic: string; payload: any }>;
-  // FIXME: replace any typing here.
+  public abstract requests: IStore<
+    number,
+    { topic: string; request: PushClientTypes.PushSubscriptionRequest }
+  >;
   public abstract subscriptions: IStore<
     string,
     PushClientTypes.PushSubscription

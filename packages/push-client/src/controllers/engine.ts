@@ -45,17 +45,17 @@ export class PushEngine extends IPushEngine {
     const publicKey = await this.client.core.crypto.generateKeyPair();
 
     // SPEC: Dapp sends push proposal on known pairing P
-    const payload = {
+    const request = {
       publicKey,
       account,
       metadata: this.client.metadata,
     };
-    const id = await this.sendRequest(pairingTopic, "wc_pushRequest", payload);
+    const id = await this.sendRequest(pairingTopic, "wc_pushRequest", request);
 
     // Store the push subscription request so we can later reference `publicKey` when we get a response.
     await this.client.requests.set(id, {
       topic: pairingTopic,
-      payload,
+      request,
     });
 
     return { id };
@@ -78,7 +78,7 @@ export class PushEngine extends IPushEngine {
   public approve: IPushEngine["approve"] = async ({ id }) => {
     this.isInitialized();
 
-    const { topic: pairingTopic, payload } = this.client.requests.get(id);
+    const { topic: pairingTopic, request } = this.client.requests.get(id);
 
     // SPEC: Wallet generates key pair Y
     const selfPublicKey = await this.client.core.crypto.generateKeyPair();
@@ -86,13 +86,13 @@ export class PushEngine extends IPushEngine {
     this.client.logger.info(
       "[Push] Engine.approve > generating shared key from selfPublicKey %s and proposer publicKey %s",
       selfPublicKey,
-      payload.params.publicKey
+      request.publicKey
     );
 
     // SPEC: Wallet derives symmetric key from keys X and Y
     const symKeyTopic = await this.client.core.crypto.generateSharedKey(
       selfPublicKey,
-      payload.params.publicKey
+      request.publicKey
     );
     const symKey = this.client.core.crypto.keychain.get(symKeyTopic);
 
@@ -116,7 +116,7 @@ export class PushEngine extends IPushEngine {
     await this.client.subscriptions.set(pushTopic, {
       topic: pushTopic,
       relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
-      metadata: payload.params.metadata,
+      metadata: request.metadata,
     });
 
     // Clean up the original request.
@@ -339,7 +339,7 @@ export class PushEngine extends IPushEngine {
       // Store the push subscription request so we can reference later for a response.
       await this.client.requests.set(payload.id, {
         topic,
-        payload,
+        request: payload.params,
       });
 
       this.client.emit("push_request", {
@@ -365,8 +365,8 @@ export class PushEngine extends IPushEngine {
     if (isJsonRpcResult(response)) {
       const { id, result } = response;
 
-      const { payload } = this.client.requests.get(id);
-      const selfPublicKey = payload.publicKey;
+      const { request } = this.client.requests.get(id);
+      const selfPublicKey = request.publicKey;
 
       this.client.logger.info(
         "[Push] Engine.onPushResponse > generating shared key from selfPublicKey %s and responder publicKey %s",
