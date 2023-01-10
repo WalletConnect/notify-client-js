@@ -1,3 +1,5 @@
+import { PushClientTypes } from "./baseClient";
+
 export declare namespace JsonRpcTypes {
   export type WcMethod = "wc_pushRequest" | "wc_pushMessage" | "wc_pushDelete";
 
@@ -6,8 +8,7 @@ export declare namespace JsonRpcTypes {
     wc_pushRequest: {
       publicKey: string;
       account: string;
-      // FIXME: use Metadata type
-      metadata: any /*Metadata*/;
+      metadata: PushClientTypes.Metadata;
     };
     wc_pushMessage: {
       title: string;
