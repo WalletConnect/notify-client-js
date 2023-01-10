@@ -1,6 +1,7 @@
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import { generateRandomBytes32 } from "@walletconnect/utils";
 import { expect, describe, it, beforeEach, afterEach } from "vitest";
+import { SDK_ERRORS } from "../src/constants";
 import { DappClient } from "../src/dappClient";
 import { IDappClient, IWalletClient } from "../src/types";
 import { WalletClient } from "../src/walletClient";
@@ -275,7 +276,9 @@ describe("WalletClient", () => {
       await waitForEvent(() => gotResponse);
 
       expect(responseEvent.params.error).toBeDefined();
-      expect(responseEvent.params.error.message).toBe(rejectionReason);
+      expect(responseEvent.params.error.message).toBe(
+        `${SDK_ERRORS.USER_REJECTED.message} Reason: ${rejectionReason}.`
+      );
 
       // Check that wallet is in expected state.
       expect(wallet.subscriptions.length).toBe(0);

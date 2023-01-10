@@ -12,7 +12,7 @@ import {
 import { RelayerTypes } from "@walletconnect/types";
 import { getInternalError, hashKey } from "@walletconnect/utils";
 
-import { ENGINE_RPC_OPTS } from "../constants";
+import { ENGINE_RPC_OPTS, SDK_ERRORS } from "../constants";
 import { IPushEngine, JsonRpcTypes, PushClientTypes } from "../types";
 
 export class PushEngine extends IPushEngine {
@@ -133,8 +133,8 @@ export class PushEngine extends IPushEngine {
 
     // SPEC: Wallet sends error response (i.e. proposal rejection) on pairing P
     await this.sendError(id, pairingTopic, {
-      code: -1,
-      message: reason,
+      code: SDK_ERRORS["USER_REJECTED"].code,
+      message: `${SDK_ERRORS["USER_REJECTED"].message} Reason: ${reason}.`,
     });
 
     this.client.logger.info(
@@ -178,10 +178,11 @@ export class PushEngine extends IPushEngine {
   public delete: IPushEngine["delete"] = async ({ topic }) => {
     this.isInitialized();
 
-    await this.sendRequest(topic, "wc_pushDelete", {
-      code: -1,
-      message: "Deleted subscription.",
-    });
+    await this.sendRequest(
+      topic,
+      "wc_pushDelete",
+      SDK_ERRORS["USER_UNSUBSCRIBED"]
+    );
     await this.deleteSubscription(topic);
 
     this.client.logger.info(
