@@ -65,9 +65,7 @@ export class PushEngine extends IPushEngine {
     this.isInitialized();
 
     this.client.logger.info(
-      "[Push] Engine.notify > sending push notification on pairing %s with message %s",
-      topic,
-      message
+      `[Push] Engine.notify > sending push notification on pairing ${topic} with message: "${message}"`
     );
 
     await this.sendRequest(topic, "wc_pushMessage", message);
@@ -84,9 +82,7 @@ export class PushEngine extends IPushEngine {
     const selfPublicKey = await this.client.core.crypto.generateKeyPair();
 
     this.client.logger.info(
-      "[Push] Engine.approve > generating shared key from selfPublicKey %s and proposer publicKey %s",
-      selfPublicKey,
-      request.publicKey
+      `[Push] Engine.approve > generating shared key from selfPublicKey ${selfPublicKey} and proposer publicKey ${request.publicKey}`
     );
 
     // SPEC: Wallet derives symmetric key from keys X and Y
@@ -100,8 +96,7 @@ export class PushEngine extends IPushEngine {
     const pushTopic = hashKey(symKey);
 
     this.client.logger.info(
-      "[Push] Engine.approve > derived pushTopic: %s",
-      pushTopic
+      `[Push] Engine.approve > derived pushTopic: ${pushTopic}`
     );
 
     // SPEC: Wallet subscribes to push topic
@@ -370,9 +365,7 @@ export class PushEngine extends IPushEngine {
       const selfPublicKey = request.publicKey;
 
       this.client.logger.info(
-        "[Push] Engine.onPushResponse > generating shared key from selfPublicKey %s and responder publicKey %s",
-        selfPublicKey,
-        result.publicKey
+        `[Push] Engine.onPushResponse > generating shared key from selfPublicKey ${selfPublicKey} and responder publicKey ${result.publicKey}`
       );
 
       const symKeyTopic = await this.client.core.crypto.generateSharedKey(
@@ -385,8 +378,7 @@ export class PushEngine extends IPushEngine {
       const pushTopic = hashKey(symKey);
 
       this.client.logger.info(
-        "[Push] Engine.onPushResponse > derived pushTopic: %s",
-        pushTopic
+        `[Push] Engine.onPushResponse > derived pushTopic: ${pushTopic}`
       );
 
       // DappClient subscribes to pushTopic.
