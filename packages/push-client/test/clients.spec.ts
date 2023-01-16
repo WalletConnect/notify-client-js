@@ -137,6 +137,8 @@ describe("DappClient", () => {
 
       expect(pushRequestEvent.params.metadata).to.deep.equal(dappMetadata);
       expect(wallet.requests.get(id)).toBeDefined();
+      expect(dapp.core.expirer.has(id)).toBe(true);
+      expect(wallet.core.expirer.has(id)).toBe(true);
     });
   });
 

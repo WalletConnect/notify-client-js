@@ -1,4 +1,8 @@
-import { RELAYER_EVENTS, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
+import {
+  RELAYER_EVENTS,
+  RELAYER_DEFAULT_PROTOCOL,
+  EXPIRER_EVENTS,
+} from "@walletconnect/core";
 import {
   formatJsonRpcRequest,
   formatJsonRpcResult,
@@ -9,10 +13,15 @@ import {
   isJsonRpcError,
   JsonRpcPayload,
 } from "@walletconnect/jsonrpc-utils";
-import { RelayerTypes } from "@walletconnect/types";
-import { getInternalError, hashKey } from "@walletconnect/utils";
+import { ExpirerTypes, RelayerTypes } from "@walletconnect/types";
+import {
+  calcExpiry,
+  getInternalError,
+  hashKey,
+  parseExpirerTarget,
+} from "@walletconnect/utils";
 
-import { ENGINE_RPC_OPTS, SDK_ERRORS } from "../constants";
+import { ENGINE_RPC_OPTS, PUSH_REQUEST_EXPIRY, SDK_ERRORS } from "../constants";
 import { IPushEngine, JsonRpcTypes, PushClientTypes } from "../types";
 
 export class PushEngine extends IPushEngine {
@@ -26,6 +35,7 @@ export class PushEngine extends IPushEngine {
   public init: IPushEngine["init"] = () => {
     if (!this.initialized) {
       this.registerRelayerEvents();
+      this.registerExpirerEvents();
       this.client.core.pairing.register({
         methods: Object.keys(ENGINE_RPC_OPTS),
       });
@@ -57,6 +67,9 @@ export class PushEngine extends IPushEngine {
       topic: pairingTopic,
       request,
     });
+
+    // Set the expiry for the push subscription request.
+    this.client.core.expirer.set(id, calcExpiry(PUSH_REQUEST_EXPIRY));
 
     return { id };
   };
@@ -115,10 +128,7 @@ export class PushEngine extends IPushEngine {
     });
 
     // Clean up the original request.
-    await this.client.requests.delete(id, {
-      code: -1,
-      message: "Cleaning up approved request.",
-    });
+    this.deleteRequest(id);
 
     // Clean up the keypair used to derive a shared symKey.
     await this.client.core.crypto.deleteKeyPair(selfPublicKey);
@@ -140,10 +150,7 @@ export class PushEngine extends IPushEngine {
     );
 
     // Clean up the original request.
-    await this.client.requests.delete(id, {
-      code: -1,
-      message: "Cleaning up rejected request.",
-    });
+    this.deleteRequest(id);
   };
 
   public decryptMessage: IPushEngine["decryptMessage"] = async ({
@@ -341,6 +348,9 @@ export class PushEngine extends IPushEngine {
         request: payload.params,
       });
 
+      // Set the expiry for the push subscription request.
+      this.client.core.expirer.set(payload.id, calcExpiry(PUSH_REQUEST_EXPIRY));
+
       this.client.emit("push_request", {
         id: payload.id,
         topic,
@@ -418,10 +428,7 @@ export class PushEngine extends IPushEngine {
     }
 
     // Clean up the original request regardless of concrete result.
-    await this.client.requests.delete(response.id, {
-      code: -1,
-      message: "Cleaning up responded request.",
-    });
+    this.deleteRequest(response.id);
   };
 
   protected onPushMessageRequest: IPushEngine["onPushMessageRequest"] = async (
@@ -473,7 +480,37 @@ export class PushEngine extends IPushEngine {
     }
   };
 
+  // ---------- Expirer Events ---------------------------------------- //
+
+  private registerExpirerEvents() {
+    this.client.core.expirer.on(
+      EXPIRER_EVENTS.expired,
+      async (event: ExpirerTypes.Expiration) => {
+        this.client.logger.info(
+          `[Push] EXPIRER_EVENTS.expired > target: ${event.target}, expiry: ${event.expiry}`
+        );
+
+        const { id } = parseExpirerTarget(event.target);
+
+        if (id) {
+          await this.deleteRequest(id, true);
+          this.client.events.emit("request_expire", { id });
+        }
+      }
+    );
+  }
+
   // ---------- Private Helpers --------------------------------- //
+
+  private deleteRequest = async (id: number, expirerHasDeleted?: boolean) => {
+    await Promise.all([
+      this.client.requests.delete(id, {
+        code: -1,
+        message: "Request deleted.",
+      }),
+      expirerHasDeleted ? Promise.resolve() : this.client.core.expirer.del(id),
+    ]);
+  };
 
   private deleteSubscription = async (topic: string) => {
     // Await the unsubscribe first to avoid deleting the symKey too early below.
