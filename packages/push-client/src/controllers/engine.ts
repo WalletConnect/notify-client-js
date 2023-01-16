@@ -119,6 +119,9 @@ export class PushEngine extends IPushEngine {
       code: -1,
       message: "Cleaning up approved request.",
     });
+
+    // Clean up the keypair used to derive a shared symKey.
+    await this.client.core.crypto.deleteKeyPair(selfPublicKey);
   };
 
   public reject: IPushEngine["reject"] = async ({ id, reason }) => {
@@ -391,6 +394,9 @@ export class PushEngine extends IPushEngine {
 
       // Store the new PushSubscription.
       await this.client.subscriptions.set(pushTopic, pushSubscription);
+
+      // Clean up the keypair used to derive a shared symKey.
+      await this.client.core.crypto.deleteKeyPair(selfPublicKey);
 
       // Emit the PushSubscription at client level.
       this.client.emit("push_response", {
