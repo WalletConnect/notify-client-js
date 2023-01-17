@@ -356,6 +356,7 @@ export class PushEngine extends IPushEngine {
         topic,
         params: {
           id: payload.id,
+          account: payload.params.account,
           metadata: payload.params.metadata,
         },
       });

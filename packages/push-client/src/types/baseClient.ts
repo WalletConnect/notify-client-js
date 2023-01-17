@@ -14,6 +14,7 @@ export declare namespace PushClientTypes {
 
   type PushRequestEventArgs = {
     id: number;
+    account: string;
     metadata: Metadata;
   };
 
