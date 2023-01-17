@@ -22,7 +22,12 @@ import {
 } from "@walletconnect/utils";
 
 import { ENGINE_RPC_OPTS, PUSH_REQUEST_EXPIRY, SDK_ERRORS } from "../constants";
-import { IPushEngine, JsonRpcTypes, PushClientTypes } from "../types";
+import {
+  IPushEngine,
+  IWalletClient,
+  JsonRpcTypes,
+  PushClientTypes,
+} from "../types";
 
 export class PushEngine extends IPushEngine {
   private initialized = false;
@@ -127,6 +132,9 @@ export class PushEngine extends IPushEngine {
       metadata: request.metadata,
     });
 
+    // Set up a store for messages sent to this push topic.
+    await (this.client as IWalletClient).messages.set(pushTopic, {});
+
     // Clean up the original request.
     this.deleteRequest(id);
 
@@ -170,6 +178,12 @@ export class PushEngine extends IPushEngine {
     }
 
     return payload.params;
+  };
+
+  public getMessageHistory: IPushEngine["getMessageHistory"] = ({ topic }) => {
+    this.isInitialized();
+
+    return (this.client as IWalletClient).messages.get(topic);
   };
 
   // ---------- Public (Common) --------------------------------------- //
@@ -441,6 +455,9 @@ export class PushEngine extends IPushEngine {
       topic,
       payload
     );
+    await (this.client as IWalletClient).messages.update(topic, {
+      [payload.id]: payload.params,
+    });
     await this.sendResult<"wc_pushMessage">(payload.id, topic, true);
     this.client.emit("push_message", {
       id: payload.id,
@@ -521,6 +538,12 @@ export class PushEngine extends IPushEngine {
         code: -1,
         message: "Deleted subscription.",
       }),
+      this.client instanceof IWalletClient
+        ? this.client.messages.delete(topic, {
+            code: -1,
+            message: "Deleted subscription.",
+          })
+        : Promise.resolve(),
       this.client.core.crypto.deleteSymKey(topic),
     ]);
   };

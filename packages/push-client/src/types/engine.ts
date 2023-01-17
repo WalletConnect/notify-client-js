@@ -57,6 +57,11 @@ export abstract class IPushEngine {
     encryptedMessage: string;
   }): Promise<PushClientTypes.PushMessage>;
 
+  // get all messages for a subscription
+  public abstract getMessageHistory(params: {
+    topic: string;
+  }): Record<number, PushClientTypes.PushMessage>;
+
   // ---------- Public Methods (common) --------------------------------- //
 
   // query all active subscriptions

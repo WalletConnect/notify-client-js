@@ -28,6 +28,7 @@ export class WalletClient extends IWalletClient {
   public engine: IWalletClient["engine"];
   public requests: IWalletClient["requests"];
   public subscriptions: IWalletClient["subscriptions"];
+  public messages: IWalletClient["messages"];
 
   static async init(opts: PushClientTypes.Options) {
     const client = new WalletClient(opts);
@@ -65,6 +66,12 @@ export class WalletClient extends IWalletClient {
       "subscriptions",
       PUSH_CLIENT_STORAGE_PREFIX
     );
+    this.messages = new Store(
+      this.core,
+      this.logger,
+      "messages",
+      PUSH_CLIENT_STORAGE_PREFIX
+    );
     this.engine = new PushEngine(this);
   }
 
@@ -99,6 +106,15 @@ export class WalletClient extends IWalletClient {
   public decryptMessage: IWalletClient["decryptMessage"] = async (params) => {
     try {
       return await this.engine.decryptMessage(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
+  public getMessageHistory: IWalletClient["getMessageHistory"] = (params) => {
+    try {
+      return this.engine.getMessageHistory(params);
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;
@@ -154,6 +170,7 @@ export class WalletClient extends IWalletClient {
       await this.core.start();
       await this.requests.init();
       await this.subscriptions.init();
+      await this.messages.init();
       await this.engine.init();
       this.logger.info(`PushWalletClient Initialization Success`);
     } catch (error: any) {

@@ -166,6 +166,12 @@ describe("DappClient", () => {
       await waitForEvent(() => gotPushMessage);
 
       expect(pushMessageEvent.params.message).to.deep.equal(message);
+
+      // Check that wallet is in expected state.
+      expect(wallet.messages.values.length).toBe(1);
+      expect(wallet.messages.values[0][pushMessageEvent.id]).to.deep.equal(
+        message
+      );
     });
   });
 });
@@ -241,6 +247,7 @@ describe("WalletClient", () => {
 
       // Check that wallet is in expected state.
       expect(wallet.subscriptions.length).toBe(1);
+      expect(wallet.messages.length).toBe(1);
       expect(wallet.requests.length).toBe(0);
       // Check that dapp is in expected state.
       expect(dapp.subscriptions.length).toBe(1);
@@ -454,6 +461,7 @@ describe("Common (BaseClient)", () => {
 
       // Check that wallet is in expected state.
       expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
+      expect(wallet.messages.keys.length).toBe(0);
       // Check that dapp is in expected state.
       expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(0);
     });
