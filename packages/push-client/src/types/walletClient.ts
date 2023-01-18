@@ -5,7 +5,7 @@ import { IBaseClient, PushClientTypes } from "./baseClient";
 export abstract class IWalletClient extends IBaseClient {
   public abstract messages: IStore<
     string,
-    Record<number, PushClientTypes.PushMessage>
+    { topic: string; messages: Record<number, PushClientTypes.PushMessage> }
   >;
 
   constructor(public opts: PushClientTypes.WalletClientOptions) {

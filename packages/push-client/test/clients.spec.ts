@@ -161,9 +161,9 @@ describe("DappClient", () => {
 
       // Check that wallet is in expected state.
       expect(wallet.messages.values.length).toBe(1);
-      expect(wallet.messages.values[0][pushMessageEvent.id]).to.deep.equal(
-        message
-      );
+      expect(
+        wallet.messages.values[0].messages[pushMessageEvent.id]
+      ).to.deep.equal(message);
     });
   });
 });

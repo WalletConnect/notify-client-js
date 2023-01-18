@@ -134,7 +134,10 @@ export class PushEngine extends IPushEngine {
     });
 
     // Set up a store for messages sent to this push topic.
-    await (this.client as IWalletClient).messages.set(pushTopic, {});
+    await (this.client as IWalletClient).messages.set(pushTopic, {
+      topic: pushTopic,
+      messages: {},
+    });
 
     // Clean up the original request.
     this.deleteRequest(id);
@@ -184,7 +187,7 @@ export class PushEngine extends IPushEngine {
   public getMessageHistory: IPushEngine["getMessageHistory"] = ({ topic }) => {
     this.isInitialized();
 
-    return (this.client as IWalletClient).messages.get(topic);
+    return (this.client as IWalletClient).messages.get(topic).messages;
   };
 
   // ---------- Public (Common) --------------------------------------- //
@@ -457,8 +460,15 @@ export class PushEngine extends IPushEngine {
       topic,
       payload
     );
+
+    const currentMessages = (this.client as IWalletClient).messages.get(
+      topic
+    ).messages;
     await (this.client as IWalletClient).messages.update(topic, {
-      [payload.id]: payload.params,
+      messages: {
+        ...currentMessages,
+        [payload.id]: payload.params,
+      },
     });
     await this.sendResult<"wc_pushMessage">(payload.id, topic, true);
     this.client.emit("push_message", {
