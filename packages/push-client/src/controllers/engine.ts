@@ -22,7 +22,12 @@ import {
 } from "@walletconnect/utils";
 
 import { ENGINE_RPC_OPTS, PUSH_REQUEST_EXPIRY, SDK_ERRORS } from "../constants";
-import { IPushEngine, IWalletClient, JsonRpcTypes } from "../types";
+import {
+  IDappClient,
+  IPushEngine,
+  IWalletClient,
+  JsonRpcTypes,
+} from "../types";
 
 export class PushEngine extends IPushEngine {
   private initialized = false;
@@ -58,7 +63,7 @@ export class PushEngine extends IPushEngine {
     const request = {
       publicKey,
       account,
-      metadata: this.client.metadata,
+      metadata: (this.client as IDappClient).metadata,
     };
     const id = await this.sendRequest(pairingTopic, "wc_pushRequest", request);
 

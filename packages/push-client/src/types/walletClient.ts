@@ -8,8 +8,8 @@ export abstract class IWalletClient extends IBaseClient {
     Record<number, PushClientTypes.PushMessage>
   >;
 
-  constructor(public opts: PushClientTypes.Options) {
-    super(opts);
+  constructor(public opts: PushClientTypes.WalletClientOptions) {
+    super();
   }
 
   // ---------- Public Methods (wallet) ----------------------------------------------- //

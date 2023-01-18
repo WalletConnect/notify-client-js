@@ -2,8 +2,10 @@ import { IPushEngine } from "./engine";
 import { IBaseClient, PushClientTypes } from "./baseClient";
 
 export abstract class IDappClient extends IBaseClient {
-  constructor(public opts: PushClientTypes.Options) {
-    super(opts);
+  public abstract metadata: PushClientTypes.Metadata;
+
+  constructor(public opts: PushClientTypes.DappClientOptions) {
+    super();
   }
 
   // ---------- Public Methods (dapp) ----------------------------------------------- //

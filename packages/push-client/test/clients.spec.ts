@@ -14,13 +14,6 @@ const dappMetadata = {
   icons: [],
 };
 
-const walletMetadata = {
-  name: "wallet (responder)",
-  description: "Test WalletClient as Responder",
-  url: "www.walletconnect.com",
-  icons: [],
-};
-
 const setupKnownPairing = async (
   clientA: IWalletClient | IDappClient,
   clientB: IWalletClient | IDappClient
@@ -96,7 +89,6 @@ describe("DappClient", () => {
       relayUrl:
         process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
-      metadata: walletMetadata,
     });
   });
   afterEach(async () => {
@@ -187,7 +179,6 @@ describe("WalletClient", () => {
       relayUrl:
         process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
-      metadata: dappMetadata,
     });
     dapp = await DappClient.init({
       name: "testDappClientAsPeer",
@@ -195,7 +186,7 @@ describe("WalletClient", () => {
       relayUrl:
         process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
-      metadata: walletMetadata,
+      metadata: dappMetadata,
     });
   });
   afterEach(async () => {
@@ -352,7 +343,6 @@ describe("Common (BaseClient)", () => {
       relayUrl:
         process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
-      metadata: dappMetadata,
     });
     dapp = await DappClient.init({
       name: "testDappClientAsPeer",
@@ -360,7 +350,7 @@ describe("Common (BaseClient)", () => {
       relayUrl:
         process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
-      metadata: walletMetadata,
+      metadata: dappMetadata,
     });
   });
   afterEach(async () => {

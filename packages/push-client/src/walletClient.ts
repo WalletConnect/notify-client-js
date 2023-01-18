@@ -20,7 +20,6 @@ export class WalletClient extends IWalletClient {
   public readonly protocol = PUSH_CLIENT_PROTOCOL;
   public readonly version = PUSH_CLIENT_VERSION;
   public readonly name: IWalletClient["name"] = PUSH_WALLET_CLIENT_DEFAULT_NAME;
-  public readonly metadata: IWalletClient["metadata"];
 
   public core: IWalletClient["core"];
   public logger: IWalletClient["logger"];
@@ -30,18 +29,17 @@ export class WalletClient extends IWalletClient {
   public subscriptions: IWalletClient["subscriptions"];
   public messages: IWalletClient["messages"];
 
-  static async init(opts: PushClientTypes.Options) {
+  static async init(opts: PushClientTypes.WalletClientOptions) {
     const client = new WalletClient(opts);
     await client.initialize();
 
     return client;
   }
 
-  constructor(opts: PushClientTypes.Options) {
+  constructor(opts: PushClientTypes.WalletClientOptions) {
     super(opts);
 
     this.name = opts.name || PUSH_WALLET_CLIENT_DEFAULT_NAME;
-    this.metadata = opts.metadata;
 
     const logger =
       typeof opts.logger !== "undefined" && typeof opts.logger !== "string"

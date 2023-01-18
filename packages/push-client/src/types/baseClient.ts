@@ -40,8 +40,12 @@ export declare namespace PushClientTypes {
     push_delete: BaseEventArgs<PushDeleteRequestEventArgs>;
   }
 
-  interface Options extends CoreTypes.Options {
+  interface DappClientOptions extends CoreTypes.Options {
     metadata: Metadata;
+    core?: ICore;
+  }
+
+  interface WalletClientOptions extends CoreTypes.Options {
     core?: ICore;
   }
 
@@ -83,7 +87,6 @@ export abstract class IBaseClient {
   public abstract readonly name: string;
 
   public abstract core: ICore;
-  public abstract metadata: PushClientTypes.Metadata;
   public abstract events: EventEmitter;
   public abstract logger: Logger;
   public abstract engine: IPushEngine;
@@ -95,8 +98,6 @@ export abstract class IBaseClient {
     string,
     PushClientTypes.PushSubscription
   >;
-
-  constructor(public opts: PushClientTypes.Options) {}
 
   // ---------- Public Methods (common) ----------------------------------------------- //
 

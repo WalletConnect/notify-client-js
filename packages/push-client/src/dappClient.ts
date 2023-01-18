@@ -29,14 +29,14 @@ export class DappClient extends IDappClient {
   public requests: IDappClient["requests"];
   public subscriptions: IDappClient["subscriptions"];
 
-  static async init(opts: PushClientTypes.Options) {
+  static async init(opts: PushClientTypes.DappClientOptions) {
     const client = new DappClient(opts);
     await client.initialize();
 
     return client;
   }
 
-  constructor(opts: PushClientTypes.Options) {
+  constructor(opts: PushClientTypes.DappClientOptions) {
     super(opts);
 
     this.name = opts.name || PUSH_DAPP_CLIENT_DEFAULT_NAME;
