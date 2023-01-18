@@ -64,6 +64,7 @@ export declare namespace PushClientTypes {
 
   interface PushSubscription {
     topic: string;
+    account: string;
     relay: RelayerTypes.ProtocolOptions;
     metadata?: Metadata;
   }

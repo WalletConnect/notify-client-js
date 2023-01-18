@@ -22,12 +22,7 @@ import {
 } from "@walletconnect/utils";
 
 import { ENGINE_RPC_OPTS, PUSH_REQUEST_EXPIRY, SDK_ERRORS } from "../constants";
-import {
-  IPushEngine,
-  IWalletClient,
-  JsonRpcTypes,
-  PushClientTypes,
-} from "../types";
+import { IPushEngine, IWalletClient, JsonRpcTypes } from "../types";
 
 export class PushEngine extends IPushEngine {
   private initialized = false;
@@ -128,6 +123,7 @@ export class PushEngine extends IPushEngine {
     // Store the new PushSubscription.
     await this.client.subscriptions.set(pushTopic, {
       topic: pushTopic,
+      account: request.account,
       relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
       metadata: request.metadata,
     });
@@ -412,8 +408,9 @@ export class PushEngine extends IPushEngine {
       // DappClient subscribes to pushTopic.
       await this.client.core.relayer.subscribe(pushTopic);
 
-      const pushSubscription: PushClientTypes.PushSubscription = {
+      const pushSubscription = {
         topic: pushTopic,
+        account: request.account,
         relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
       };
 
