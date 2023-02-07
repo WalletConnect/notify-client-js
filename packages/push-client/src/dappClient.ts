@@ -14,6 +14,7 @@ import {
   PUSH_CLIENT_PROTOCOL,
   PUSH_CLIENT_VERSION,
   PUSH_CLIENT_STORAGE_PREFIX,
+  DEFAULT_CAST_SERVER_URL,
 } from "./constants";
 
 export class DappClient extends IDappClient {
@@ -21,6 +22,7 @@ export class DappClient extends IDappClient {
   public readonly version = PUSH_CLIENT_VERSION;
   public readonly name: IDappClient["name"] = PUSH_DAPP_CLIENT_DEFAULT_NAME;
   public readonly metadata: IDappClient["metadata"];
+  public readonly castUrl: IDappClient["castUrl"];
 
   public core: IDappClient["core"];
   public logger: IDappClient["logger"];
@@ -41,6 +43,8 @@ export class DappClient extends IDappClient {
 
     this.name = opts.name || PUSH_DAPP_CLIENT_DEFAULT_NAME;
     this.metadata = opts.metadata;
+
+    this.castUrl = opts.castUrl || DEFAULT_CAST_SERVER_URL;
 
     const logger =
       typeof opts.logger !== "undefined" && typeof opts.logger !== "string"

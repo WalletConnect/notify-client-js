@@ -42,6 +42,7 @@ export declare namespace PushClientTypes {
 
   interface DappClientOptions extends CoreTypes.Options {
     metadata: Metadata;
+    castUrl?: string;
     core?: ICore;
   }
 

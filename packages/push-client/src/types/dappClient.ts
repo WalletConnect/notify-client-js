@@ -3,6 +3,7 @@ import { IBaseClient, PushClientTypes } from "./baseClient";
 
 export abstract class IDappClient extends IBaseClient {
   public abstract metadata: PushClientTypes.Metadata;
+  public abstract castUrl: string;
 
   constructor(public opts: PushClientTypes.DappClientOptions) {
     super();
