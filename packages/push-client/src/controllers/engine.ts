@@ -17,7 +17,6 @@ import { ExpirerTypes, RelayerTypes } from "@walletconnect/types";
 import {
   calcExpiry,
   getInternalError,
-  hashKey,
   parseExpirerTarget,
 } from "@walletconnect/utils";
 
@@ -104,14 +103,13 @@ export class PushEngine extends IPushEngine {
     );
 
     // SPEC: Wallet derives symmetric key from keys X and Y
-    const symKeyTopic = await this.client.core.crypto.generateSharedKey(
+    // SPEC: Push topic is derived from sha256 hash of symmetric key
+    // `crypto.generateSharedKey` returns the sha256 hash of the symmetric key, i.e. the push topic.
+    const pushTopic = await this.client.core.crypto.generateSharedKey(
       selfPublicKey,
       request.publicKey
     );
-    const symKey = this.client.core.crypto.keychain.get(symKeyTopic);
-
-    // SPEC: Push topic is derived from sha256 hash of symmetric key
-    const pushTopic = hashKey(symKey);
+    // const symKey = this.client.core.crypto.keychain.get(pushTopic);
 
     this.client.logger.info(
       `[Push] Engine.approve > derived pushTopic: ${pushTopic}`
@@ -400,14 +398,14 @@ export class PushEngine extends IPushEngine {
         `[Push] Engine.onPushResponse > generating shared key from selfPublicKey ${selfPublicKey} and responder publicKey ${result.publicKey}`
       );
 
-      const symKeyTopic = await this.client.core.crypto.generateSharedKey(
+      // SPEC: Wallet derives symmetric key from keys X and Y
+      // SPEC: Push topic is derived from sha256 hash of symmetric key
+      // `crypto.generateSharedKey` returns the sha256 hash of the symmetric key, i.e. the push topic.
+      const pushTopic = await this.client.core.crypto.generateSharedKey(
         selfPublicKey,
         result.publicKey
       );
-      const symKey = this.client.core.crypto.keychain.get(symKeyTopic);
-
-      // SPEC: Push topic is derived from sha256 hash of symmetric key
-      const pushTopic = hashKey(symKey);
+      // const symKey = this.client.core.crypto.keychain.get(pushTopic);
 
       this.client.logger.info(
         `[Push] Engine.onPushResponse > derived pushTopic: ${pushTopic}`
