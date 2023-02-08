@@ -80,6 +80,8 @@ describe("DappClient", () => {
       logger: "error",
       relayUrl:
         process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
+      castUrl:
+        process.env.TEST_CAST_URL || "https://staging.cast.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
       metadata: dappMetadata,
     });
@@ -185,6 +187,8 @@ describe("WalletClient", () => {
       logger: "error",
       relayUrl:
         process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
+      castUrl:
+        process.env.TEST_CAST_URL || "https://staging.cast.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
       metadata: dappMetadata,
     });
@@ -349,6 +353,8 @@ describe("Common (BaseClient)", () => {
       logger: "error",
       relayUrl:
         process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
+      castUrl:
+        process.env.TEST_CAST_URL || "https://staging.cast.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
       metadata: dappMetadata,
     });

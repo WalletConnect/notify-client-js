@@ -20,7 +20,12 @@ import {
   parseExpirerTarget,
 } from "@walletconnect/utils";
 
-import { ENGINE_RPC_OPTS, PUSH_REQUEST_EXPIRY, SDK_ERRORS } from "../constants";
+import {
+  DEFAULT_RELAY_SERVER_URL,
+  ENGINE_RPC_OPTS,
+  PUSH_REQUEST_EXPIRY,
+  SDK_ERRORS,
+} from "../constants";
 import {
   IDappClient,
   IPushEngine,
@@ -109,7 +114,6 @@ export class PushEngine extends IPushEngine {
       selfPublicKey,
       request.publicKey
     );
-    // const symKey = this.client.core.crypto.keychain.get(pushTopic);
 
     this.client.logger.info(
       `[Push] Engine.approve > derived pushTopic: ${pushTopic}`
@@ -405,11 +409,42 @@ export class PushEngine extends IPushEngine {
         selfPublicKey,
         result.publicKey
       );
-      // const symKey = this.client.core.crypto.keychain.get(pushTopic);
+      const symKey = this.client.core.crypto.keychain.get(pushTopic);
 
       this.client.logger.info(
-        `[Push] Engine.onPushResponse > derived pushTopic: ${pushTopic}`
+        `[Push] Engine.onPushResponse > derived pushTopic ${pushTopic} from symKey: ${symKey}`
       );
+
+      const castUrl = (this.client as IDappClient).castUrl;
+      const reqUrl = castUrl + `/${this.client.core.projectId}/register`;
+      const bodyString = JSON.stringify({
+        account: request.account,
+        symKey,
+        relayUrl: this.client.core.relayUrl || DEFAULT_RELAY_SERVER_URL,
+      });
+      try {
+        this.client.logger.info(
+          `[Push] Engine.onPushResponse > POST to Cast Server at ${reqUrl} with body ${bodyString}`
+        );
+
+        await fetch(reqUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: bodyString,
+        });
+
+        this.client.logger.info(
+          `[Push] Engine.onPushResponse > POST to Cast Server at ${reqUrl} returned ${JSON.stringify(
+            response
+          )}`
+        );
+      } catch (error: any) {
+        this.client.logger.error(
+          `[Push] Could not register push subscription on Cast Server via POST with body: ${bodyString} to ${reqUrl}: ${error.message}`
+        );
+      }
 
       // DappClient subscribes to pushTopic.
       await this.client.core.relayer.subscribe(pushTopic);
