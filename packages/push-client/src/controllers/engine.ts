@@ -322,7 +322,10 @@ export class PushEngine extends IPushEngine {
       case "wc_pushRequest":
         return this.onPushRequest(topic, payload);
       case "wc_pushMessage":
-        return this.onPushMessageRequest(topic, payload);
+        // If dapp, ignore `wc_pushMessage` requests being broadcast to all by Cast server.
+        return this.client instanceof IWalletClient
+          ? this.onPushMessageRequest(topic, payload)
+          : null;
       case "wc_pushDelete":
         return this.onPushDeleteRequest(topic, payload);
       default:

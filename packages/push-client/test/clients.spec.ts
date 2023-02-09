@@ -1,11 +1,13 @@
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import { generateRandomBytes32 } from "@walletconnect/utils";
-import { expect, describe, it, beforeEach, afterEach } from "vitest";
+import { expect, describe, it, beforeEach, afterEach, vi } from "vitest";
 import { SDK_ERRORS } from "../src/constants";
 import { DappClient } from "../src/dappClient";
 import { IDappClient, IWalletClient } from "../src/types";
 import { WalletClient } from "../src/walletClient";
 import { disconnectSocket } from "./helpers/ws";
+
+global.fetch = vi.fn();
 
 const dappMetadata = {
   name: "dapp (requester)",
