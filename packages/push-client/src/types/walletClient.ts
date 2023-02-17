@@ -5,7 +5,10 @@ import { IBaseClient, PushClientTypes } from "./baseClient";
 export abstract class IWalletClient extends IBaseClient {
   public abstract messages: IStore<
     string,
-    { topic: string; messages: Record<number, PushClientTypes.PushMessage> }
+    {
+      topic: string;
+      messages: Record<number, PushClientTypes.PushMessageRecord>;
+    }
   >;
 
   constructor(public opts: PushClientTypes.WalletClientOptions) {
@@ -18,4 +21,5 @@ export abstract class IWalletClient extends IBaseClient {
   public abstract reject: IPushEngine["reject"];
   public abstract decryptMessage: IPushEngine["decryptMessage"];
   public abstract getMessageHistory: IPushEngine["getMessageHistory"];
+  public abstract deletePushMessage: IPushEngine["deletePushMessage"];
 }

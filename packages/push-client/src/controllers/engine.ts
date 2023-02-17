@@ -142,7 +142,7 @@ export class PushEngine extends IPushEngine {
     });
 
     // Clean up the original request.
-    this.deleteRequest(id);
+    this.cleanupRequest(id);
 
     // Clean up the keypair used to derive a shared symKey.
     await this.client.core.crypto.deleteKeyPair(selfPublicKey);
@@ -164,7 +164,7 @@ export class PushEngine extends IPushEngine {
     );
 
     // Clean up the original request.
-    this.deleteRequest(id);
+    this.cleanupRequest(id);
   };
 
   public decryptMessage: IPushEngine["decryptMessage"] = async ({
@@ -192,6 +192,27 @@ export class PushEngine extends IPushEngine {
     return (this.client as IWalletClient).messages.get(topic).messages;
   };
 
+  public deletePushMessage: IPushEngine["deletePushMessage"] = ({ id }) => {
+    this.isInitialized();
+
+    const targetRecord = (this.client as IWalletClient).messages
+      .getAll()
+      .find((record) => record.messages[id]);
+
+    if (!targetRecord) {
+      throw new Error(
+        `No message with id ${id} found in push message history.`
+      );
+    }
+
+    delete targetRecord.messages[id];
+
+    (this.client as IWalletClient).messages.update(
+      targetRecord.topic,
+      targetRecord
+    );
+  };
+
   // ---------- Public (Common) --------------------------------------- //
 
   public getActiveSubscriptions: IPushEngine["getActiveSubscriptions"] = () => {
@@ -200,7 +221,9 @@ export class PushEngine extends IPushEngine {
     return Object.fromEntries(this.client.subscriptions.map);
   };
 
-  public delete: IPushEngine["delete"] = async ({ topic }) => {
+  public deleteSubscription: IPushEngine["deleteSubscription"] = async ({
+    topic,
+  }) => {
     this.isInitialized();
 
     await this.sendRequest(
@@ -208,14 +231,14 @@ export class PushEngine extends IPushEngine {
       "wc_pushDelete",
       SDK_ERRORS["USER_UNSUBSCRIBED"]
     );
-    await this.deleteSubscription(topic);
+    await this.cleanupSubscription(topic);
 
     this.client.logger.info(
       `[Push] Engine.delete > deleted push subscription on topic ${topic}`
     );
   };
 
-  // ---------- Private Helpers --------------------------------------- //
+  // ---------- Protected Helpers --------------------------------------- //
 
   protected setExpiry: IPushEngine["setExpiry"] = async (topic, expiry) => {
     if (this.client.core.pairing.pairings.keys.includes(topic)) {
@@ -284,45 +307,6 @@ export class PushEngine extends IPushEngine {
 
     return payload.id;
   };
-
-  private registerOnCastServer = async (account: string, symKey: string) => {
-    const castUrl = (this.client as IDappClient).castUrl;
-    const reqUrl = castUrl + `/${this.client.core.projectId}/register`;
-    const relayUrl = this.client.core.relayUrl || DEFAULT_RELAY_SERVER_URL;
-    const bodyString = JSON.stringify({
-      account,
-      symKey,
-      relayUrl,
-    });
-    try {
-      this.client.logger.info(
-        `[Push] Engine.onPushResponse > POST to Cast Server at ${reqUrl} with body ${bodyString}`
-      );
-
-      const res = await fetch(reqUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: bodyString,
-      });
-
-      this.client.logger.info(
-        `[Push] Engine.onPushResponse > POST to Cast Server at ${reqUrl} returned ${res.status} - ${res.statusText}`
-      );
-    } catch (error: any) {
-      this.client.logger.error(
-        `[Push] Could not register push subscription on Cast Server via POST with body: ${bodyString} to ${reqUrl}: ${error.message}`
-      );
-    }
-  };
-
-  private isInitialized() {
-    if (!this.initialized) {
-      const { message } = getInternalError("NOT_INITIALIZED", this.name);
-      throw new Error(message);
-    }
-  }
 
   // ---------- Relay Events Router ----------------------------------- //
 
@@ -488,7 +472,7 @@ export class PushEngine extends IPushEngine {
     }
 
     // Clean up the original request regardless of concrete result.
-    this.deleteRequest(response.id);
+    this.cleanupRequest(response.id);
   };
 
   protected onPushMessageRequest: IPushEngine["onPushMessageRequest"] = async (
@@ -507,7 +491,11 @@ export class PushEngine extends IPushEngine {
     await (this.client as IWalletClient).messages.update(topic, {
       messages: {
         ...currentMessages,
-        [payload.id]: payload.params,
+        [payload.id]: {
+          id: payload.id,
+          topic,
+          message: payload.params,
+        },
       },
     });
     await this.sendResult<"wc_pushMessage">(payload.id, topic, true);
@@ -542,7 +530,7 @@ export class PushEngine extends IPushEngine {
     const { id } = payload;
     try {
       await this.sendResult<"wc_pushDelete">(id, topic, true);
-      await this.deleteSubscription(topic);
+      await this.cleanupSubscription(topic);
       this.client.events.emit("push_delete", { id, topic });
     } catch (err: any) {
       await this.sendError(id, topic, err);
@@ -563,7 +551,7 @@ export class PushEngine extends IPushEngine {
         const { id } = parseExpirerTarget(event.target);
 
         if (id) {
-          await this.deleteRequest(id, true);
+          await this.cleanupRequest(id, true);
           this.client.events.emit("request_expire", { id });
         }
       }
@@ -572,7 +560,14 @@ export class PushEngine extends IPushEngine {
 
   // ---------- Private Helpers --------------------------------- //
 
-  private deleteRequest = async (id: number, expirerHasDeleted?: boolean) => {
+  private isInitialized() {
+    if (!this.initialized) {
+      const { message } = getInternalError("NOT_INITIALIZED", this.name);
+      throw new Error(message);
+    }
+  }
+
+  private cleanupRequest = async (id: number, expirerHasDeleted?: boolean) => {
     await Promise.all([
       this.client.requests.delete(id, {
         code: -1,
@@ -582,7 +577,7 @@ export class PushEngine extends IPushEngine {
     ]);
   };
 
-  private deleteSubscription = async (topic: string) => {
+  private cleanupSubscription = async (topic: string) => {
     // Await the unsubscribe first to avoid deleting the symKey too early below.
     await this.client.core.relayer.unsubscribe(topic);
     await Promise.all([
@@ -598,5 +593,37 @@ export class PushEngine extends IPushEngine {
         : Promise.resolve(),
       this.client.core.crypto.deleteSymKey(topic),
     ]);
+  };
+
+  private registerOnCastServer = async (account: string, symKey: string) => {
+    const castUrl = (this.client as IDappClient).castUrl;
+    const reqUrl = castUrl + `/${this.client.core.projectId}/register`;
+    const relayUrl = this.client.core.relayUrl || DEFAULT_RELAY_SERVER_URL;
+    const bodyString = JSON.stringify({
+      account,
+      symKey,
+      relayUrl,
+    });
+    try {
+      this.client.logger.info(
+        `[Push] Engine.onPushResponse > POST to Cast Server at ${reqUrl} with body ${bodyString}`
+      );
+
+      const res = await fetch(reqUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: bodyString,
+      });
+
+      this.client.logger.info(
+        `[Push] Engine.onPushResponse > POST to Cast Server at ${reqUrl} returned ${res.status} - ${res.statusText}`
+      );
+    } catch (error: any) {
+      this.client.logger.error(
+        `[Push] Could not register push subscription on Cast Server via POST with body: ${bodyString} to ${reqUrl}: ${error.message}`
+      );
+    }
   };
 }

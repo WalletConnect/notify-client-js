@@ -60,7 +60,9 @@ export abstract class IPushEngine {
   // get all messages for a subscription
   public abstract getMessageHistory(params: {
     topic: string;
-  }): Record<number, PushClientTypes.PushMessage>;
+  }): Record<number, PushClientTypes.PushMessageRecord>;
+
+  public abstract deletePushMessage(params: { id: number }): void;
 
   // ---------- Public Methods (common) --------------------------------- //
 
@@ -71,7 +73,7 @@ export abstract class IPushEngine {
   >;
 
   // delete active subscription
-  public abstract delete(params: { topic: string }): Promise<void>;
+  public abstract deleteSubscription(params: { topic: string }): Promise<void>;
 
   // ---------- Protected Helpers --------------------------------------- //
 

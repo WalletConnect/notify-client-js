@@ -109,9 +109,11 @@ export class DappClient extends IDappClient {
     }
   };
 
-  public delete: IDappClient["delete"] = async (params) => {
+  public deleteSubscription: IDappClient["deleteSubscription"] = async (
+    params
+  ) => {
     try {
-      return await this.engine.delete(params);
+      return await this.engine.deleteSubscription(params);
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;
