@@ -285,6 +285,38 @@ export class PushEngine extends IPushEngine {
     return payload.id;
   };
 
+  private registerOnCastServer = async (account: string, symKey: string) => {
+    const castUrl = (this.client as IDappClient).castUrl;
+    const reqUrl = castUrl + `/${this.client.core.projectId}/register`;
+    const relayUrl = this.client.core.relayUrl || DEFAULT_RELAY_SERVER_URL;
+    const bodyString = JSON.stringify({
+      account,
+      symKey,
+      relayUrl,
+    });
+    try {
+      this.client.logger.info(
+        `[Push] Engine.onPushResponse > POST to Cast Server at ${reqUrl} with body ${bodyString}`
+      );
+
+      const res = await fetch(reqUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: bodyString,
+      });
+
+      this.client.logger.info(
+        `[Push] Engine.onPushResponse > POST to Cast Server at ${reqUrl} returned ${res.status} - ${res.statusText}`
+      );
+    } catch (error: any) {
+      this.client.logger.error(
+        `[Push] Could not register push subscription on Cast Server via POST with body: ${bodyString} to ${reqUrl}: ${error.message}`
+      );
+    }
+  };
+
   private isInitialized() {
     if (!this.initialized) {
       const { message } = getInternalError("NOT_INITIALIZED", this.name);
@@ -419,36 +451,7 @@ export class PushEngine extends IPushEngine {
         `[Push] Engine.onPushResponse > derived pushTopic ${pushTopic} from symKey: ${symKey}`
       );
 
-      const castUrl = (this.client as IDappClient).castUrl;
-      const reqUrl = castUrl + `/${this.client.core.projectId}/register`;
-      const bodyString = JSON.stringify({
-        account: request.account,
-        symKey,
-        relayUrl: this.client.core.relayUrl || DEFAULT_RELAY_SERVER_URL,
-      });
-      try {
-        this.client.logger.info(
-          `[Push] Engine.onPushResponse > POST to Cast Server at ${reqUrl} with body ${bodyString}`
-        );
-
-        await fetch(reqUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: bodyString,
-        });
-
-        this.client.logger.info(
-          `[Push] Engine.onPushResponse > POST to Cast Server at ${reqUrl} returned ${JSON.stringify(
-            response
-          )}`
-        );
-      } catch (error: any) {
-        this.client.logger.error(
-          `[Push] Could not register push subscription on Cast Server via POST with body: ${bodyString} to ${reqUrl}: ${error.message}`
-        );
-      }
+      await this.registerOnCastServer(request.account, symKey);
 
       // DappClient subscribes to pushTopic.
       await this.client.core.relayer.subscribe(pushTopic);
