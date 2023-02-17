@@ -107,8 +107,8 @@ export class PushEngine extends IPushEngine {
       `[Push] Engine.approve > generating shared key from selfPublicKey ${selfPublicKey} and proposer publicKey ${request.publicKey}`
     );
 
-    // SPEC: Wallet derives symmetric key from keys X and Y
-    // SPEC: Push topic is derived from sha256 hash of symmetric key
+    // SPEC: Wallet derives symmetric key from keys X and Y.
+    // SPEC: Push topic is derived from sha256 hash of symmetric key.
     // `crypto.generateSharedKey` returns the sha256 hash of the symmetric key, i.e. the push topic.
     const pushTopic = await this.client.core.crypto.generateSharedKey(
       selfPublicKey,
@@ -322,7 +322,8 @@ export class PushEngine extends IPushEngine {
       case "wc_pushRequest":
         return this.onPushRequest(topic, payload);
       case "wc_pushMessage":
-        // If dapp, ignore `wc_pushMessage` requests being broadcast to all by Cast server.
+        // `wc_pushMessage` requests being broadcast to all subscribers
+        // by Cast server should only be handled by the wallet client.
         return this.client instanceof IWalletClient
           ? this.onPushMessageRequest(topic, payload)
           : null;
@@ -405,8 +406,8 @@ export class PushEngine extends IPushEngine {
         `[Push] Engine.onPushResponse > generating shared key from selfPublicKey ${selfPublicKey} and responder publicKey ${result.publicKey}`
       );
 
-      // SPEC: Wallet derives symmetric key from keys X and Y
-      // SPEC: Push topic is derived from sha256 hash of symmetric key
+      // SPEC: Wallet derives symmetric key from keys X and Y.
+      // SPEC: Push topic is derived from sha256 hash of symmetric key.
       // `crypto.generateSharedKey` returns the sha256 hash of the symmetric key, i.e. the push topic.
       const pushTopic = await this.client.core.crypto.generateSharedKey(
         selfPublicKey,
