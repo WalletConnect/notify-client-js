@@ -119,6 +119,15 @@ export class WalletClient extends IWalletClient {
     }
   };
 
+  public deletePushMessage: IWalletClient["deletePushMessage"] = (params) => {
+    try {
+      return this.engine.deletePushMessage(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   public getActiveSubscriptions: IWalletClient["getActiveSubscriptions"] =
     () => {
       try {
@@ -129,9 +138,11 @@ export class WalletClient extends IWalletClient {
       }
     };
 
-  public delete: IWalletClient["delete"] = async (params) => {
+  public deleteSubscription: IWalletClient["deleteSubscription"] = async (
+    params
+  ) => {
     try {
-      return await this.engine.delete(params);
+      return await this.engine.deleteSubscription(params);
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;

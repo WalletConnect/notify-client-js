@@ -168,12 +168,13 @@ describe("DappClient", () => {
       await dapp.notify({ topic, message });
       await waitForEvent(() => gotPushMessage);
 
+      // Check that event is as expected.
       expect(pushMessageEvent.params.message).to.deep.equal(message);
 
       // Check that wallet is in expected state.
       expect(wallet.messages.values.length).toBe(1);
       expect(
-        wallet.messages.values[0].messages[pushMessageEvent.id]
+        wallet.messages.values[0].messages[pushMessageEvent.id].message
       ).to.deep.equal(message);
     });
   });
@@ -343,6 +344,79 @@ describe("WalletClient", () => {
       expect(decryptedMessage).toBe(plaintextMessage);
     });
   });
+
+  describe("getMessageHistory", async () => {
+    it("can get message history for a known push topic", async () => {
+      let receivedMessageCount = 0;
+      let pushMessageEvent: any;
+
+      await createPushSubscription(dapp, wallet);
+      const [subscription] = dapp.subscriptions.getAll();
+      const { topic } = subscription;
+      const message1 = {
+        title: "Test Push 1",
+        body: "This is a test push notification",
+        icon: "xyz.png",
+        url: "https://walletconnect.com",
+      };
+      const message2 = {
+        title: "Test Push 2",
+        body: "This is a test push notification",
+        icon: "xyz.png",
+        url: "https://walletconnect.com",
+      };
+
+      wallet.on("push_message", (event) => {
+        receivedMessageCount++;
+        pushMessageEvent = event;
+      });
+
+      await dapp.notify({ topic, message: message1 });
+      await dapp.notify({ topic, message: message2 });
+      await waitForEvent(() => receivedMessageCount === 2);
+
+      const messageHistory = wallet.getMessageHistory({ topic });
+
+      expect(Object.keys(messageHistory).length).toBe(2);
+      expect(
+        Object.values(messageHistory).map(({ message }) => message)
+      ).to.deep.equal([message1, message2]);
+    });
+  });
+
+  describe("deletePushMessage", async () => {
+    it("deletes the push message associated with the provided `id`", async () => {
+      let receivedMessageCount = 0;
+      let pushMessageEvent: any;
+
+      await createPushSubscription(dapp, wallet);
+      const [subscription] = dapp.subscriptions.getAll();
+      const { topic } = subscription;
+      const message = {
+        title: "Test Push",
+        body: "This is a test push notification",
+        icon: "xyz.png",
+        url: "https://walletconnect.com",
+      };
+
+      wallet.on("push_message", (event) => {
+        receivedMessageCount++;
+        pushMessageEvent = event;
+      });
+
+      await dapp.notify({ topic, message });
+      await waitForEvent(() => receivedMessageCount === 1);
+
+      const messages = Object.values(wallet.messages.get(topic).messages);
+
+      expect(messages.length).toBe(1);
+
+      const targetMessageId = messages[0].id;
+      wallet.deletePushMessage({ id: targetMessageId });
+
+      expect(Object.values(wallet.messages.get(topic).messages).length).toBe(0);
+    });
+  });
 });
 
 describe("Common (BaseClient)", () => {
@@ -417,7 +491,7 @@ describe("Common (BaseClient)", () => {
     });
   });
 
-  describe("delete", () => {
+  describe("deleteSubscription", () => {
     it("can delete a currently active push subscription", async () => {
       const pairingTopic = await setupKnownPairing(wallet, dapp);
       let gotPushRequest = false;
@@ -461,7 +535,7 @@ describe("Common (BaseClient)", () => {
         pushDeleteEvent = event;
       });
 
-      await wallet.delete({ topic: walletSubscriptionTopic });
+      await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
       await waitForEvent(() => gotPushDelete);
 
       // Check that wallet is in expected state.

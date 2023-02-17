@@ -80,6 +80,12 @@ export declare namespace PushClientTypes {
     icon: string;
     url: string;
   }
+
+  interface PushMessageRecord {
+    id: number;
+    topic: string;
+    message: PushMessage;
+  }
 }
 
 export abstract class IBaseClient {
@@ -103,7 +109,7 @@ export abstract class IBaseClient {
   // ---------- Public Methods (common) ----------------------------------------------- //
 
   public abstract getActiveSubscriptions: IPushEngine["getActiveSubscriptions"];
-  public abstract delete: IPushEngine["delete"];
+  public abstract deleteSubscription: IPushEngine["deleteSubscription"];
 
   // ---------- Event Handlers ----------------------------------------------- //
 
