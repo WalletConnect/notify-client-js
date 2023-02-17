@@ -10,7 +10,11 @@ import {
 } from "../src/";
 import { disconnectSocket } from "./helpers/ws";
 
-global.fetch = vi.fn();
+// @ts-expect-error
+global.fetch = vi.fn(async () => ({
+  status: 201,
+  statusText: "Created",
+}));
 
 const dappMetadata = {
   name: "dapp (requester)",
