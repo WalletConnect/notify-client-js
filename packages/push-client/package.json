@@ -30,9 +30,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@walletconnect/core": "2.2.1",
+    "@walletconnect/core": "2.4.4",
     "@walletconnect/jsonrpc-utils": "^1.0.4",
-    "@walletconnect/types": "2.2.1",
-    "@walletconnect/utils": "2.2.1"
+    "@walletconnect/types": "2.4.4",
+    "@walletconnect/utils": "2.4.4"
   }
 }
