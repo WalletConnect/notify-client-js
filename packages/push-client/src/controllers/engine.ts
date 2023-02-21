@@ -444,6 +444,7 @@ export class PushEngine extends IPushEngine {
         topic: pushTopic,
         account: request.account,
         relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
+        metadata: request.metadata,
       };
 
       // Store the new PushSubscription.

@@ -71,7 +71,7 @@ export declare namespace PushClientTypes {
     topic: string;
     account: string;
     relay: RelayerTypes.ProtocolOptions;
-    metadata?: Metadata;
+    metadata: Metadata;
   }
 
   interface PushMessage {
