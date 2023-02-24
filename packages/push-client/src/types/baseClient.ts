@@ -85,6 +85,7 @@ export declare namespace PushClientTypes {
     id: number;
     topic: string;
     message: PushMessage;
+    publishedAt: number;
   }
 }
 

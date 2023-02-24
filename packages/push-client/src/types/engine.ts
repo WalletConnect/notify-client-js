@@ -21,6 +21,7 @@ export declare namespace PushEngineTypes {
   interface EventCallback<T extends JsonRpcRequest | JsonRpcResponse> {
     topic: string;
     payload: T;
+    publishedAt: number;
   }
 }
 
@@ -126,7 +127,8 @@ export abstract class IPushEngine {
 
   protected abstract onPushMessageRequest(
     topic: string,
-    payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_pushMessage"]>
+    payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_pushMessage"]>,
+    publishedAt: number
   ): Promise<void>;
 
   protected abstract onPushMessageResponse(

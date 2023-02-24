@@ -314,15 +314,15 @@ export class PushEngine extends IPushEngine {
     this.client.core.relayer.on(
       RELAYER_EVENTS.message,
       async (event: RelayerTypes.MessageEvent) => {
-        const { topic, message } = event;
+        const { topic, message, publishedAt } = event;
         const payload = await this.client.core.crypto.decode(topic, message);
 
         if (isJsonRpcRequest(payload)) {
           this.client.core.history.set(topic, payload);
-          this.onRelayEventRequest({ topic, payload });
+          this.onRelayEventRequest({ topic, payload, publishedAt });
         } else if (isJsonRpcResponse(payload)) {
           await this.client.core.history.resolve(payload);
-          this.onRelayEventResponse({ topic, payload });
+          this.onRelayEventResponse({ topic, payload, publishedAt });
         }
       }
     );
@@ -331,7 +331,7 @@ export class PushEngine extends IPushEngine {
   protected onRelayEventRequest: IPushEngine["onRelayEventRequest"] = (
     event
   ) => {
-    const { topic, payload } = event;
+    const { topic, payload, publishedAt } = event;
     const reqMethod = payload.method as JsonRpcTypes.WcMethod;
 
     switch (reqMethod) {
@@ -341,7 +341,7 @@ export class PushEngine extends IPushEngine {
         // `wc_pushMessage` requests being broadcast to all subscribers
         // by Cast server should only be handled by the wallet client.
         return this.client instanceof IWalletClient
-          ? this.onPushMessageRequest(topic, payload)
+          ? this.onPushMessageRequest(topic, payload, publishedAt)
           : null;
       case "wc_pushDelete":
         return this.onPushDeleteRequest(topic, payload);
@@ -478,7 +478,8 @@ export class PushEngine extends IPushEngine {
 
   protected onPushMessageRequest: IPushEngine["onPushMessageRequest"] = async (
     topic,
-    payload
+    payload,
+    publishedAt
   ) => {
     this.client.logger.info(
       "[Push] Engine.onPushMessageRequest",
@@ -496,6 +497,7 @@ export class PushEngine extends IPushEngine {
           id: payload.id,
           topic,
           message: payload.params,
+          publishedAt,
         },
       },
     });

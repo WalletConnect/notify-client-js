@@ -348,7 +348,6 @@ describe("WalletClient", () => {
   describe("getMessageHistory", async () => {
     it("can get message history for a known push topic", async () => {
       let receivedMessageCount = 0;
-      let pushMessageEvent: any;
 
       await createPushSubscription(dapp, wallet);
       const [subscription] = dapp.subscriptions.getAll();
@@ -366,9 +365,8 @@ describe("WalletClient", () => {
         url: "https://walletconnect.com",
       };
 
-      wallet.on("push_message", (event) => {
+      wallet.on("push_message", () => {
         receivedMessageCount++;
-        pushMessageEvent = event;
       });
 
       await dapp.notify({ topic, message: message1 });
@@ -376,11 +374,18 @@ describe("WalletClient", () => {
       await waitForEvent(() => receivedMessageCount === 2);
 
       const messageHistory = wallet.getMessageHistory({ topic });
+      const sortedHistory = Object.values(messageHistory).sort(
+        (a, b) => a.publishedAt - b.publishedAt
+      );
 
-      expect(Object.keys(messageHistory).length).toBe(2);
-      expect(
-        Object.values(messageHistory).map(({ message }) => message)
-      ).to.deep.equal([message1, message2]);
+      expect(sortedHistory.length).toBe(2);
+      expect(sortedHistory[0].id).toBeDefined();
+      expect(sortedHistory[0].topic).toBeDefined();
+      expect(sortedHistory[0].publishedAt).toBeDefined();
+      expect(sortedHistory.map(({ message }) => message)).to.deep.equal([
+        message1,
+        message2,
+      ]);
     });
   });
 
