@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@walletconnect/core": "2.5.1",
+    "@walletconnect/did-jwt": "1.0.0",
     "@walletconnect/jsonrpc-utils": "1.0.6",
     "@walletconnect/types": "2.5.1",
     "@walletconnect/utils": "2.5.1"
