@@ -2,7 +2,15 @@ import { IStore } from "@walletconnect/types";
 import { IPushEngine } from "./engine";
 import { IBaseClient, PushClientTypes } from "./baseClient";
 
+export interface IdentityKeychain {
+  accountId: string;
+  identityKeyPub: string;
+  identityKeyPriv: string;
+}
+
 export abstract class IWalletClient extends IBaseClient {
+  public abstract readonly keyserverUrl: string;
+
   public abstract messages: IStore<
     string,
     {
@@ -10,6 +18,7 @@ export abstract class IWalletClient extends IBaseClient {
       messages: Record<number, PushClientTypes.PushMessageRecord>;
     }
   >;
+  public abstract identityKeys: IStore<string, IdentityKeychain>;
 
   constructor(public opts: PushClientTypes.WalletClientOptions) {
     super();

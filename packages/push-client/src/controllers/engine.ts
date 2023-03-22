@@ -16,9 +16,13 @@ import {
 import { ExpirerTypes, RelayerTypes } from "@walletconnect/types";
 import {
   calcExpiry,
+  generateRandomBytes32,
   getInternalError,
   parseExpirerTarget,
 } from "@walletconnect/utils";
+import { composeDidPkh, encodeEd25519Key } from "@walletconnect/did-jwt";
+import { Cacao, formatMessage } from "@walletconnect/cacao";
+import * as ed25519 from "@noble/ed25519";
 
 import {
   DEFAULT_RELAY_SERVER_URL,
@@ -34,8 +38,9 @@ import {
 } from "../types";
 
 export class PushEngine extends IPushEngine {
-  private initialized = false;
   public name = "pushEngine";
+
+  private initialized = false;
 
   constructor(client: IPushEngine["client"]) {
     super(client);
@@ -95,10 +100,13 @@ export class PushEngine extends IPushEngine {
 
   // ---------- Public (Wallet) --------------------------------------- //
 
-  public approve: IPushEngine["approve"] = async ({ id }) => {
+  public approve: IPushEngine["approve"] = async ({ id, onSign }) => {
     this.isInitialized();
 
     const { topic: pairingTopic, request } = this.client.requests.get(id);
+
+    // Retrieve existing identity or register a new one for this account on this device.
+    const identityKey = await this.registerIdentity(request.account, onSign);
 
     // SPEC: Wallet generates key pair Y
     const selfPublicKey = await this.client.core.crypto.generateKeyPair();
@@ -627,6 +635,104 @@ export class PushEngine extends IPushEngine {
       this.client.logger.error(
         `[Push] Could not register push subscription on Cast Server via POST with body: ${bodyString} to ${reqUrl}: ${error.message}`
       );
+    }
+  };
+
+  private generateIdentityKey = async () => {
+    const privateKey = ed25519.utils.randomPrivateKey();
+    const publicKey = await ed25519.getPublicKey(privateKey);
+    const pubKeyHex = ed25519.utils.bytesToHex(publicKey).toLowerCase();
+    const privKeyHex = ed25519.utils.bytesToHex(privateKey).toLowerCase();
+
+    this.client.core.crypto.keychain.set(pubKeyHex, privKeyHex);
+
+    return [pubKeyHex, privKeyHex];
+  };
+
+  private registerIdentity = async (
+    accountId: string,
+    onSign: (message: string) => Promise<string>
+  ): Promise<string> => {
+    try {
+      const storedKeyPair = (this.client as IWalletClient).identityKeys.get(
+        accountId
+      );
+      this.client.logger.info(
+        `[Push] Engine.registerIdentity > Found stored identityKey for ${accountId}: ${storedKeyPair.identityKeyPub}`
+      );
+      return storedKeyPair.identityKeyPub;
+    } catch {
+      const keyserverUrl = (this.client as IWalletClient).keyserverUrl;
+      const [pubKeyHex, privKeyHex] = await this.generateIdentityKey();
+      const didKey = encodeEd25519Key(pubKeyHex);
+
+      const cacao: Cacao = {
+        h: {
+          t: "eip4361",
+        },
+        p: {
+          aud: keyserverUrl,
+          domain: keyserverUrl,
+          iss: composeDidPkh(accountId),
+          nonce: generateRandomBytes32(),
+          iat: new Date().toISOString(),
+          version: "1",
+          resources: [didKey],
+        },
+        s: {
+          t: "eip191",
+          s: "",
+        },
+      };
+
+      const cacaoMessage = formatMessage(cacao.p, composeDidPkh(accountId));
+
+      this.client.logger.info(
+        `[Push] Engine.registerIdentity > Awaiting signature for cacao: ${JSON.stringify(
+          cacao
+        )}`
+      );
+      const signature = await onSign(cacaoMessage);
+
+      this.client.logger.info(
+        `[Push] Engine.registerIdentity > Got signature: ${signature}`
+      );
+
+      // Storing keys after signature creation to prevent having false statement
+      // Eg, onSign failing / never resolving but having identity keys stored.
+      (this.client as IWalletClient).identityKeys.set(accountId, {
+        accountId,
+        identityKeyPriv: privKeyHex,
+        identityKeyPub: pubKeyHex,
+      });
+
+      this.client.logger.info(
+        `[Push] Engine.registerIdentity > Registering on keyserver ${keyserverUrl}...`
+      );
+
+      const res = await fetch(`${keyserverUrl}/identity`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cacao: {
+            ...cacao,
+            s: {
+              ...cacao.s,
+              s: signature,
+            },
+          },
+        }),
+      });
+
+      if (res.status === 200) {
+        this.client.logger.info(
+          `[Push] Engine.registerIdentity > Registered on keyserver ${keyserverUrl}, didKey: ${didKey}`
+        );
+        return didKey;
+      }
+      throw new Error(`Failed to register on keyserver ${res.status}`);
     }
   };
 }

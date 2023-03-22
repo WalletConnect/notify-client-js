@@ -30,6 +30,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
+    "@noble/ed25519": "^1.7.3",
+    "@walletconnect/cacao": "^1.0.1",
     "@walletconnect/core": "2.5.1",
     "@walletconnect/did-jwt": "1.0.0",
     "@walletconnect/jsonrpc-utils": "1.0.6",

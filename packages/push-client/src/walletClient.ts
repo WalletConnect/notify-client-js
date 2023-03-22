@@ -8,8 +8,9 @@ import {
 import { EventEmitter } from "events";
 
 import { PushEngine } from "./controllers";
-import { IWalletClient, PushClientTypes } from "./types";
+import { IdentityKeychain, IWalletClient, PushClientTypes } from "./types";
 import {
+  DEFAULT_KEYSERVER_URL,
   PUSH_CLIENT_PROTOCOL,
   PUSH_CLIENT_STORAGE_PREFIX,
   PUSH_CLIENT_VERSION,
@@ -20,6 +21,7 @@ export class WalletClient extends IWalletClient {
   public readonly protocol = PUSH_CLIENT_PROTOCOL;
   public readonly version = PUSH_CLIENT_VERSION;
   public readonly name: IWalletClient["name"] = PUSH_WALLET_CLIENT_DEFAULT_NAME;
+  public readonly keyserverUrl: IWalletClient["keyserverUrl"];
 
   public core: IWalletClient["core"];
   public logger: IWalletClient["logger"];
@@ -28,6 +30,7 @@ export class WalletClient extends IWalletClient {
   public requests: IWalletClient["requests"];
   public subscriptions: IWalletClient["subscriptions"];
   public messages: IWalletClient["messages"];
+  public identityKeys: IWalletClient["identityKeys"];
 
   static async init(opts: PushClientTypes.WalletClientOptions) {
     const client = new WalletClient(opts);
@@ -50,6 +53,7 @@ export class WalletClient extends IWalletClient {
             })
           );
 
+    this.keyserverUrl = opts?.keyserverUrl ?? DEFAULT_KEYSERVER_URL;
     this.core = opts.core || new Core(opts);
     this.logger = generateChildLogger(logger, this.name);
     this.requests = new Store(
@@ -70,6 +74,14 @@ export class WalletClient extends IWalletClient {
       "messages",
       PUSH_CLIENT_STORAGE_PREFIX
     );
+    this.identityKeys = new Store(
+      this.core,
+      this.logger,
+      "identityKeys",
+      PUSH_CLIENT_STORAGE_PREFIX,
+      (keys: IdentityKeychain) => keys.accountId
+    );
+
     this.engine = new PushEngine(this);
   }
 
