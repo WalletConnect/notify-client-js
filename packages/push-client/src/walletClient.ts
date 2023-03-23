@@ -192,6 +192,7 @@ export class WalletClient extends IWalletClient {
       await this.requests.init();
       await this.subscriptions.init();
       await this.messages.init();
+      await this.identityKeys.init();
       await this.engine.init();
       this.logger.info(`PushWalletClient Initialization Success`);
     } catch (error: any) {
