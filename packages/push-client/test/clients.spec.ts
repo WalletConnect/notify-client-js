@@ -23,6 +23,11 @@ const dappMetadata = {
   icons: [],
 };
 
+const onSignMock = () =>
+  Promise.resolve(
+    "0x5cf19252d326699e9078686035cf8cb020aadf15cb817bb56bcd5605dc0068c15ebdd3230de9b61ab7973d0346b5933f0b0206894b1f6e4af4e2eb8162c52c1d1c"
+  );
+
 const setupKnownPairing = async (
   clientA: IWalletClient | IDappClient,
   clientB: IWalletClient | IDappClient
@@ -63,7 +68,7 @@ const createPushSubscription = async (
 
   await waitForEvent(() => gotPushRequest);
 
-  await wallet.approve({ id });
+  await wallet.approve({ id, onSign: onSignMock });
   await waitForEvent(() => gotResponse);
 };
 
@@ -245,7 +250,7 @@ describe("WalletClient", () => {
         responseEvent = event;
       });
 
-      await wallet.approve({ id });
+      await wallet.approve({ id, onSign: onSignMock });
       await waitForEvent(() => gotResponse);
 
       expect(responseEvent.params.subscription.topic).toBeDefined();
@@ -328,7 +333,7 @@ describe("WalletClient", () => {
         responseEvent = event;
       });
 
-      await wallet.approve({ id });
+      await wallet.approve({ id, onSign: onSignMock });
       await waitForEvent(() => gotResponse);
 
       const plaintextMessage = "this is a test for decryptMessage";
@@ -477,7 +482,7 @@ describe("Common (BaseClient)", () => {
         responseEvent = event;
       });
 
-      await wallet.approve({ id });
+      await wallet.approve({ id, onSign: onSignMock });
       await waitForEvent(() => gotResponse);
 
       expect(responseEvent.params.subscription.topic).toBeDefined();
@@ -523,7 +528,7 @@ describe("Common (BaseClient)", () => {
         responseEvent = event;
       });
 
-      await wallet.approve({ id });
+      await wallet.approve({ id, onSign: onSignMock });
       await waitForEvent(() => gotResponse);
 
       expect(responseEvent.params.subscription.topic).toBeDefined();
