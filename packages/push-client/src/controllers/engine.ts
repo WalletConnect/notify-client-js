@@ -726,13 +726,16 @@ export class PushEngine extends IPushEngine {
         }),
       });
 
-      if (res.status === 200 || res.status === 201) {
+      if (res.status !== 200 && res.status !== 201) {
+        throw new Error(
+          `[Push] Engine.registerIdentity > Failed to register on keyserver ${res.status}`
+        );
+      }
+
         this.client.logger.info(
           `[Push] Engine.registerIdentity > Registered on keyserver ${keyserverUrl}, didKey: ${didKey}`
         );
         return didKey;
-      }
-      throw new Error(`Failed to register on keyserver ${res.status}`);
     }
   };
 }
