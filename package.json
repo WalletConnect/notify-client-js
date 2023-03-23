@@ -18,7 +18,8 @@
     "test": "npm run test --workspaces",
     "test:watch": "npm run test:watch --workspaces",
     "npm-publish": "npm publish --access public --workspaces",
-    "npm-publish:canary": "npm publish --access public --tag canary --workspaces"
+    "npm-publish:canary": "npm publish --access public --tag canary --workspaces",
+    "npm-publish:experimental": "npm publish --access public --tag experimental --workspaces"
   },
   "repository": {
     "type": "git",
