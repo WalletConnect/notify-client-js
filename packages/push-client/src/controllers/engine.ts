@@ -20,7 +20,13 @@ import {
   getInternalError,
   parseExpirerTarget,
 } from "@walletconnect/utils";
-import { composeDidPkh, encodeEd25519Key } from "@walletconnect/did-jwt";
+import {
+  composeDidPkh,
+  encodeEd25519Key,
+  generateJWT,
+  jwtExp,
+  JwtPayload,
+} from "@walletconnect/did-jwt";
 import { Cacao, formatMessage } from "@walletconnect/cacao";
 import * as ed25519 from "@noble/ed25519";
 
@@ -106,7 +112,16 @@ export class PushEngine extends IPushEngine {
     const { topic: pairingTopic, request } = this.client.requests.get(id);
 
     // Retrieve existing identity or register a new one for this account on this device.
-    const identityKey = await this.registerIdentity(request.account, onSign);
+    await this.registerIdentity(request.account, onSign);
+
+    const subscriptionAuth = await this.generateSubscriptionAuth(
+      request.account,
+      request.metadata.url
+    );
+
+    this.client.logger.debug(
+      `[Push] Engine.approve > generated subscriptionAuth: ${subscriptionAuth}`
+    );
 
     // SPEC: Wallet generates key pair Y
     const selfPublicKey = await this.client.core.crypto.generateKeyPair();
@@ -649,6 +664,30 @@ export class PushEngine extends IPushEngine {
     return [pubKeyHex, privKeyHex];
   };
 
+  private generateSubscriptionAuth = (accountId: string, dappUrl: string) => {
+    const { identityKeyPub, identityKeyPriv } = (
+      this.client as IWalletClient
+    ).identityKeys.get(accountId);
+
+    const issuedAt = Math.round(Date.now() / 1000);
+    const payload: JwtPayload = {
+      iat: issuedAt,
+      exp: jwtExp(issuedAt),
+      iss: encodeEd25519Key(identityKeyPub),
+      sub: composeDidPkh(accountId),
+      aud: dappUrl,
+      ksu: (this.client as IWalletClient).keyserverUrl,
+    };
+
+    this.client.logger.info(
+      `[Push] Engine.generateSubscriptionAuth > Generated subscriptionAuth JWT payload: ${JSON.stringify(
+        payload
+      )}`
+    );
+
+    return generateJWT([identityKeyPub, identityKeyPriv], payload);
+  };
+
   private registerIdentity = async (
     accountId: string,
     onSign: (message: string) => Promise<string>
@@ -732,10 +771,10 @@ export class PushEngine extends IPushEngine {
         );
       }
 
-        this.client.logger.info(
-          `[Push] Engine.registerIdentity > Registered on keyserver ${keyserverUrl}, didKey: ${didKey}`
-        );
-        return didKey;
+      this.client.logger.info(
+        `[Push] Engine.registerIdentity > Registered on keyserver ${keyserverUrl}, didKey: ${didKey}`
+      );
+      return didKey;
     }
   };
 }
