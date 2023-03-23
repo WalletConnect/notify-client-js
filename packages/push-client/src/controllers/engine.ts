@@ -726,7 +726,7 @@ export class PushEngine extends IPushEngine {
         }),
       });
 
-      if (res.status === 200) {
+      if (res.status === 200 || res.status === 201) {
         this.client.logger.info(
           `[Push] Engine.registerIdentity > Registered on keyserver ${keyserverUrl}, didKey: ${didKey}`
         );
