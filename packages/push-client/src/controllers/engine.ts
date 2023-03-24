@@ -73,6 +73,7 @@ export class PushEngine extends IPushEngine {
 
     // SPEC: Dapp generates public key X
     const publicKey = await this.client.core.crypto.generateKeyPair();
+    const responseTopic = hashKey(publicKey);
 
     // SPEC: Dapp sends push proposal on known pairing P
     const request = {
@@ -82,6 +83,12 @@ export class PushEngine extends IPushEngine {
     };
     const id = await this.sendRequest(pairingTopic, "wc_pushRequest", request);
 
+    this.client.logger.info(
+      `[Push] Engine.request > sent push subscription request on pairing ${pairingTopic} with id: ${id}. Request: ${JSON.stringify(
+        request
+      )}`
+    );
+
     // Store the push subscription request so we can later reference `publicKey` when we get a response.
     await this.client.requests.set(id, {
       topic: pairingTopic,
@@ -90,6 +97,13 @@ export class PushEngine extends IPushEngine {
 
     // Set the expiry for the push subscription request.
     this.client.core.expirer.set(id, calcExpiry(PUSH_REQUEST_EXPIRY));
+
+    // SPEC: Dapp subscribes to response topic, which is the sha256 hash of public key X
+    await this.client.core.relayer.subscribe(responseTopic);
+
+    this.client.logger.info(
+      `[Push] Engine.request > subscribed to response topic ${responseTopic}`
+    );
 
     return { id };
   };
