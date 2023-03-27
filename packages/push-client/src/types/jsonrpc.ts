@@ -26,6 +26,7 @@ export declare namespace JsonRpcTypes {
   export interface Results {
     wc_pushRequest: {
       publicKey: string;
+      subscriptionAuth: string;
     };
     wc_pushMessage: true;
     wc_pushDelete: true;

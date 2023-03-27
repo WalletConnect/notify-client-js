@@ -8,7 +8,7 @@ import {
 import { EventEmitter } from "events";
 
 import { PushEngine } from "./controllers";
-import { IDappClient, PushClientTypes } from "./types";
+import { IDappClient, ProposalKeychain, PushClientTypes } from "./types";
 import {
   PUSH_DAPP_CLIENT_DEFAULT_NAME,
   PUSH_CLIENT_PROTOCOL,
@@ -30,6 +30,7 @@ export class DappClient extends IDappClient {
   public engine: IDappClient["engine"];
   public requests: IDappClient["requests"];
   public subscriptions: IDappClient["subscriptions"];
+  public proposalKeys: IDappClient["proposalKeys"];
 
   static async init(opts: PushClientTypes.DappClientOptions) {
     const client = new DappClient(opts);
@@ -68,6 +69,13 @@ export class DappClient extends IDappClient {
       this.logger,
       "subscriptions",
       PUSH_CLIENT_STORAGE_PREFIX
+    );
+    this.proposalKeys = new Store(
+      this.core,
+      this.logger,
+      "proposalKeys",
+      PUSH_CLIENT_STORAGE_PREFIX,
+      (keys: ProposalKeychain) => keys.responseTopic
     );
     this.engine = new PushEngine(this);
   }
@@ -150,6 +158,7 @@ export class DappClient extends IDappClient {
       await this.core.start();
       await this.requests.init();
       await this.subscriptions.init();
+      await this.proposalKeys.init();
       await this.engine.init();
       this.logger.info(`PushDappClient Initialization Success`);
     } catch (error: any) {

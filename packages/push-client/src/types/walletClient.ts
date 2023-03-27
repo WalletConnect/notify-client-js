@@ -18,7 +18,10 @@ export abstract class IWalletClient extends IBaseClient {
       messages: Record<number, PushClientTypes.PushMessageRecord>;
     }
   >;
-  public abstract identityKeys: IStore<string, IdentityKeychain>;
+  public abstract identityKeys: IStore<
+    IdentityKeychain["accountId"],
+    IdentityKeychain
+  >;
 
   constructor(public opts: PushClientTypes.WalletClientOptions) {
     super();
