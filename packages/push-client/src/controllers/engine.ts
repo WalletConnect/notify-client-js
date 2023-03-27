@@ -793,6 +793,7 @@ export class PushEngine extends IPushEngine {
         },
         p: {
           aud: keyserverUrl,
+          statement: "Test",
           domain: keyserverUrl,
           iss: composeDidPkh(accountId),
           nonce: generateRandomBytes32(),
