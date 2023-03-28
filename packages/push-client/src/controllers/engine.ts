@@ -384,11 +384,18 @@ export class PushEngine extends IPushEngine {
 
         // TODO: this needs better/safer handling logic, only try to get the key if TYPE_1 envelope.
         // We need to expose the validateDecoding functionality from crypto for this.
-        if (this.client instanceof IDappClient) {
+        if (
+          this.client instanceof IDappClient &&
+          this.client.proposalKeys.keys.includes(topic)
+        ) {
           try {
             const { proposalKeyPub } = this.client.proposalKeys.get(topic);
             receiverPublicKey = proposalKeyPub;
-          } catch (error) {}
+          } catch (error) {
+            this.client.logger.error(
+              `[Push] Engine > on RELAYER_EVENTS.message > Failed to get proposalKey for topic ${topic}: ${error}`
+            );
+          }
         }
 
         const payload = await this.client.core.crypto.decode(topic, message, {
