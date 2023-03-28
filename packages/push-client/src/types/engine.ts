@@ -22,6 +22,7 @@ export declare namespace PushEngineTypes {
     topic: string;
     payload: T;
     publishedAt: number;
+    senderPublicKey?: string;
   }
 }
 
@@ -125,7 +126,8 @@ export abstract class IPushEngine {
     topic: string,
     payload:
       | JsonRpcResult<JsonRpcTypes.Results["wc_pushRequest"]>
-      | JsonRpcError
+      | JsonRpcError,
+    senderPublicKey?: string
   ): void;
 
   protected abstract onPushMessageRequest(

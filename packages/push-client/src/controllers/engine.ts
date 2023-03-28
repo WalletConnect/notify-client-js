@@ -181,7 +181,6 @@ export class PushEngine extends IPushEngine {
       id,
       responseTopic,
       {
-        publicKey: selfPublicKey,
         subscriptionAuth,
       },
       {
@@ -398,16 +397,31 @@ export class PushEngine extends IPushEngine {
           }
         }
 
+        // Attempt to extract the encoded senderPublicKey from the message.
+        // Will only be defined if this is a TYPE_1 envelope message.
+        const senderPublicKey =
+          this.client.core.crypto.getPayloadSenderPublicKey(message);
+
         const payload = await this.client.core.crypto.decode(topic, message, {
           receiverPublicKey,
         });
 
         if (isJsonRpcRequest(payload)) {
           this.client.core.history.set(topic, payload);
-          this.onRelayEventRequest({ topic, payload, publishedAt });
+          this.onRelayEventRequest({
+            topic,
+            payload,
+            publishedAt,
+            senderPublicKey,
+          });
         } else if (isJsonRpcResponse(payload)) {
           await this.client.core.history.resolve(payload);
-          this.onRelayEventResponse({ topic, payload, publishedAt });
+          this.onRelayEventResponse({
+            topic,
+            payload,
+            publishedAt,
+            senderPublicKey,
+          });
         }
       }
     );
@@ -440,13 +454,13 @@ export class PushEngine extends IPushEngine {
   protected onRelayEventResponse: IPushEngine["onRelayEventResponse"] = async (
     event
   ) => {
-    const { topic, payload } = event;
+    const { topic, payload, senderPublicKey } = event;
     const record = await this.client.core.history.get(topic, payload.id);
     const resMethod = record.request.method as JsonRpcTypes.WcMethod;
 
     switch (resMethod) {
       case "wc_pushRequest":
-        return this.onPushResponse(topic, payload);
+        return this.onPushResponse(topic, payload, senderPublicKey);
       case "wc_pushMessage":
         return this.onPushMessageResponse(topic, payload);
       case "wc_pushDelete":
@@ -493,7 +507,8 @@ export class PushEngine extends IPushEngine {
 
   protected onPushResponse: IPushEngine["onPushResponse"] = async (
     topic,
-    response
+    response,
+    senderPublicKey
   ) => {
     this.client.logger.info("onPushResponse", topic, response);
 
@@ -508,7 +523,9 @@ export class PushEngine extends IPushEngine {
       }) as JwtPayload;
 
       if (!decodedPayload) {
-        throw new Error("Empty `subscriptionAuth` payload");
+        throw new Error(
+          "[Push] Engine.onPushResponse > Empty `subscriptionAuth` payload"
+        );
       }
 
       this.client.logger.info(
@@ -517,12 +534,18 @@ export class PushEngine extends IPushEngine {
         )}`
       );
 
+      if (!senderPublicKey) {
+        throw new Error(
+          "[Push] Engine.onPushResponse > Missing `senderPublicKey`, cannot derive shared key."
+        );
+      }
+
       // SPEC: Wallet derives symmetric key from keys X and Y.
       // SPEC: Push topic is derived from sha256 hash of symmetric key.
       // `crypto.generateSharedKey` returns the sha256 hash of the symmetric key, i.e. the push topic.
       const pushTopic = await this.client.core.crypto.generateSharedKey(
         selfPublicKey,
-        result.publicKey
+        senderPublicKey
       );
       const symKey = this.client.core.crypto.keychain.get(pushTopic);
 
