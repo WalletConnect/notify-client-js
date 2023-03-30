@@ -18,6 +18,7 @@ import {
   calcExpiry,
   getInternalError,
   parseExpirerTarget,
+  TYPE_1,
 } from "@walletconnect/utils";
 
 import {
@@ -315,6 +316,12 @@ export class PushEngine extends IPushEngine {
       RELAYER_EVENTS.message,
       async (event: RelayerTypes.MessageEvent) => {
         const { topic, message, publishedAt } = event;
+
+        // Ignoring TYPE_1 messages categorically for now until we have the new `subscriptionAuth` flow merged.
+        if (this.client.core.crypto.getPayloadType(message) === TYPE_1) {
+          return;
+        }
+
         const payload = await this.client.core.crypto.decode(topic, message);
 
         if (isJsonRpcRequest(payload)) {
