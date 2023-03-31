@@ -27,7 +27,7 @@
     "prettier:write": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}' --write",
     "test": "vitest run --dir test",
     "test:watch": "vitest watch --dir test",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run test && npm run build"
   },
   "dependencies": {
     "@noble/ed25519": "^1.7.3",
