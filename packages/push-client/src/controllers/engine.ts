@@ -378,11 +378,11 @@ export class PushEngine extends IPushEngine {
       RELAYER_EVENTS.message,
       async (event: RelayerTypes.MessageEvent) => {
         const { topic, message, publishedAt } = event;
+        const isType1Payload =
+          this.client.core.crypto.getPayloadType(message) === TYPE_1;
 
         let receiverPublicKey: string | undefined;
 
-        // TODO: this needs better/safer handling logic, only try to get the key if TYPE_1 envelope.
-        // We need to expose the validateDecoding functionality from crypto for this.
         if (
           this.client instanceof IDappClient &&
           this.client.proposalKeys.keys.includes(topic)
@@ -397,14 +397,21 @@ export class PushEngine extends IPushEngine {
           }
         }
 
-        // Attempt to extract the encoded senderPublicKey from the message.
-        // Will only be defined if this is a TYPE_1 envelope message.
-        const senderPublicKey =
-          this.client.core.crypto.getPayloadSenderPublicKey(message);
+        if (isType1Payload && !receiverPublicKey) {
+          this.client.logger.debug(
+            `[Push] Engine > on RELAYER_EVENTS.message > Skipping message on topic ${topic}, no receiverPublicKey found.`
+          );
+          return;
+        }
 
         const payload = await this.client.core.crypto.decode(topic, message, {
           receiverPublicKey,
         });
+
+        // Extract the encoded `senderPublicKey` if it's a TYPE_1 message.
+        const senderPublicKey = isType1Payload
+          ? this.client.core.crypto.getPayloadSenderPublicKey(message)
+          : undefined;
 
         if (isJsonRpcRequest(payload)) {
           this.client.core.history.set(topic, payload);
