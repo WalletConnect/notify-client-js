@@ -8,3 +8,5 @@ export const PUSH_CLIENT_STORAGE_PREFIX = `${PUSH_CLIENT_PROTOCOL}@${PUSH_CLIENT
 
 export const DEFAULT_CAST_SERVER_URL = "https://cast.walletconnect.com";
 export const DEFAULT_RELAY_SERVER_URL = "wss://relay.walletconnect.com";
+
+export const DEFAULT_KEYSERVER_URL = "https://keys.walletconnect.com";

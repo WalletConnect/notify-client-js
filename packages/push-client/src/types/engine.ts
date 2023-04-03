@@ -22,6 +22,7 @@ export declare namespace PushEngineTypes {
     topic: string;
     payload: T;
     publishedAt: number;
+    senderPublicKey?: string;
   }
 }
 
@@ -47,7 +48,10 @@ export abstract class IPushEngine {
   // ---------- Public Methods (wallet) --------------------------------- //
 
   // approve push subscription
-  public abstract approve(params: { id: number }): Promise<void>;
+  public abstract approve(params: {
+    id: number;
+    onSign: (message: string) => Promise<string>;
+  }): Promise<void>;
 
   // reject push subscription
   public abstract reject(params: { id: number; reason: string }): Promise<void>;
@@ -122,7 +126,8 @@ export abstract class IPushEngine {
     topic: string,
     payload:
       | JsonRpcResult<JsonRpcTypes.Results["wc_pushRequest"]>
-      | JsonRpcError
+      | JsonRpcError,
+    senderPublicKey?: string
   ): void;
 
   protected abstract onPushMessageRequest(

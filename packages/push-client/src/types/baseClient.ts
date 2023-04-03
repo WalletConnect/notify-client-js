@@ -48,6 +48,7 @@ export declare namespace PushClientTypes {
 
   interface WalletClientOptions extends CoreTypes.Options {
     core?: ICore;
+    keyserverUrl?: string;
   }
 
   interface Metadata {

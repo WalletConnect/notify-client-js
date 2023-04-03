@@ -25,17 +25,6 @@ export default function createConfig(packageName, packageDependencies) {
     {
       input,
       plugins,
-      output: {
-        file: "./dist/index.umd.js",
-        format: "umd",
-        exports: "named",
-        name: packageName,
-        sourcemap: true,
-      },
-    },
-    {
-      input,
-      plugins,
       external: packageDependencies,
       output: [
         {

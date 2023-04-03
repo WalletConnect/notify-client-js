@@ -27,12 +27,19 @@
     "prettier:write": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}' --write",
     "test": "vitest run --dir test",
     "test:watch": "vitest watch --dir test",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run test && npm run build"
   },
   "dependencies": {
-    "@walletconnect/core": "2.5.1",
+    "@noble/ed25519": "^1.7.3",
+    "@walletconnect/cacao": "^1.0.1",
+    "@walletconnect/core": "2.6.0",
+    "@walletconnect/did-jwt": "1.0.1",
     "@walletconnect/jsonrpc-utils": "1.0.6",
-    "@walletconnect/types": "2.5.1",
-    "@walletconnect/utils": "2.5.1"
+    "@walletconnect/types": "2.6.0",
+    "@walletconnect/utils": "2.6.0",
+    "jsonwebtoken": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.1"
   }
 }

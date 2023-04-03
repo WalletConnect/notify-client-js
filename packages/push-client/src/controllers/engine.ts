@@ -16,10 +16,22 @@ import {
 import { ExpirerTypes, RelayerTypes } from "@walletconnect/types";
 import {
   calcExpiry,
+  generateRandomBytes32,
   getInternalError,
+  hashKey,
   parseExpirerTarget,
   TYPE_1,
 } from "@walletconnect/utils";
+import {
+  composeDidPkh,
+  encodeEd25519Key,
+  generateJWT,
+  jwtExp,
+  JwtPayload,
+} from "@walletconnect/did-jwt";
+import { Cacao, formatMessage } from "@walletconnect/cacao";
+import * as ed25519 from "@noble/ed25519";
+import jwt from "jsonwebtoken";
 
 import {
   DEFAULT_RELAY_SERVER_URL,
@@ -35,8 +47,9 @@ import {
 } from "../types";
 
 export class PushEngine extends IPushEngine {
-  private initialized = false;
   public name = "pushEngine";
+
+  private initialized = false;
 
   constructor(client: IPushEngine["client"]) {
     super(client);
@@ -63,6 +76,7 @@ export class PushEngine extends IPushEngine {
 
     // SPEC: Dapp generates public key X
     const publicKey = await this.client.core.crypto.generateKeyPair();
+    const responseTopic = hashKey(publicKey);
 
     // SPEC: Dapp sends push proposal on known pairing P
     const request = {
@@ -72,14 +86,33 @@ export class PushEngine extends IPushEngine {
     };
     const id = await this.sendRequest(pairingTopic, "wc_pushRequest", request);
 
+    this.client.logger.info(
+      `[Push] Engine.request > sent push subscription request on pairing ${pairingTopic} with id: ${id}. Request: ${JSON.stringify(
+        request
+      )}`
+    );
+
     // Store the push subscription request so we can later reference `publicKey` when we get a response.
+    // TODO: Is this obsolete now?
     await this.client.requests.set(id, {
       topic: pairingTopic,
       request,
     });
 
+    await (this.client as IDappClient).proposalKeys.set(responseTopic, {
+      responseTopic,
+      proposalKeyPub: publicKey,
+    });
+
     // Set the expiry for the push subscription request.
     this.client.core.expirer.set(id, calcExpiry(PUSH_REQUEST_EXPIRY));
+
+    // SPEC: Dapp subscribes to response topic, which is the sha256 hash of public key X
+    await this.client.core.relayer.subscribe(responseTopic);
+
+    this.client.logger.info(
+      `[Push] Engine.request > subscribed to response topic ${responseTopic}`
+    );
 
     return { id };
   };
@@ -96,10 +129,22 @@ export class PushEngine extends IPushEngine {
 
   // ---------- Public (Wallet) --------------------------------------- //
 
-  public approve: IPushEngine["approve"] = async ({ id }) => {
+  public approve: IPushEngine["approve"] = async ({ id, onSign }) => {
     this.isInitialized();
 
-    const { topic: pairingTopic, request } = this.client.requests.get(id);
+    const { request } = this.client.requests.get(id);
+
+    // Retrieve existing identity or register a new one for this account on this device.
+    await this.registerIdentity(request.account, onSign);
+
+    const subscriptionAuth = await this.generateSubscriptionAuth(
+      request.account,
+      request.metadata.url
+    );
+
+    this.client.logger.debug(
+      `[Push] Engine.approve > generated subscriptionAuth: ${subscriptionAuth}`
+    );
 
     // SPEC: Wallet generates key pair Y
     const selfPublicKey = await this.client.core.crypto.generateKeyPair();
@@ -108,7 +153,7 @@ export class PushEngine extends IPushEngine {
       `[Push] Engine.approve > generating shared key from selfPublicKey ${selfPublicKey} and proposer publicKey ${request.publicKey}`
     );
 
-    // SPEC: Wallet derives symmetric key from keys X and Y.
+    // SPEC: Wallet derives symmetric key from self-generated publicKey (pubKey Y) and requester publicKey (pubKey X).
     // SPEC: Push topic is derived from sha256 hash of symmetric key.
     // `crypto.generateSharedKey` returns the sha256 hash of the symmetric key, i.e. the push topic.
     const pushTopic = await this.client.core.crypto.generateSharedKey(
@@ -123,10 +168,27 @@ export class PushEngine extends IPushEngine {
     // SPEC: Wallet subscribes to push topic
     await this.client.core.relayer.subscribe(pushTopic);
 
+    // TODO: add to spec -  this step isn't explicit in the spec atm
+    // SPEC: Wallet derives response topic from sha246 hash of requester publicKey (pubKey X)
+    const responseTopic = hashKey(request.publicKey);
+
+    this.client.logger.info(
+      `[Push] Engine.approve > derived responseTopic: ${responseTopic}`
+    );
+
     // SPEC: Wallet sends proposal response on pairing P with publicKey Y
-    await this.sendResult<"wc_pushRequest">(id, pairingTopic, {
-      publicKey: selfPublicKey,
-    });
+    await this.sendResult<"wc_pushRequest">(
+      id,
+      responseTopic,
+      {
+        subscriptionAuth,
+      },
+      {
+        type: TYPE_1,
+        senderPublicKey: selfPublicKey,
+        receiverPublicKey: request.publicKey,
+      }
+    );
 
     // Store the new PushSubscription.
     await this.client.subscriptions.set(pushTopic, {
@@ -316,20 +378,57 @@ export class PushEngine extends IPushEngine {
       RELAYER_EVENTS.message,
       async (event: RelayerTypes.MessageEvent) => {
         const { topic, message, publishedAt } = event;
+        const isType1Payload =
+          this.client.core.crypto.getPayloadType(message) === TYPE_1;
 
-        // Ignoring TYPE_1 messages categorically for now until we have the new `subscriptionAuth` flow merged.
-        if (this.client.core.crypto.getPayloadType(message) === TYPE_1) {
+        let receiverPublicKey: string | undefined;
+
+        if (
+          this.client instanceof IDappClient &&
+          this.client.proposalKeys.keys.includes(topic)
+        ) {
+          try {
+            const { proposalKeyPub } = this.client.proposalKeys.get(topic);
+            receiverPublicKey = proposalKeyPub;
+          } catch (error) {
+            this.client.logger.error(
+              `[Push] Engine > on RELAYER_EVENTS.message > Failed to get proposalKey for topic ${topic}: ${error}`
+            );
+          }
+        }
+
+        if (isType1Payload && !receiverPublicKey) {
+          this.client.logger.debug(
+            `[Push] Engine > on RELAYER_EVENTS.message > Skipping message on topic ${topic}, no receiverPublicKey found.`
+          );
           return;
         }
 
-        const payload = await this.client.core.crypto.decode(topic, message);
+        const payload = await this.client.core.crypto.decode(topic, message, {
+          receiverPublicKey,
+        });
+
+        // Extract the encoded `senderPublicKey` if it's a TYPE_1 message.
+        const senderPublicKey = isType1Payload
+          ? this.client.core.crypto.getPayloadSenderPublicKey(message)
+          : undefined;
 
         if (isJsonRpcRequest(payload)) {
           this.client.core.history.set(topic, payload);
-          this.onRelayEventRequest({ topic, payload, publishedAt });
+          this.onRelayEventRequest({
+            topic,
+            payload,
+            publishedAt,
+            senderPublicKey,
+          });
         } else if (isJsonRpcResponse(payload)) {
           await this.client.core.history.resolve(payload);
-          this.onRelayEventResponse({ topic, payload, publishedAt });
+          this.onRelayEventResponse({
+            topic,
+            payload,
+            publishedAt,
+            senderPublicKey,
+          });
         }
       }
     );
@@ -362,13 +461,13 @@ export class PushEngine extends IPushEngine {
   protected onRelayEventResponse: IPushEngine["onRelayEventResponse"] = async (
     event
   ) => {
-    const { topic, payload } = event;
+    const { topic, payload, senderPublicKey } = event;
     const record = await this.client.core.history.get(topic, payload.id);
     const resMethod = record.request.method as JsonRpcTypes.WcMethod;
 
     switch (resMethod) {
       case "wc_pushRequest":
-        return this.onPushResponse(topic, payload);
+        return this.onPushResponse(topic, payload, senderPublicKey);
       case "wc_pushMessage":
         return this.onPushMessageResponse(topic, payload);
       case "wc_pushDelete":
@@ -415,7 +514,8 @@ export class PushEngine extends IPushEngine {
 
   protected onPushResponse: IPushEngine["onPushResponse"] = async (
     topic,
-    response
+    response,
+    senderPublicKey
   ) => {
     this.client.logger.info("onPushResponse", topic, response);
 
@@ -425,16 +525,34 @@ export class PushEngine extends IPushEngine {
       const { request } = this.client.requests.get(id);
       const selfPublicKey = request.publicKey;
 
+      const decodedPayload = jwt.decode(result.subscriptionAuth, {
+        json: true,
+      }) as JwtPayload;
+
+      if (!decodedPayload) {
+        throw new Error(
+          "[Push] Engine.onPushResponse > Empty `subscriptionAuth` payload"
+        );
+      }
+
       this.client.logger.info(
-        `[Push] Engine.onPushResponse > generating shared key from selfPublicKey ${selfPublicKey} and responder publicKey ${result.publicKey}`
+        `[Push] Engine.onPushResponse > decoded subscriptionAuth payload: ${JSON.stringify(
+          decodedPayload
+        )}`
       );
+
+      if (!senderPublicKey) {
+        throw new Error(
+          "[Push] Engine.onPushResponse > Missing `senderPublicKey`, cannot derive shared key."
+        );
+      }
 
       // SPEC: Wallet derives symmetric key from keys X and Y.
       // SPEC: Push topic is derived from sha256 hash of symmetric key.
       // `crypto.generateSharedKey` returns the sha256 hash of the symmetric key, i.e. the push topic.
       const pushTopic = await this.client.core.crypto.generateSharedKey(
         selfPublicKey,
-        result.publicKey
+        senderPublicKey
       );
       const symKey = this.client.core.crypto.keychain.get(pushTopic);
 
@@ -442,7 +560,13 @@ export class PushEngine extends IPushEngine {
         `[Push] Engine.onPushResponse > derived pushTopic ${pushTopic} from symKey: ${symKey}`
       );
 
-      await this.registerOnCastServer(request.account, symKey);
+      // SPEC: Dapp registers address with the Cast Server.
+      // TODO: pass `subscriptionAuth` to `registerOnCastServer` to verify the signature.
+      await this.registerOnCastServer(
+        request.account,
+        symKey,
+        result.subscriptionAuth
+      );
 
       // DappClient subscribes to pushTopic.
       await this.client.core.relayer.subscribe(pushTopic);
@@ -459,6 +583,12 @@ export class PushEngine extends IPushEngine {
 
       // Clean up the keypair used to derive a shared symKey.
       await this.client.core.crypto.deleteKeyPair(selfPublicKey);
+
+      // Clean up the proposal key.
+      await (this.client as IDappClient).proposalKeys.delete(topic, {
+        code: -1,
+        message: "Proposal key deleted.",
+      });
 
       // Emit the PushSubscription at client level.
       this.client.emit("push_response", {
@@ -605,13 +735,18 @@ export class PushEngine extends IPushEngine {
     ]);
   };
 
-  private registerOnCastServer = async (account: string, symKey: string) => {
+  private registerOnCastServer = async (
+    account: string,
+    symKey: string,
+    subscriptionAuth: string
+  ) => {
     const castUrl = (this.client as IDappClient).castUrl;
     const reqUrl = castUrl + `/${this.client.core.projectId}/register`;
     const relayUrl = this.client.core.relayUrl || DEFAULT_RELAY_SERVER_URL;
     const bodyString = JSON.stringify({
       account,
       symKey,
+      subscriptionAuth,
       relayUrl,
     });
     try {
@@ -634,6 +769,132 @@ export class PushEngine extends IPushEngine {
       this.client.logger.error(
         `[Push] Could not register push subscription on Cast Server via POST with body: ${bodyString} to ${reqUrl}: ${error.message}`
       );
+    }
+  };
+
+  private generateIdentityKey = async () => {
+    const privateKey = ed25519.utils.randomPrivateKey();
+    const publicKey = await ed25519.getPublicKey(privateKey);
+    const pubKeyHex = ed25519.utils.bytesToHex(publicKey).toLowerCase();
+    const privKeyHex = ed25519.utils.bytesToHex(privateKey).toLowerCase();
+
+    this.client.core.crypto.keychain.set(pubKeyHex, privKeyHex);
+
+    return [pubKeyHex, privKeyHex];
+  };
+
+  private generateSubscriptionAuth = (accountId: string, dappUrl: string) => {
+    const { identityKeyPub, identityKeyPriv } = (
+      this.client as IWalletClient
+    ).identityKeys.get(accountId);
+
+    const issuedAt = Math.round(Date.now() / 1000);
+    const payload: JwtPayload = {
+      iat: issuedAt,
+      exp: jwtExp(issuedAt),
+      iss: encodeEd25519Key(identityKeyPub),
+      sub: composeDidPkh(accountId),
+      aud: dappUrl,
+      ksu: (this.client as IWalletClient).keyserverUrl,
+    };
+
+    this.client.logger.info(
+      `[Push] Engine.generateSubscriptionAuth > Generated subscriptionAuth JWT payload: ${JSON.stringify(
+        payload
+      )}`
+    );
+
+    return generateJWT([identityKeyPub, identityKeyPriv], payload);
+  };
+
+  private registerIdentity = async (
+    accountId: string,
+    onSign: (message: string) => Promise<string>
+  ): Promise<string> => {
+    try {
+      const storedKeyPair = (this.client as IWalletClient).identityKeys.get(
+        accountId
+      );
+      this.client.logger.info(
+        `[Push] Engine.registerIdentity > Found stored identityKey for ${accountId}: ${storedKeyPair.identityKeyPub}`
+      );
+      return storedKeyPair.identityKeyPub;
+    } catch {
+      const keyserverUrl = (this.client as IWalletClient).keyserverUrl;
+      const [pubKeyHex, privKeyHex] = await this.generateIdentityKey();
+      const didKey = encodeEd25519Key(pubKeyHex);
+
+      const cacao: Cacao = {
+        h: {
+          t: "eip4361",
+        },
+        p: {
+          aud: keyserverUrl,
+          statement: "Test",
+          domain: keyserverUrl,
+          iss: composeDidPkh(accountId),
+          nonce: generateRandomBytes32(),
+          iat: new Date().toISOString(),
+          version: "1",
+          resources: [didKey],
+        },
+        s: {
+          t: "eip191",
+          s: "",
+        },
+      };
+
+      const cacaoMessage = formatMessage(cacao.p, composeDidPkh(accountId));
+
+      this.client.logger.info(
+        `[Push] Engine.registerIdentity > Awaiting signature for cacao: ${JSON.stringify(
+          cacao
+        )}`
+      );
+      const signature = await onSign(cacaoMessage);
+
+      this.client.logger.info(
+        `[Push] Engine.registerIdentity > Got signature: ${signature}`
+      );
+
+      // Storing keys after signature creation to prevent having false statement
+      // Eg, onSign failing / never resolving but having identity keys stored.
+      (this.client as IWalletClient).identityKeys.set(accountId, {
+        accountId,
+        identityKeyPriv: privKeyHex,
+        identityKeyPub: pubKeyHex,
+      });
+
+      this.client.logger.info(
+        `[Push] Engine.registerIdentity > Registering on keyserver ${keyserverUrl}...`
+      );
+
+      const res = await fetch(`${keyserverUrl}/identity`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cacao: {
+            ...cacao,
+            s: {
+              ...cacao.s,
+              s: signature,
+            },
+          },
+        }),
+      });
+
+      if (res.status !== 200 && res.status !== 201) {
+        throw new Error(
+          `[Push] Engine.registerIdentity > Failed to register on keyserver ${res.status}`
+        );
+      }
+
+      this.client.logger.info(
+        `[Push] Engine.registerIdentity > Registered on keyserver ${keyserverUrl}, didKey: ${didKey}`
+      );
+      return didKey;
     }
   };
 }
