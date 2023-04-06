@@ -796,6 +796,7 @@ export class PushEngine extends IPushEngine {
       sub: composeDidPkh(accountId),
       aud: dappUrl,
       ksu: (this.client as IWalletClient).keyserverUrl,
+      act: "push_subscription",
     };
 
     this.client.logger.info(
