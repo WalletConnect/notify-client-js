@@ -1,36 +1,34 @@
 import {
-  RELAYER_EVENTS,
-  RELAYER_DEFAULT_PROTOCOL,
   EXPIRER_EVENTS,
+  RELAYER_DEFAULT_PROTOCOL,
+  RELAYER_EVENTS,
 } from "@walletconnect/core";
+import { JwtPayload } from "@walletconnect/did-jwt";
 import {
+  JsonRpcPayload,
+  formatJsonRpcError,
   formatJsonRpcRequest,
   formatJsonRpcResult,
-  formatJsonRpcError,
+  isJsonRpcError,
   isJsonRpcRequest,
   isJsonRpcResponse,
   isJsonRpcResult,
-  isJsonRpcError,
-  JsonRpcPayload,
 } from "@walletconnect/jsonrpc-utils";
 import { ExpirerTypes, RelayerTypes } from "@walletconnect/types";
 import {
+  TYPE_1,
   calcExpiry,
-  generateRandomBytes32,
   getInternalError,
   hashKey,
   parseExpirerTarget,
-  TYPE_1,
 } from "@walletconnect/utils";
+
 import {
-  composeDidPkh,
-  encodeEd25519Key,
-  generateJWT,
-  jwtExp,
-  JwtPayload,
-} from "@walletconnect/did-jwt";
-import { Cacao, formatMessage } from "@walletconnect/cacao";
-import * as ed25519 from "@noble/ed25519";
+  IIdentityKeys,
+  IdentityKeyClaims,
+  IdentityKeys,
+} from "@walletconnect/identity-keys";
+
 import jwt from "jsonwebtoken";
 
 import {
@@ -48,11 +46,12 @@ import {
 
 export class PushEngine extends IPushEngine {
   public name = "pushEngine";
-
+  private identityKeys: IIdentityKeys;
   private initialized = false;
 
   constructor(client: IPushEngine["client"]) {
     super(client);
+    this.identityKeys = new IdentityKeys(client.core);
   }
 
   public init: IPushEngine["init"] = () => {
@@ -772,129 +771,21 @@ export class PushEngine extends IPushEngine {
     }
   };
 
-  private generateIdentityKey = async () => {
-    const privateKey = ed25519.utils.randomPrivateKey();
-    const publicKey = await ed25519.getPublicKey(privateKey);
-    const pubKeyHex = ed25519.utils.bytesToHex(publicKey).toLowerCase();
-    const privKeyHex = ed25519.utils.bytesToHex(privateKey).toLowerCase();
-
-    this.client.core.crypto.keychain.set(pubKeyHex, privKeyHex);
-
-    return [pubKeyHex, privKeyHex];
-  };
-
-  private generateSubscriptionAuth = (accountId: string, dappUrl: string) => {
-    const { identityKeyPub, identityKeyPriv } = (
-      this.client as IWalletClient
-    ).identityKeys.get(accountId);
-
-    const issuedAt = Math.round(Date.now() / 1000);
-    const payload: JwtPayload = {
-      iat: issuedAt,
-      exp: jwtExp(issuedAt),
-      iss: encodeEd25519Key(identityKeyPub),
-      sub: composeDidPkh(accountId),
-      aud: dappUrl,
-      ksu: (this.client as IWalletClient).keyserverUrl,
-    };
-
-    this.client.logger.info(
-      `[Push] Engine.generateSubscriptionAuth > Generated subscriptionAuth JWT payload: ${JSON.stringify(
-        payload
-      )}`
-    );
-
-    return generateJWT([identityKeyPub, identityKeyPriv], payload);
+  private generateSubscriptionAuth = async (
+    accountId: string,
+    payload: IdentityKeyClaims
+  ) => {
+    return this.identityKeys.generateIdAuth(accountId, payload);
   };
 
   private registerIdentity = async (
     accountId: string,
     onSign: (message: string) => Promise<string>
   ): Promise<string> => {
-    try {
-      const storedKeyPair = (this.client as IWalletClient).identityKeys.get(
-        accountId
-      );
-      this.client.logger.info(
-        `[Push] Engine.registerIdentity > Found stored identityKey for ${accountId}: ${storedKeyPair.identityKeyPub}`
-      );
-      return storedKeyPair.identityKeyPub;
-    } catch {
-      const keyserverUrl = (this.client as IWalletClient).keyserverUrl;
-      const [pubKeyHex, privKeyHex] = await this.generateIdentityKey();
-      const didKey = encodeEd25519Key(pubKeyHex);
+    return this.identityKeys.registerIdentity({ accountId, onSign });
+  };
 
-      const cacao: Cacao = {
-        h: {
-          t: "eip4361",
-        },
-        p: {
-          aud: keyserverUrl,
-          statement: "Test",
-          domain: keyserverUrl,
-          iss: composeDidPkh(accountId),
-          nonce: generateRandomBytes32(),
-          iat: new Date().toISOString(),
-          version: "1",
-          resources: [didKey],
-        },
-        s: {
-          t: "eip191",
-          s: "",
-        },
-      };
-
-      const cacaoMessage = formatMessage(cacao.p, composeDidPkh(accountId));
-
-      this.client.logger.info(
-        `[Push] Engine.registerIdentity > Awaiting signature for cacao: ${JSON.stringify(
-          cacao
-        )}`
-      );
-      const signature = await onSign(cacaoMessage);
-
-      this.client.logger.info(
-        `[Push] Engine.registerIdentity > Got signature: ${signature}`
-      );
-
-      // Storing keys after signature creation to prevent having false statement
-      // Eg, onSign failing / never resolving but having identity keys stored.
-      (this.client as IWalletClient).identityKeys.set(accountId, {
-        accountId,
-        identityKeyPriv: privKeyHex,
-        identityKeyPub: pubKeyHex,
-      });
-
-      this.client.logger.info(
-        `[Push] Engine.registerIdentity > Registering on keyserver ${keyserverUrl}...`
-      );
-
-      const res = await fetch(`${keyserverUrl}/identity`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          cacao: {
-            ...cacao,
-            s: {
-              ...cacao.s,
-              s: signature,
-            },
-          },
-        }),
-      });
-
-      if (res.status !== 200 && res.status !== 201) {
-        throw new Error(
-          `[Push] Engine.registerIdentity > Failed to register on keyserver ${res.status}`
-        );
-      }
-
-      this.client.logger.info(
-        `[Push] Engine.registerIdentity > Registered on keyserver ${keyserverUrl}, didKey: ${didKey}`
-      );
-      return didKey;
-    }
+  public unregisterIdentity = async (account: string) => {
+    return this.identityKeys.unregisterIdentity({ account });
   };
 }
