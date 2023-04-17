@@ -180,7 +180,6 @@ export class PushEngine extends IPushEngine {
     // SPEC: Wallet subscribes to push topic
     await this.client.core.relayer.subscribe(pushTopic);
 
-    // TODO: add to spec -  this step isn't explicit in the spec atm
     // SPEC: Wallet derives response topic from sha246 hash of requester publicKey (pubKey X)
     const responseTopic = hashKey(request.publicKey);
 
@@ -573,7 +572,6 @@ export class PushEngine extends IPushEngine {
       );
 
       // SPEC: Dapp registers address with the Cast Server.
-      // TODO: pass `subscriptionAuth` to `registerOnCastServer` to verify the signature.
       await this.registerOnCastServer(
         request.account,
         symKey,
