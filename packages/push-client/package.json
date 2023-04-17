@@ -31,11 +31,12 @@
   },
   "dependencies": {
     "@noble/ed25519": "^1.7.3",
-    "@walletconnect/cacao": "^1.0.1",
-    "@walletconnect/core": "2.6.0",
-    "@walletconnect/did-jwt": "1.0.1",
-    "@walletconnect/jsonrpc-utils": "1.0.6",
-    "@walletconnect/types": "2.6.0",
+    "@walletconnect/cacao": "^1.0.2",
+    "@walletconnect/core": "^2.7.0",
+    "@walletconnect/did-jwt": "^2.0.0",
+    "@walletconnect/identity-keys": "^0.1.0",
+    "@walletconnect/jsonrpc-utils": "^1.0.7",
+    "@walletconnect/types": "^2.7.0",
     "@walletconnect/utils": "2.6.0",
     "jsonwebtoken": "^9.0.0"
   },

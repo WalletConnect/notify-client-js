@@ -3,7 +3,12 @@ import {
   RELAYER_DEFAULT_PROTOCOL,
   RELAYER_EVENTS,
 } from "@walletconnect/core";
-import { JwtPayload } from "@walletconnect/did-jwt";
+import {
+  JwtPayload,
+  composeDidPkh,
+  encodeEd25519Key,
+  jwtExp,
+} from "@walletconnect/did-jwt";
 import {
   JsonRpcPayload,
   formatJsonRpcError,
@@ -23,11 +28,7 @@ import {
   parseExpirerTarget,
 } from "@walletconnect/utils";
 
-import {
-  IIdentityKeys,
-  IdentityKeyClaims,
-  IdentityKeys,
-} from "@walletconnect/identity-keys";
+import { IIdentityKeys, IdentityKeys } from "@walletconnect/identity-keys";
 
 import jwt from "jsonwebtoken";
 
@@ -136,9 +137,21 @@ export class PushEngine extends IPushEngine {
     // Retrieve existing identity or register a new one for this account on this device.
     await this.registerIdentity(request.account, onSign);
 
+    const dappUrl = request.metadata.url;
+    const issuedAt = Math.round(Date.now() / 1000);
+    const payload: JwtPayload = {
+      iat: issuedAt,
+      exp: jwtExp(issuedAt),
+      iss: encodeEd25519Key(request.publicKey),
+      sub: composeDidPkh(request.account),
+      aud: dappUrl,
+      ksu: (this.client as IWalletClient).keyserverUrl,
+      act: "push_subscription",
+    };
+
     const subscriptionAuth = await this.generateSubscriptionAuth(
       request.account,
-      request.metadata.url
+      payload
     );
 
     this.client.logger.debug(
@@ -773,7 +786,7 @@ export class PushEngine extends IPushEngine {
 
   private generateSubscriptionAuth = async (
     accountId: string,
-    payload: IdentityKeyClaims
+    payload: JwtPayload
   ) => {
     return this.identityKeys.generateIdAuth(accountId, payload);
   };
