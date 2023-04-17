@@ -34,7 +34,7 @@
     "@walletconnect/cacao": "^1.0.2",
     "@walletconnect/core": "^2.7.0",
     "@walletconnect/did-jwt": "^2.0.0",
-    "@walletconnect/identity-keys": "^0.1.0",
+    "@walletconnect/identity-keys": "^0.1.0-3106dd9",
     "@walletconnect/jsonrpc-utils": "^1.0.7",
     "@walletconnect/types": "^2.7.0",
     "@walletconnect/utils": "^2.7.0",

@@ -28,8 +28,6 @@ import {
   parseExpirerTarget,
 } from "@walletconnect/utils";
 
-import { IIdentityKeys, IdentityKeys } from "@walletconnect/identity-keys";
-
 import jwt from "jsonwebtoken";
 
 import {
@@ -47,12 +45,10 @@ import {
 
 export class PushEngine extends IPushEngine {
   public name = "pushEngine";
-  private identityKeys: IIdentityKeys;
   private initialized = false;
 
   constructor(client: IPushEngine["client"]) {
     super(client);
-    this.identityKeys = new IdentityKeys(client.core);
   }
 
   public init: IPushEngine["init"] = () => {
@@ -62,6 +58,7 @@ export class PushEngine extends IPushEngine {
       this.client.core.pairing.register({
         methods: Object.keys(ENGINE_RPC_OPTS),
       });
+
       this.initialized = true;
     }
   };
@@ -786,17 +783,25 @@ export class PushEngine extends IPushEngine {
     accountId: string,
     payload: JwtPayload
   ) => {
-    return this.identityKeys.generateIdAuth(accountId, payload);
+    return (this.client as IWalletClient).identityKeys.generateIdAuth(
+      accountId,
+      payload
+    );
   };
 
   private registerIdentity = async (
     accountId: string,
     onSign: (message: string) => Promise<string>
   ): Promise<string> => {
-    return this.identityKeys.registerIdentity({ accountId, onSign });
+    return (this.client as IWalletClient).identityKeys.registerIdentity({
+      accountId,
+      onSign,
+    });
   };
 
   public unregisterIdentity = async (account: string) => {
-    return this.identityKeys.unregisterIdentity({ account });
+    return (this.client as IWalletClient).identityKeys.unregisterIdentity({
+      account,
+    });
   };
 }

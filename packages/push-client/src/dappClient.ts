@@ -1,4 +1,3 @@
-import pino from "pino";
 import { Core, Store } from "@walletconnect/core";
 import {
   generateChildLogger,
@@ -6,16 +5,17 @@ import {
   getLoggerContext,
 } from "@walletconnect/logger";
 import { EventEmitter } from "events";
+import pino from "pino";
 
+import {
+  DEFAULT_CAST_SERVER_URL,
+  PUSH_CLIENT_PROTOCOL,
+  PUSH_CLIENT_STORAGE_PREFIX,
+  PUSH_CLIENT_VERSION,
+  PUSH_DAPP_CLIENT_DEFAULT_NAME,
+} from "./constants";
 import { PushEngine } from "./controllers";
 import { IDappClient, ProposalKeychain, PushClientTypes } from "./types";
-import {
-  PUSH_DAPP_CLIENT_DEFAULT_NAME,
-  PUSH_CLIENT_PROTOCOL,
-  PUSH_CLIENT_VERSION,
-  PUSH_CLIENT_STORAGE_PREFIX,
-  DEFAULT_CAST_SERVER_URL,
-} from "./constants";
 
 export class DappClient extends IDappClient {
   public readonly protocol = PUSH_CLIENT_PROTOCOL;
