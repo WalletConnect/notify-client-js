@@ -1,6 +1,7 @@
+import { IdentityKeys } from "@walletconnect/identity-keys";
 import { IStore } from "@walletconnect/types";
-import { IPushEngine } from "./engine";
 import { IBaseClient, PushClientTypes } from "./baseClient";
+import { IPushEngine } from "./engine";
 
 export interface IdentityKeychain {
   accountId: string;
@@ -18,10 +19,7 @@ export abstract class IWalletClient extends IBaseClient {
       messages: Record<number, PushClientTypes.PushMessageRecord>;
     }
   >;
-  public abstract identityKeys: IStore<
-    IdentityKeychain["accountId"],
-    IdentityKeychain
-  >;
+  public abstract identityKeys: IdentityKeys;
 
   constructor(public opts: PushClientTypes.WalletClientOptions) {
     super();

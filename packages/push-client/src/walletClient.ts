@@ -1,4 +1,3 @@
-import pino from "pino";
 import { Core, Store } from "@walletconnect/core";
 import {
   generateChildLogger,
@@ -6,9 +5,9 @@ import {
   getLoggerContext,
 } from "@walletconnect/logger";
 import { EventEmitter } from "events";
+import pino from "pino";
 
-import { PushEngine } from "./controllers";
-import { IdentityKeychain, IWalletClient, PushClientTypes } from "./types";
+import { IdentityKeys } from "@walletconnect/identity-keys";
 import {
   DEFAULT_KEYSERVER_URL,
   PUSH_CLIENT_PROTOCOL,
@@ -16,6 +15,8 @@ import {
   PUSH_CLIENT_VERSION,
   PUSH_WALLET_CLIENT_DEFAULT_NAME,
 } from "./constants";
+import { PushEngine } from "./controllers";
+import { IWalletClient, PushClientTypes } from "./types";
 
 export class WalletClient extends IWalletClient {
   public readonly protocol = PUSH_CLIENT_PROTOCOL;
@@ -74,14 +75,7 @@ export class WalletClient extends IWalletClient {
       "messages",
       PUSH_CLIENT_STORAGE_PREFIX
     );
-    this.identityKeys = new Store(
-      this.core,
-      this.logger,
-      "identityKeys",
-      PUSH_CLIENT_STORAGE_PREFIX,
-      (keys: IdentityKeychain) => keys.accountId
-    );
-
+    this.identityKeys = new IdentityKeys(this.core);
     this.engine = new PushEngine(this);
   }
 
