@@ -798,10 +798,4 @@ export class PushEngine extends IPushEngine {
       onSign,
     });
   };
-
-  public unregisterIdentity = async (account: string) => {
-    return (this.client as IWalletClient).identityKeys.unregisterIdentity({
-      account,
-    });
-  };
 }
