@@ -1,7 +1,7 @@
 {
   "name": "@walletconnect/push-client",
   "description": "WalletConnect Push Client",
-  "version": "0.7.1-dd9f5fa",
+  "version": "0.7.2",
   "author": "WalletConnect, Inc. <walletconnect.com>",
   "homepage": "https://github.com/walletconnect/push-client-js/",
   "license": "Apache-2.0",
