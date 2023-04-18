@@ -28,6 +28,15 @@ const onSignMock = () =>
     "0x5cf19252d326699e9078686035cf8cb020aadf15cb817bb56bcd5605dc0068c15ebdd3230de9b61ab7973d0346b5933f0b0206894b1f6e4af4e2eb8162c52c1d1c"
   );
 
+const mockIdentityMethods = (wallet: IWalletClient) => {
+  wallet.identityKeys.registerIdentity = vi.fn(async () => {
+    return "0x";
+  });
+  wallet.identityKeys.generateIdAuth = vi.fn(async () => {
+    return "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODE4MzE3MjUsImV4cCI6MTc2ODIzMTcyNSwiaXNzIjoiZGlkOmtleTp6Nk1rb213S2FnaEpCQkdoVHVidnpZb28xeGlZSGljMm5mRnE2R1BMakx5NHNyZkoiLCJzdWIiOiJkaWQ6cGtoOjB4QjY4MzI4NTQyRDBDMDhjNDc4ODJEMTI3NmM3Y0M0RDZmQjllQWU3MSIsImF1ZCI6Ind3dy53YWxsZXRjb25uZWN0LmNvbSIsImtzdSI6Imh0dHBzOi8va2V5cy53YWxsZXRjb25uZWN0LmNvbSIsImFjdCI6InB1c2hfc3Vic2NyaXB0aW9uIn0.EosnDbWeR5XQPFRknPnUxeMyzYN5OV7kqH8ljnqDWRv1EG05p8O-TO56EHTDRMrPulSE6pENMCCMvkLDMcSSBQ";
+  });
+};
+
 const setupKnownPairing = async (
   clientA: IWalletClient | IDappClient,
   clientB: IWalletClient | IDappClient
@@ -106,6 +115,9 @@ describe("DappClient", () => {
         process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
     });
+
+    // Mocking identity key methods.
+    mockIdentityMethods(wallet);
   });
   afterEach(async () => {
     await disconnectSocket(dapp.core);
@@ -207,6 +219,9 @@ describe("WalletClient", () => {
       projectId: process.env.TEST_PROJECT_ID!,
       metadata: dappMetadata,
     });
+
+    // Mocking identity key methods.
+    mockIdentityMethods(wallet);
   });
   afterEach(async () => {
     await disconnectSocket(wallet.core);
@@ -451,6 +466,9 @@ describe("Common (BaseClient)", () => {
       projectId: process.env.TEST_PROJECT_ID!,
       metadata: dappMetadata,
     });
+
+    // Mocking identity key methods.
+    mockIdentityMethods(wallet);
   });
   afterEach(async () => {
     await disconnectSocket(wallet.core);
