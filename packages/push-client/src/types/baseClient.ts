@@ -9,6 +9,7 @@ export declare namespace PushClientTypes {
   type Event =
     | "push_request"
     | "push_response"
+    | "push_subscription"
     | "push_message"
     | "push_delete";
 
@@ -36,6 +37,7 @@ export declare namespace PushClientTypes {
   interface EventArguments {
     push_request: BaseEventArgs<PushRequestEventArgs>;
     push_response: BaseEventArgs<PushResponseEventArgs>;
+    push_subscription: BaseEventArgs<PushResponseEventArgs>;
     push_message: BaseEventArgs<PushMessageRequestEventArgs>;
     push_delete: BaseEventArgs<PushDeleteRequestEventArgs>;
   }
@@ -90,6 +92,22 @@ export declare namespace PushClientTypes {
     message: PushMessage;
     publishedAt: number;
   }
+
+  interface PushDidDocument {
+    "@context": string[];
+    id: string;
+    verificationMethod: Array<{
+      id: string;
+      type: string;
+      controller: string;
+      publicKeyJwk: {
+        kty: string;
+        crv: string;
+        x: string;
+      };
+    }>;
+    keyAgreement: string[];
+  }
 }
 
 export abstract class IBaseClient {
@@ -103,7 +121,10 @@ export abstract class IBaseClient {
   public abstract engine: IPushEngine;
   public abstract requests: IStore<
     number,
-    { topic: string; request: PushClientTypes.PushSubscriptionRequest }
+    {
+      topic: string;
+      request: PushClientTypes.PushSubscriptionRequest;
+    }
   >;
   public abstract subscriptions: IStore<
     string,

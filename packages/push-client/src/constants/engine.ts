@@ -17,6 +17,18 @@ export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
       tag: 4001,
     },
   },
+  wc_pushSubscribe: {
+    req: {
+      ttl: ONE_DAY,
+      prompt: true,
+      tag: 4006,
+    },
+    res: {
+      ttl: ONE_DAY,
+      prompt: false,
+      tag: 4007,
+    },
+  },
   wc_pushMessage: {
     req: {
       ttl: ONE_DAY,

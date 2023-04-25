@@ -107,6 +107,15 @@ export class WalletClient extends IWalletClient {
     }
   };
 
+  public subscribe: IWalletClient["subscribe"] = async (params) => {
+    try {
+      return await this.engine.subscribe(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   public decryptMessage: IWalletClient["decryptMessage"] = async (params) => {
     try {
       return await this.engine.decryptMessage(params);
