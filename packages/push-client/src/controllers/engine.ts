@@ -296,6 +296,7 @@ export class PushEngine extends IPushEngine {
       sub: composeDidPkh(account),
       aud: dappUrl,
       ksu: (this.client as IWalletClient).keyserverUrl,
+      scp: "",
       act: "push_subscription",
     };
     const subscriptionAuth = await this.generateSubscriptionAuth(
