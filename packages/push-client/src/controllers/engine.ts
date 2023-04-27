@@ -143,6 +143,7 @@ export class PushEngine extends IPushEngine {
       sub: composeDidPkh(request.account),
       aud: dappUrl,
       ksu: (this.client as IWalletClient).keyserverUrl,
+      scp: "",
       act: "push_subscription",
     };
 
