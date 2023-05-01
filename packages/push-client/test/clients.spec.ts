@@ -390,6 +390,7 @@ describe("WalletClient", () => {
       });
 
       await dapp.notify({ topic, message: message1 });
+      await waitForEvent(() => receivedMessageCount === 1);
       await dapp.notify({ topic, message: message2 });
       await waitForEvent(() => receivedMessageCount === 2);
 

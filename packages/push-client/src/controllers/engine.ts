@@ -445,7 +445,7 @@ export class PushEngine extends IPushEngine {
     );
     const rpcOpts = ENGINE_RPC_OPTS[method].req;
     this.client.core.history.set(topic, payload);
-    await this.client.core.relayer.publish(topic, message, rpcOpts);
+    this.client.core.relayer.publish(topic, message, rpcOpts);
 
     return payload.id;
   };
@@ -465,7 +465,7 @@ export class PushEngine extends IPushEngine {
     const record = await this.client.core.history.get(topic, id);
     const rpcOpts = ENGINE_RPC_OPTS[record.request.method].res;
 
-    await this.client.core.relayer.publish(topic, message, rpcOpts);
+    this.client.core.relayer.publish(topic, message, rpcOpts);
     await this.client.core.history.resolve(payload);
 
     return payload.id;
