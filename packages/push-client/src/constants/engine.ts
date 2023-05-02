@@ -1,7 +1,8 @@
-import { ONE_DAY } from "@walletconnect/time";
+import { ONE_DAY, THIRTY_DAYS } from "@walletconnect/time";
 import { JsonRpcTypes, RpcOpts } from "../types";
 
 export const PUSH_REQUEST_EXPIRY = ONE_DAY;
+export const PUSH_SUBSCRIPTION_EXPIRY = THIRTY_DAYS;
 
 export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
   wc_pushRequest: {

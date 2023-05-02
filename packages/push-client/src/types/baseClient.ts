@@ -73,6 +73,8 @@ export declare namespace PushClientTypes {
     account: string;
     relay: RelayerTypes.ProtocolOptions;
     metadata: Metadata;
+    scope: Record<string, { description: string; enabled: boolean }>;
+    expiry: number;
   }
 
   interface PushMessage {

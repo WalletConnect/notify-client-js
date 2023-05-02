@@ -34,6 +34,7 @@ import {
   DEFAULT_RELAY_SERVER_URL,
   ENGINE_RPC_OPTS,
   PUSH_REQUEST_EXPIRY,
+  PUSH_SUBSCRIPTION_EXPIRY,
   SDK_ERRORS,
 } from "../constants";
 import {
@@ -205,6 +206,8 @@ export class PushEngine extends IPushEngine {
       account: request.account,
       relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
       metadata: request.metadata,
+      scope: {},
+      expiry: PUSH_SUBSCRIPTION_EXPIRY,
     });
 
     // Set up a store for messages sent to this push topic.
@@ -584,6 +587,8 @@ export class PushEngine extends IPushEngine {
         account: request.account,
         relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
         metadata: request.metadata,
+        scope: {},
+        expiry: PUSH_SUBSCRIPTION_EXPIRY,
       };
 
       // Store the new PushSubscription.
