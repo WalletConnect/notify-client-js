@@ -348,6 +348,9 @@ export class PushEngine extends IPushEngine {
       },
     });
 
+    // Set the expiry for the push subscription request.
+    this.client.core.expirer.set(id, calcExpiry(PUSH_REQUEST_EXPIRY));
+
     return true;
   };
 
@@ -788,7 +791,7 @@ export class PushEngine extends IPushEngine {
       }
 
       // Clean up the original request regardless of concrete result.
-      this.cleanupRequest(response.id);
+      this.cleanupRequest(response.id, true);
     };
 
   protected onPushMessageRequest: IPushEngine["onPushMessageRequest"] = async (
