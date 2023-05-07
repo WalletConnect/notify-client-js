@@ -845,6 +845,9 @@ export class PushEngine extends IPushEngine {
           messages: {},
         });
 
+        // SPEC: Wallet subscribes to derived pushTopic.
+        this.client.core.relayer.subscribe(pushTopic);
+
         await this.cleanupRequest(id);
 
         // Emit the PushSubscription at client level.
