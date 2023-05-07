@@ -212,7 +212,7 @@ export class PushEngine extends IPushEngine {
       relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
       metadata: request.metadata,
       scope: {},
-      expiry: PUSH_SUBSCRIPTION_EXPIRY,
+      expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
     });
 
     // Set up a store for messages sent to this push topic.
@@ -760,7 +760,7 @@ export class PushEngine extends IPushEngine {
         relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
         metadata: request.metadata,
         scope: {},
-        expiry: PUSH_SUBSCRIPTION_EXPIRY,
+        expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
       };
 
       // Store the new PushSubscription.
@@ -833,7 +833,7 @@ export class PushEngine extends IPushEngine {
           relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
           metadata: request.metadata,
           scope: request.scope,
-          expiry: PUSH_SUBSCRIPTION_EXPIRY,
+          expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
         };
 
         // Store the new PushSubscription.
