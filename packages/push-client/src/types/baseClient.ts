@@ -64,10 +64,13 @@ export declare namespace PushClientTypes {
     };
   }
 
+  type ScopeMap = Record<string, { description: string; enabled: boolean }>;
+
   interface PushSubscriptionRequest {
     publicKey: string;
     metadata: Metadata;
     account: string;
+    scope: ScopeMap;
   }
 
   interface PushSubscription {
@@ -75,7 +78,7 @@ export declare namespace PushClientTypes {
     account: string;
     relay: RelayerTypes.ProtocolOptions;
     metadata: Metadata;
-    scope: Record<string, { description: string; enabled: boolean }>;
+    scope: ScopeMap;
     expiry: number;
   }
 
@@ -107,6 +110,15 @@ export declare namespace PushClientTypes {
       };
     }>;
     keyAgreement: string[];
+  }
+
+  interface PushConfigDocument {
+    version: number;
+    lastModified: number;
+    types: Array<{
+      name: string;
+      description: string;
+    }>;
   }
 }
 

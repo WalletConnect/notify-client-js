@@ -34,7 +34,9 @@ export declare namespace JsonRpcTypes {
     wc_pushRequest: {
       subscriptionAuth: string;
     };
-    wc_pushSubscribe: true;
+    wc_pushSubscribe: {
+      publicKey: string;
+    };
     wc_pushMessage: true;
     wc_pushDelete: true;
   }

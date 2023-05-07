@@ -33,7 +33,7 @@ const mockIdentityMethods = (wallet: IWalletClient) => {
     return "0x";
   });
   wallet.identityKeys.generateIdAuth = vi.fn(async () => {
-    return "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODE4MzE3MjUsImV4cCI6MTc2ODIzMTcyNSwiaXNzIjoiZGlkOmtleTp6Nk1rb213S2FnaEpCQkdoVHVidnpZb28xeGlZSGljMm5mRnE2R1BMakx5NHNyZkoiLCJzdWIiOiJkaWQ6cGtoOjB4QjY4MzI4NTQyRDBDMDhjNDc4ODJEMTI3NmM3Y0M0RDZmQjllQWU3MSIsImF1ZCI6Ind3dy53YWxsZXRjb25uZWN0LmNvbSIsImtzdSI6Imh0dHBzOi8va2V5cy53YWxsZXRjb25uZWN0LmNvbSIsImFjdCI6InB1c2hfc3Vic2NyaXB0aW9uIn0.EosnDbWeR5XQPFRknPnUxeMyzYN5OV7kqH8ljnqDWRv1EG05p8O-TO56EHTDRMrPulSE6pENMCCMvkLDMcSSBQ";
+    return "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODI1MjUwMjQsImV4cCI6MTc2ODkyNTAyNCwiaXNzIjoiZGlkOmtleTp6Nk1ranVEdXFFU3JHN2ZTSldDNjhiajF6MXJxUU05NHBzU2Q1aktuRmRtMVc5NHMiLCJzdWIiOiJkaWQ6cGtoOmVpcDE1NToxOjB4ZEEzRkI3ZENiOTY2OGI2NTVlZkU0ZjZEMDFCN0YyQjE4OTUzOEYxNSIsImF1ZCI6Imh0dHBzOi8vZ20ud2FsbGV0Y29ubmVjdC5jb20iLCJrc3UiOiJodHRwczovL2tleXMud2FsbGV0Y29ubmVjdC5jb20iLCJzY3AiOiJwcm9tb3Rpb25hbCBwcml2YXRlIGFsZXJ0cyIsImFjdCI6InB1c2hfc3Vic2NyaXB0aW9uIn0.Buc9iTbfT_CmJjxgDy9gL53KLqdBiLsKk0IyQ1ynCMJTw2_XvMjwI_9jZfvwGzBXhjtK6XpQzrerxrUGO_5XAA";
   });
 };
 
@@ -204,16 +204,14 @@ describe("WalletClient", () => {
   beforeEach(async () => {
     wallet = await WalletClient.init({
       name: "testWalletClient",
-      logger: "error",
-      relayUrl:
-        process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
+      logger: "trace",
+      relayUrl: process.env.TEST_RELAY_URL || "wss://relay.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
     });
     dapp = await DappClient.init({
       name: "testDappClientAsPeer",
       logger: "error",
-      relayUrl:
-        process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
+      relayUrl: process.env.TEST_RELAY_URL || "wss://relay.walletconnect.com",
       castUrl:
         process.env.TEST_CAST_URL || "https://staging.cast.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
@@ -320,6 +318,47 @@ describe("WalletClient", () => {
       // Check that dapp is in expected state.
       expect(dapp.subscriptions.length).toBe(0);
       expect(dapp.requests.length).toBe(0);
+    });
+  });
+
+  describe("subscribe", () => {
+    it("can issue a `push_subscription` request and handle the response", async () => {
+      // Set up known pairing.
+      // const pairingTopic = await setupKnownPairing(dapp, wallet);
+      let gotPushSubscriptionResponse = false;
+      let pushSubscriptionEvent: any;
+
+      wallet.once("push_subscription", (event) => {
+        gotPushSubscriptionResponse = true;
+        pushSubscriptionEvent = event;
+      });
+
+      const hasSent = await wallet.subscribe({
+        metadata: {
+          name: "gm-dapp",
+          description: "Get a gm every hour",
+          icons: [
+            "https://explorer-api.walletconnect.com/v3/logo/md/32b894e5-f91e-4fcd-6891-38d31fa6ba00?projectId=25de36e8afefd5babb4b45580efb4e06",
+          ],
+          url: "https://gm.walletconnect.com",
+        },
+        account: "eip155:1:0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        onSign: onSignMock,
+      });
+
+      expect(hasSent).toBe(true);
+
+      await waitForEvent(() => gotPushSubscriptionResponse);
+      console.log(
+        "pushSubscriptionEvent:",
+        JSON.stringify(pushSubscriptionEvent, null, 2)
+      );
+
+      // expect(pushSubscriptionEvent.params.metadata).to.deep.equal(dappMetadata);
+      expect(pushSubscriptionEvent.params.subscription.topic).toBeDefined();
+      // expect(wallet.requests.get(id)).toBeDefined();
+      // expect(dapp.core.expirer.has(id)).toBe(true);
+      // expect(wallet.core.expirer.has(id)).toBe(true);
     });
   });
 
