@@ -33,6 +33,7 @@ import axios from "axios";
 import {
   DEFAULT_RELAY_SERVER_URL,
   ENGINE_RPC_OPTS,
+  JWT_SCP_SEPARATOR,
   PUSH_REQUEST_EXPIRY,
   PUSH_SUBSCRIPTION_EXPIRY,
   SDK_ERRORS,
@@ -308,13 +309,21 @@ export class PushEngine extends IPushEngine {
     );
 
     // SPEC: Generate a subscriptionAuth JWT
+    const identityKeyPub = await (
+      this.client as IWalletClient
+    ).identityKeys.getIdentity({
+      account,
+    });
     const dappUrl = metadata.url;
     const issuedAt = Math.round(Date.now() / 1000);
-    const scp = pushConfig.types.map((type) => type.name).join(" ");
+    this.client;
+    const scp = pushConfig.types
+      .map((type) => type.name)
+      .join(JWT_SCP_SEPARATOR);
     const payload: JwtPayload = {
       iat: issuedAt,
       exp: jwtExp(issuedAt),
-      iss: encodeEd25519Key(dappPublicKey),
+      iss: encodeEd25519Key(identityKeyPub),
       sub: composeDidPkh(account),
       aud: dappUrl,
       ksu: (this.client as IWalletClient).keyserverUrl,

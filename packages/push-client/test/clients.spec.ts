@@ -23,6 +23,8 @@ const dappMetadata = {
   icons: [],
 };
 
+const mockAccount = "eip155:1:0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71";
+
 const onSignMock = () =>
   Promise.resolve(
     "0x5cf19252d326699e9078686035cf8cb020aadf15cb817bb56bcd5605dc0068c15ebdd3230de9b61ab7973d0346b5933f0b0206894b1f6e4af4e2eb8162c52c1d1c"
@@ -35,6 +37,10 @@ const mockIdentityMethods = (wallet: IWalletClient) => {
   wallet.identityKeys.generateIdAuth = vi.fn(async () => {
     return "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODI1MjUwMjQsImV4cCI6MTc2ODkyNTAyNCwiaXNzIjoiZGlkOmtleTp6Nk1ranVEdXFFU3JHN2ZTSldDNjhiajF6MXJxUU05NHBzU2Q1aktuRmRtMVc5NHMiLCJzdWIiOiJkaWQ6cGtoOmVpcDE1NToxOjB4ZEEzRkI3ZENiOTY2OGI2NTVlZkU0ZjZEMDFCN0YyQjE4OTUzOEYxNSIsImF1ZCI6Imh0dHBzOi8vZ20ud2FsbGV0Y29ubmVjdC5jb20iLCJrc3UiOiJodHRwczovL2tleXMud2FsbGV0Y29ubmVjdC5jb20iLCJzY3AiOiJwcm9tb3Rpb25hbCBwcml2YXRlIGFsZXJ0cyIsImFjdCI6InB1c2hfc3Vic2NyaXB0aW9uIn0.Buc9iTbfT_CmJjxgDy9gL53KLqdBiLsKk0IyQ1ynCMJTw2_XvMjwI_9jZfvwGzBXhjtK6XpQzrerxrUGO_5XAA";
   });
+  wallet.identityKeys.getIdentity = vi.fn(
+    async () =>
+      "1acf41c75a13dd332e3520eb5210a9d25591c1fd98a1fcfe5fb848cbf47edd0b"
+  );
 };
 
 const setupKnownPairing = async (
@@ -341,7 +347,7 @@ describe("WalletClient", () => {
 
       const hasSent = await wallet.subscribe({
         metadata: gmDappMetadata,
-        account: "eip155:1:0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        account: mockAccount,
         onSign: onSignMock,
       });
 
