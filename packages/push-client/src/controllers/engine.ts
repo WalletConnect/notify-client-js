@@ -744,6 +744,13 @@ export class PushEngine extends IPushEngine {
       if (isJsonRpcResult(response)) {
         const { id } = response;
 
+        this.client.logger.info({
+          action: "onPushSubscribeResponse",
+          id,
+          topic,
+          response,
+        });
+
         const { request } = this.client.requests.get(id);
 
         const pushSubscription = {
@@ -751,6 +758,9 @@ export class PushEngine extends IPushEngine {
           account: request.account,
           relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
           metadata: request.metadata,
+          // TODO: Add proper scope from request.
+          scope: {},
+          expiry: PUSH_SUBSCRIPTION_EXPIRY,
         };
 
         // Store the new PushSubscription.
