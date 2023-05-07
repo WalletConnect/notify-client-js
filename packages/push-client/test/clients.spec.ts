@@ -323,8 +323,14 @@ describe("WalletClient", () => {
 
   describe("subscribe", () => {
     it("can issue a `push_subscription` request and handle the response", async () => {
-      // Set up known pairing.
-      // const pairingTopic = await setupKnownPairing(dapp, wallet);
+      const gmDappMetadata = {
+        name: "gm-dapp",
+        description: "Get a gm every hour",
+        icons: [
+          "https://explorer-api.walletconnect.com/v3/logo/md/32b894e5-f91e-4fcd-6891-38d31fa6ba00?projectId=25de36e8afefd5babb4b45580efb4e06",
+        ],
+        url: "https://gm.walletconnect.com",
+      };
       let gotPushSubscriptionResponse = false;
       let pushSubscriptionEvent: any;
 
@@ -334,14 +340,7 @@ describe("WalletClient", () => {
       });
 
       const hasSent = await wallet.subscribe({
-        metadata: {
-          name: "gm-dapp",
-          description: "Get a gm every hour",
-          icons: [
-            "https://explorer-api.walletconnect.com/v3/logo/md/32b894e5-f91e-4fcd-6891-38d31fa6ba00?projectId=25de36e8afefd5babb4b45580efb4e06",
-          ],
-          url: "https://gm.walletconnect.com",
-        },
+        metadata: gmDappMetadata,
         account: "eip155:1:0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
         onSign: onSignMock,
       });
@@ -349,16 +348,24 @@ describe("WalletClient", () => {
       expect(hasSent).toBe(true);
 
       await waitForEvent(() => gotPushSubscriptionResponse);
-      console.log(
-        "pushSubscriptionEvent:",
-        JSON.stringify(pushSubscriptionEvent, null, 2)
-      );
 
-      // expect(pushSubscriptionEvent.params.metadata).to.deep.equal(dappMetadata);
+      expect(pushSubscriptionEvent.params.subscription.metadata).to.deep.equal(
+        gmDappMetadata
+      );
       expect(pushSubscriptionEvent.params.subscription.topic).toBeDefined();
-      // expect(wallet.requests.get(id)).toBeDefined();
-      // expect(dapp.core.expirer.has(id)).toBe(true);
-      // expect(wallet.core.expirer.has(id)).toBe(true);
+
+      // Check that wallet is in expected state.
+      expect(
+        wallet.subscriptions.keys.includes(
+          pushSubscriptionEvent.params.subscription.topic
+        )
+      ).toBe(true);
+      expect(
+        wallet.messages.keys.includes(
+          pushSubscriptionEvent.params.subscription.topic
+        )
+      ).toBe(true);
+      expect(wallet.requests.length).toBe(0);
     });
   });
 
