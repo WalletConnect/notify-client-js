@@ -116,6 +116,15 @@ export class WalletClient extends IWalletClient {
     }
   };
 
+  public update: IWalletClient["update"] = async (params) => {
+    try {
+      return await this.engine.update(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   public decryptMessage: IWalletClient["decryptMessage"] = async (params) => {
     try {
       return await this.engine.decryptMessage(params);

@@ -409,6 +409,84 @@ export class PushEngine extends IPushEngine {
     return true;
   };
 
+  public update: IPushEngine["update"] = async ({ topic, scope }) => {
+    this.isInitialized();
+
+    this.client.logger.info(
+      `[Push] update > updating push subscription for topic ${topic} with new scope: ${JSON.stringify(
+        scope
+      )}`
+    );
+
+    let subscription: PushClientTypes.PushSubscription;
+
+    // Retrieves the known subscription for the given topic or throws if no subscription is found.
+    try {
+      subscription = this.client.subscriptions.get(topic);
+    } catch (error) {
+      throw new Error(
+        `update(): No subscription found to update for the given topic: ${topic}`
+      );
+    }
+
+    const identityKeyPub = await (
+      this.client as IWalletClient
+    ).identityKeys.getIdentity({
+      account: subscription.account,
+    });
+    const issuedAt = Math.round(Date.now() / 1000);
+    const payload: JwtPayload = {
+      iat: issuedAt,
+      exp: jwtExp(issuedAt),
+      iss: encodeEd25519Key(identityKeyPub),
+      sub: composeDidPkh(subscription.account),
+      aud: subscription.metadata.url,
+      ksu: (this.client as IWalletClient).keyserverUrl,
+      scp: scope.join(JWT_SCP_SEPARATOR),
+      act: "push_subscription",
+    };
+
+    this.client.logger.info(
+      `[Push] subscribe > generating subscriptionAuth JWT for payload: ${JSON.stringify(
+        payload
+      )}`
+    );
+
+    const subscriptionAuth = await this.generateSubscriptionAuth(
+      subscription.account,
+      payload
+    );
+
+    this.client.logger.info(
+      `[Push] subscribe > generated subscriptionAuth JWT: ${subscriptionAuth}`
+    );
+
+    const id = await this.sendRequest(topic, "wc_pushUpdate", {
+      subscriptionAuth,
+    });
+
+    this.client.logger.info({
+      action: "sendRequest",
+      method: "wc_pushUpdate",
+      id,
+      topic,
+      subscriptionAuth,
+    });
+
+    await this.client.requests.set(id, {
+      topic,
+      request: {
+        account: subscription.account,
+        metadata: subscription.metadata,
+        publicKey: identityKeyPub,
+        scope: subscription.scope,
+        scopeUpdate: scope,
+      },
+    });
+
+    return true;
+  };
+
   public decryptMessage: IPushEngine["decryptMessage"] = async ({
     topic,
     encryptedMessage,
@@ -653,6 +731,8 @@ export class PushEngine extends IPushEngine {
         return this.onPushMessageResponse(topic, payload);
       case "wc_pushDelete":
         return;
+      case "wc_pushUpdate":
+        return this.onPushUpdateResponse(topic, payload);
       default:
         return this.client.logger.info(
           `[Push] Unsupported response method ${resMethod}`
@@ -935,6 +1015,74 @@ export class PushEngine extends IPushEngine {
     } catch (err: any) {
       await this.sendError(id, topic, err);
       this.client.logger.error(err);
+    }
+  };
+
+  protected onPushUpdateResponse: IPushEngine["onPushUpdateResponse"] = async (
+    topic,
+    payload
+  ) => {
+    if (isJsonRpcResult(payload)) {
+      this.client.logger.info({
+        event: "onPushUpdateResponse",
+        topic,
+        result: payload,
+      });
+
+      const { id } = payload;
+
+      const { request } = this.client.requests.get(id);
+      const existingSubscription = this.client.subscriptions.get(topic);
+
+      if (!request.scopeUpdate) {
+        throw new Error(
+          `No scope update found in request for push update: ${JSON.stringify(
+            request
+          )}`
+        );
+      }
+
+      const updatedScope = Object.entries(existingSubscription.scope).reduce(
+        (map, [scope, setting]) => {
+          map[scope] = setting;
+          if (request.scopeUpdate?.includes(scope)) {
+            map[scope].enabled = true;
+          } else {
+            map[scope].enabled = false;
+          }
+          return map;
+        },
+        {} as PushClientTypes.PushSubscription["scope"]
+      );
+
+      const updatedSubscription: PushClientTypes.PushSubscription = {
+        ...existingSubscription,
+        scope: updatedScope,
+        expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
+      };
+
+      await this.client.subscriptions.set(topic, updatedSubscription);
+
+      this.client.events.emit("push_update", {
+        id,
+        topic,
+        params: {
+          subscription: updatedSubscription,
+        },
+      });
+    } else if (isJsonRpcError(payload)) {
+      this.client.logger.error({
+        event: "onPushUpdateResponse",
+        topic,
+        error: payload.error,
+      });
+      this.client.emit("push_update", {
+        id: payload.id,
+        topic,
+        params: {
+          error: payload.error,
+        },
+      });
     }
   };
 

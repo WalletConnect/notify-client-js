@@ -5,7 +5,8 @@ export declare namespace JsonRpcTypes {
     | "wc_pushRequest"
     | "wc_pushSubscribe"
     | "wc_pushMessage"
-    | "wc_pushDelete";
+    | "wc_pushDelete"
+    | "wc_pushUpdate";
 
   // ---- JSON-RPC Requests -----------------------------
   export interface RequestParams {
@@ -28,6 +29,9 @@ export declare namespace JsonRpcTypes {
       code: number;
       message: string;
     };
+    wc_pushUpdate: {
+      subscriptionAuth: string;
+    };
   }
 
   // ---- JSON-RPC Responses -----------------------------
@@ -40,5 +44,6 @@ export declare namespace JsonRpcTypes {
     };
     wc_pushMessage: true;
     wc_pushDelete: true;
+    wc_pushUpdate: true;
   }
 }

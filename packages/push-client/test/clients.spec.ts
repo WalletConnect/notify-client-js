@@ -1,12 +1,14 @@
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import { generateRandomBytes32 } from "@walletconnect/utils";
 import { expect, describe, it, beforeEach, afterEach, vi } from "vitest";
+import cloneDeep from "lodash.clonedeep";
 import {
   DappClient,
   WalletClient,
   IDappClient,
   IWalletClient,
   SDK_ERRORS,
+  PushClientTypes,
 } from "../src/";
 import { disconnectSocket } from "./helpers/ws";
 
@@ -21,6 +23,15 @@ const dappMetadata = {
   description: "Test DappClient as Requester",
   url: "www.walletconnect.com",
   icons: [],
+};
+
+const gmDappMetadata = {
+  name: "gm-dapp",
+  description: "Get a gm every hour",
+  icons: [
+    "https://explorer-api.walletconnect.com/v3/logo/md/32b894e5-f91e-4fcd-6891-38d31fa6ba00?projectId=25de36e8afefd5babb4b45580efb4e06",
+  ],
+  url: "https://gm.walletconnect.com",
 };
 
 const mockAccount = "eip155:1:0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71";
@@ -329,14 +340,6 @@ describe("WalletClient", () => {
 
   describe("subscribe", () => {
     it("can issue a `push_subscription` request and handle the response", async () => {
-      const gmDappMetadata = {
-        name: "gm-dapp",
-        description: "Get a gm every hour",
-        icons: [
-          "https://explorer-api.walletconnect.com/v3/logo/md/32b894e5-f91e-4fcd-6891-38d31fa6ba00?projectId=25de36e8afefd5babb4b45580efb4e06",
-        ],
-        url: "https://gm.walletconnect.com",
-      };
       let gotPushSubscriptionResponse = false;
       let pushSubscriptionEvent: any;
 
@@ -372,6 +375,58 @@ describe("WalletClient", () => {
         )
       ).toBe(true);
       expect(wallet.requests.length).toBe(0);
+    });
+  });
+
+  describe("update", () => {
+    it("can update an existing push subscription with a new scope", async () => {
+      let gotPushSubscriptionResponse = false;
+      let initialPushSubscription = {} as PushClientTypes.PushSubscription;
+
+      wallet.once("push_subscription", (event) => {
+        gotPushSubscriptionResponse = true;
+        initialPushSubscription = cloneDeep(event.params.subscription!);
+      });
+
+      const hasSent = await wallet.subscribe({
+        metadata: gmDappMetadata,
+        account: mockAccount,
+        onSign: onSignMock,
+      });
+
+      expect(hasSent).toBe(true);
+
+      await waitForEvent(() => gotPushSubscriptionResponse);
+
+      console.log(initialPushSubscription.scope);
+
+      expect(initialPushSubscription.metadata).to.deep.equal(gmDappMetadata);
+      expect(initialPushSubscription.topic).toBeDefined();
+
+      let gotPushUpdateResponse = false;
+      let pushUpdateEvent: any;
+
+      wallet.once("push_update", (event) => {
+        gotPushUpdateResponse = true;
+        pushUpdateEvent = { ...event };
+      });
+
+      await wallet.update({
+        topic: initialPushSubscription.topic,
+        scope: [""],
+      });
+
+      await waitForEvent(() => gotPushUpdateResponse);
+
+      expect(pushUpdateEvent.params.subscription.topic).toBe(
+        initialPushSubscription.topic
+      );
+      expect(pushUpdateEvent.params.subscription.metadata).to.deep.equal(
+        initialPushSubscription.metadata
+      );
+      expect(pushUpdateEvent.params.subscription.scope).not.to.deep.equal(
+        initialPushSubscription.scope
+      );
     });
   });
 

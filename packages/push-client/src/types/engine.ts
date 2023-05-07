@@ -62,6 +62,11 @@ export abstract class IPushEngine {
     onSign: (message: string) => Promise<string>;
   }): Promise<boolean>;
 
+  public abstract update(params: {
+    topic: string;
+    scope: string[];
+  }): Promise<boolean>;
+
   // decrypt push subscription message
   public abstract decryptMessage(params: {
     topic: string;
@@ -159,5 +164,10 @@ export abstract class IPushEngine {
   protected abstract onPushDeleteRequest(
     topic: string,
     payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_pushDelete"]>
+  ): Promise<void>;
+
+  protected abstract onPushUpdateResponse(
+    topic: string,
+    payload: JsonRpcResult<JsonRpcTypes.Results["wc_pushUpdate"]> | JsonRpcError
   ): Promise<void>;
 }
