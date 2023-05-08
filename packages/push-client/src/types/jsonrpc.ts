@@ -22,6 +22,7 @@ export declare namespace JsonRpcTypes {
       body: string;
       icon: string;
       url: string;
+      type?: string;
     };
     wc_pushDelete: {
       code: number;

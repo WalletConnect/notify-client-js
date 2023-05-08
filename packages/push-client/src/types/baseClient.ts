@@ -87,6 +87,7 @@ export declare namespace PushClientTypes {
     body: string;
     icon: string;
     url: string;
+    type?: string;
   }
 
   interface PushMessageRecord {
