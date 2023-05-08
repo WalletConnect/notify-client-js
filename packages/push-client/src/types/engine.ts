@@ -56,6 +56,12 @@ export abstract class IPushEngine {
   // reject push subscription
   public abstract reject(params: { id: number; reason: string }): Promise<void>;
 
+  public abstract subscribe(params: {
+    metadata: PushClientTypes.Metadata;
+    account: string;
+    onSign: (message: string) => Promise<string>;
+  }): Promise<boolean>;
+
   // decrypt push subscription message
   public abstract decryptMessage(params: {
     topic: string;
@@ -129,6 +135,13 @@ export abstract class IPushEngine {
       | JsonRpcError,
     senderPublicKey?: string
   ): void;
+
+  protected abstract onPushSubscribeResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_pushSubscribe"]>
+      | JsonRpcError
+  ): Promise<void>;
 
   protected abstract onPushMessageRequest(
     topic: string,

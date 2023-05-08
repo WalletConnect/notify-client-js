@@ -23,6 +23,8 @@ const dappMetadata = {
   icons: [],
 };
 
+const mockAccount = "eip155:1:0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71";
+
 const onSignMock = () =>
   Promise.resolve(
     "0x5cf19252d326699e9078686035cf8cb020aadf15cb817bb56bcd5605dc0068c15ebdd3230de9b61ab7973d0346b5933f0b0206894b1f6e4af4e2eb8162c52c1d1c"
@@ -33,8 +35,12 @@ const mockIdentityMethods = (wallet: IWalletClient) => {
     return "0x";
   });
   wallet.identityKeys.generateIdAuth = vi.fn(async () => {
-    return "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODE4MzE3MjUsImV4cCI6MTc2ODIzMTcyNSwiaXNzIjoiZGlkOmtleTp6Nk1rb213S2FnaEpCQkdoVHVidnpZb28xeGlZSGljMm5mRnE2R1BMakx5NHNyZkoiLCJzdWIiOiJkaWQ6cGtoOjB4QjY4MzI4NTQyRDBDMDhjNDc4ODJEMTI3NmM3Y0M0RDZmQjllQWU3MSIsImF1ZCI6Ind3dy53YWxsZXRjb25uZWN0LmNvbSIsImtzdSI6Imh0dHBzOi8va2V5cy53YWxsZXRjb25uZWN0LmNvbSIsImFjdCI6InB1c2hfc3Vic2NyaXB0aW9uIn0.EosnDbWeR5XQPFRknPnUxeMyzYN5OV7kqH8ljnqDWRv1EG05p8O-TO56EHTDRMrPulSE6pENMCCMvkLDMcSSBQ";
+    return "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODI1MjUwMjQsImV4cCI6MTc2ODkyNTAyNCwiaXNzIjoiZGlkOmtleTp6Nk1ranVEdXFFU3JHN2ZTSldDNjhiajF6MXJxUU05NHBzU2Q1aktuRmRtMVc5NHMiLCJzdWIiOiJkaWQ6cGtoOmVpcDE1NToxOjB4ZEEzRkI3ZENiOTY2OGI2NTVlZkU0ZjZEMDFCN0YyQjE4OTUzOEYxNSIsImF1ZCI6Imh0dHBzOi8vZ20ud2FsbGV0Y29ubmVjdC5jb20iLCJrc3UiOiJodHRwczovL2tleXMud2FsbGV0Y29ubmVjdC5jb20iLCJzY3AiOiJwcm9tb3Rpb25hbCBwcml2YXRlIGFsZXJ0cyIsImFjdCI6InB1c2hfc3Vic2NyaXB0aW9uIn0.Buc9iTbfT_CmJjxgDy9gL53KLqdBiLsKk0IyQ1ynCMJTw2_XvMjwI_9jZfvwGzBXhjtK6XpQzrerxrUGO_5XAA";
   });
+  wallet.identityKeys.getIdentity = vi.fn(
+    async () =>
+      "1acf41c75a13dd332e3520eb5210a9d25591c1fd98a1fcfe5fb848cbf47edd0b"
+  );
 };
 
 const setupKnownPairing = async (
@@ -204,16 +210,14 @@ describe("WalletClient", () => {
   beforeEach(async () => {
     wallet = await WalletClient.init({
       name: "testWalletClient",
-      logger: "error",
-      relayUrl:
-        process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
+      logger: "trace",
+      relayUrl: process.env.TEST_RELAY_URL || "wss://relay.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
     });
     dapp = await DappClient.init({
       name: "testDappClientAsPeer",
       logger: "error",
-      relayUrl:
-        process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
+      relayUrl: process.env.TEST_RELAY_URL || "wss://relay.walletconnect.com",
       castUrl:
         process.env.TEST_CAST_URL || "https://staging.cast.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
@@ -323,6 +327,54 @@ describe("WalletClient", () => {
     });
   });
 
+  describe("subscribe", () => {
+    it("can issue a `push_subscription` request and handle the response", async () => {
+      const gmDappMetadata = {
+        name: "gm-dapp",
+        description: "Get a gm every hour",
+        icons: [
+          "https://explorer-api.walletconnect.com/v3/logo/md/32b894e5-f91e-4fcd-6891-38d31fa6ba00?projectId=25de36e8afefd5babb4b45580efb4e06",
+        ],
+        url: "https://gm.walletconnect.com",
+      };
+      let gotPushSubscriptionResponse = false;
+      let pushSubscriptionEvent: any;
+
+      wallet.once("push_subscription", (event) => {
+        gotPushSubscriptionResponse = true;
+        pushSubscriptionEvent = event;
+      });
+
+      const hasSent = await wallet.subscribe({
+        metadata: gmDappMetadata,
+        account: mockAccount,
+        onSign: onSignMock,
+      });
+
+      expect(hasSent).toBe(true);
+
+      await waitForEvent(() => gotPushSubscriptionResponse);
+
+      expect(pushSubscriptionEvent.params.subscription.metadata).to.deep.equal(
+        gmDappMetadata
+      );
+      expect(pushSubscriptionEvent.params.subscription.topic).toBeDefined();
+
+      // Check that wallet is in expected state.
+      expect(
+        wallet.subscriptions.keys.includes(
+          pushSubscriptionEvent.params.subscription.topic
+        )
+      ).toBe(true);
+      expect(
+        wallet.messages.keys.includes(
+          pushSubscriptionEvent.params.subscription.topic
+        )
+      ).toBe(true);
+      expect(wallet.requests.length).toBe(0);
+    });
+  });
+
   describe("decryptMessage", () => {
     it("can decrypt an encrypted message for a known push topic", async () => {
       const pairingTopic = await setupKnownPairing(wallet, dapp);
@@ -390,6 +442,7 @@ describe("WalletClient", () => {
       });
 
       await dapp.notify({ topic, message: message1 });
+      await waitForEvent(() => receivedMessageCount === 1);
       await dapp.notify({ topic, message: message2 });
       await waitForEvent(() => receivedMessageCount === 2);
 

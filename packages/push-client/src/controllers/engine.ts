@@ -27,12 +27,13 @@ import {
   hashKey,
   parseExpirerTarget,
 } from "@walletconnect/utils";
-
 import jwt from "jsonwebtoken";
+import axios from "axios";
 
 import {
   DEFAULT_RELAY_SERVER_URL,
   ENGINE_RPC_OPTS,
+  JWT_SCP_SEPARATOR,
   PUSH_REQUEST_EXPIRY,
   PUSH_SUBSCRIPTION_EXPIRY,
   SDK_ERRORS,
@@ -42,6 +43,7 @@ import {
   IPushEngine,
   IWalletClient,
   JsonRpcTypes,
+  PushClientTypes,
 } from "../types";
 
 export class PushEngine extends IPushEngine {
@@ -94,7 +96,10 @@ export class PushEngine extends IPushEngine {
     // TODO: Is this obsolete now?
     await this.client.requests.set(id, {
       topic: pairingTopic,
-      request,
+      request: {
+        ...request,
+        scope: {},
+      },
     });
 
     await (this.client as IDappClient).proposalKeys.set(responseTopic, {
@@ -207,7 +212,7 @@ export class PushEngine extends IPushEngine {
       relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
       metadata: request.metadata,
       scope: {},
-      expiry: PUSH_SUBSCRIPTION_EXPIRY,
+      expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
     });
 
     // Set up a store for messages sent to this push topic.
@@ -240,6 +245,168 @@ export class PushEngine extends IPushEngine {
 
     // Clean up the original request.
     this.cleanupRequest(id);
+  };
+
+  public subscribe: IPushEngine["subscribe"] = async ({
+    metadata,
+    account,
+    onSign,
+  }) => {
+    this.isInitialized();
+
+    let didDoc: PushClientTypes.PushDidDocument;
+    let pushConfig: PushClientTypes.PushConfigDocument;
+
+    try {
+      // Fetch dapp's public key from its hosted DID doc.
+      const didDocResp = await axios.get(
+        `${metadata.url}/.well-known/did.json`
+      );
+      didDoc = didDocResp.data;
+    } catch (error: any) {
+      throw new Error(
+        `Failed to fetch dapp's DID doc from ${metadata.url}/.well-known/did.json. Error: ${error.message}`
+      );
+    }
+
+    try {
+      // Fetch dapp's Push config from its hosted wc-push-config.
+      const pushConfigResp = await axios.get(
+        `${metadata.url}/.well-known/wc-push-config.json`
+      );
+      pushConfig = pushConfigResp.data;
+
+      this.client.logger.info(
+        `[Push] subscribe > got push config: ${JSON.stringify(pushConfig)}`
+      );
+    } catch (error: any) {
+      throw new Error(
+        `Failed to fetch dapp's Push config from ${metadata.url}/.well-known/wc-push-config.json. Error: ${error.message}`
+      );
+    }
+
+    // Retrieve existing identity or register a new one for this account on this device.
+    await this.registerIdentity(account, onSign);
+
+    const { publicKeyJwk } = didDoc.verificationMethod[0];
+    const base64Jwk = publicKeyJwk.x.replace(/-/g, "+").replace(/_/g, "/");
+    const dappPublicKey = Buffer.from(base64Jwk, "base64").toString("hex");
+
+    this.client.logger.info(
+      `[Push] subscribe > publicKey for ${metadata.url} is: ${dappPublicKey}`
+    );
+
+    // SPEC: Wallet derives subscribe topic, which is the sha256 hash of public key X
+    const subscribeTopic = hashKey(dappPublicKey);
+
+    // SPEC: Wallet generates key pair Y
+    const selfPublicKey = await this.client.core.crypto.generateKeyPair();
+
+    // SPEC: Wallet derives S symmetric key with keys X and Y
+    const responseTopic = await this.client.core.crypto.generateSharedKey(
+      selfPublicKey,
+      dappPublicKey
+    );
+
+    // SPEC: Generate a subscriptionAuth JWT
+    const identityKeyPub = await (
+      this.client as IWalletClient
+    ).identityKeys.getIdentity({
+      account,
+    });
+    const dappUrl = metadata.url;
+    const issuedAt = Math.round(Date.now() / 1000);
+    this.client;
+    const scp = pushConfig.types
+      .map((type) => type.name)
+      .join(JWT_SCP_SEPARATOR);
+    const payload: JwtPayload = {
+      iat: issuedAt,
+      exp: jwtExp(issuedAt),
+      iss: encodeEd25519Key(identityKeyPub),
+      sub: composeDidPkh(account),
+      aud: dappUrl,
+      ksu: (this.client as IWalletClient).keyserverUrl,
+      scp,
+      act: "push_subscription",
+    };
+
+    this.client.logger.info(
+      `[Push] subscribe > generating subscriptionAuth JWT for payload: ${JSON.stringify(
+        payload
+      )}`
+    );
+
+    const subscriptionAuth = await this.generateSubscriptionAuth(
+      account,
+      payload
+    );
+
+    this.client.logger.info(
+      `[Push] subscribe > generated subscriptionAuth JWT: ${subscriptionAuth}`
+    );
+
+    // SPEC: Wallet subscribes to response topic
+    await this.client.core.relayer.subscribe(responseTopic);
+
+    this.client.logger.info(
+      `[Push] subscribe > subscribed to responseTopic ${responseTopic}`
+    );
+
+    this.client.logger.info(
+      `[Push] subscribe > sending wc_pushSubscribe request on topic ${subscribeTopic}...`
+    );
+
+    // SPEC: Wallet sends wc_pushSubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
+    const id = await this.sendRequest<"wc_pushSubscribe">(
+      subscribeTopic,
+      "wc_pushSubscribe",
+      {
+        subscriptionAuth,
+      },
+      {
+        type: TYPE_1,
+        senderPublicKey: selfPublicKey,
+        receiverPublicKey: dappPublicKey,
+      }
+    );
+
+    this.client.logger.info({
+      action: "sendRequest",
+      method: "wc_pushSubscribe",
+      id,
+      topic: subscribeTopic,
+      subscriptionAuth,
+      params: {
+        type: TYPE_1,
+        senderPublicKey: selfPublicKey,
+        receiverPublicKey: dappPublicKey,
+      },
+    });
+
+    const scopeMap: PushClientTypes.ScopeMap = pushConfig.types.reduce(
+      (map, type) => {
+        map[type.name] = { description: type.description, enabled: true };
+        return map;
+      },
+      {}
+    );
+
+    // Store the pending subscription request.
+    this.client.requests.set(id, {
+      topic: responseTopic,
+      request: {
+        account,
+        metadata,
+        publicKey: selfPublicKey,
+        scope: scopeMap,
+      },
+    });
+
+    // Set the expiry for the push subscription request.
+    this.client.core.expirer.set(id, calcExpiry(PUSH_REQUEST_EXPIRY));
+
+    return true;
   };
 
   public decryptMessage: IPushEngine["decryptMessage"] = async ({
@@ -336,7 +503,7 @@ export class PushEngine extends IPushEngine {
     );
     const rpcOpts = ENGINE_RPC_OPTS[method].req;
     this.client.core.history.set(topic, payload);
-    await this.client.core.relayer.publish(topic, message, rpcOpts);
+    this.client.core.relayer.publish(topic, message, rpcOpts);
 
     return payload.id;
   };
@@ -356,7 +523,7 @@ export class PushEngine extends IPushEngine {
     const record = await this.client.core.history.get(topic, id);
     const rpcOpts = ENGINE_RPC_OPTS[record.request.method].res;
 
-    await this.client.core.relayer.publish(topic, message, rpcOpts);
+    this.client.core.relayer.publish(topic, message, rpcOpts);
     await this.client.core.history.resolve(payload);
 
     return payload.id;
@@ -480,6 +647,8 @@ export class PushEngine extends IPushEngine {
     switch (resMethod) {
       case "wc_pushRequest":
         return this.onPushResponse(topic, payload, senderPublicKey);
+      case "wc_pushSubscribe":
+        return this.onPushSubscribeResponse(topic, payload);
       case "wc_pushMessage":
         return this.onPushMessageResponse(topic, payload);
       case "wc_pushDelete":
@@ -503,7 +672,10 @@ export class PushEngine extends IPushEngine {
       // Store the push subscription request so we can reference later for a response.
       await this.client.requests.set(payload.id, {
         topic,
-        request: payload.params,
+        request: {
+          ...payload.params,
+          scope: {},
+        },
       });
 
       // Set the expiry for the push subscription request.
@@ -588,7 +760,7 @@ export class PushEngine extends IPushEngine {
         relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
         metadata: request.metadata,
         scope: {},
-        expiry: PUSH_SUBSCRIPTION_EXPIRY,
+        expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
       };
 
       // Store the new PushSubscription.
@@ -625,6 +797,81 @@ export class PushEngine extends IPushEngine {
     // Clean up the original request regardless of concrete result.
     this.cleanupRequest(response.id);
   };
+
+  protected onPushSubscribeResponse: IPushEngine["onPushSubscribeResponse"] =
+    async (responseTopic, response) => {
+      this.client.logger.info(
+        `onPushSubscribeResponse on response topic ${responseTopic}`
+      );
+
+      if (isJsonRpcResult(response)) {
+        const { id } = response;
+
+        this.client.logger.info({
+          event: "onPushSubscribeResponse",
+          id,
+          topic: responseTopic,
+          response,
+        });
+
+        const { request } = this.client.requests.get(id);
+
+        // SPEC: Wallet derives symmetric key P with keys Y and Z.
+        // SPEC: Push topic is derived from the sha256 hash of the symmetric key P
+        const pushTopic = await this.client.core.crypto.generateSharedKey(
+          request.publicKey,
+          response.result.publicKey
+        );
+
+        this.client.logger.info(
+          `onPushSubscribeResponse > derived pushTopic ${pushTopic} from selfPublicKey ${request.publicKey} and Cast publicKey ${response.result.publicKey}`
+        );
+
+        const pushSubscription = {
+          topic: pushTopic,
+          account: request.account,
+          relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
+          metadata: request.metadata,
+          scope: request.scope,
+          expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
+        };
+
+        // Store the new PushSubscription.
+        await this.client.subscriptions.set(pushTopic, pushSubscription);
+
+        // Set up a store for messages sent to this push topic.
+        await (this.client as IWalletClient).messages.set(pushTopic, {
+          topic: pushTopic,
+          messages: {},
+        });
+
+        // SPEC: Wallet subscribes to derived pushTopic.
+        this.client.core.relayer.subscribe(pushTopic);
+
+        await this.cleanupRequest(id);
+
+        // Emit the PushSubscription at client level.
+        this.client.emit("push_subscription", {
+          id: response.id,
+          topic: pushTopic,
+          params: {
+            subscription: pushSubscription,
+          },
+        });
+      } else if (isJsonRpcError(response)) {
+        // Emit the error response at client level.
+        this.client.emit("push_subscription", {
+          id: response.id,
+          topic: responseTopic,
+          params: {
+            error: response.error,
+          },
+        });
+      }
+
+      // Clean up the original request regardless of concrete result.
+      this.cleanupRequest(response.id, true);
+    };
 
   protected onPushMessageRequest: IPushEngine["onPushMessageRequest"] = async (
     topic,

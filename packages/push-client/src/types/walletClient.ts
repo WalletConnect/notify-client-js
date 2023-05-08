@@ -29,6 +29,7 @@ export abstract class IWalletClient extends IBaseClient {
 
   public abstract approve: IPushEngine["approve"];
   public abstract reject: IPushEngine["reject"];
+  public abstract subscribe: IPushEngine["subscribe"];
   public abstract decryptMessage: IPushEngine["decryptMessage"];
   public abstract getMessageHistory: IPushEngine["getMessageHistory"];
   public abstract deletePushMessage: IPushEngine["deletePushMessage"];

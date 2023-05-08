@@ -9,6 +9,7 @@ export declare namespace PushClientTypes {
   type Event =
     | "push_request"
     | "push_response"
+    | "push_subscription"
     | "push_message"
     | "push_delete";
 
@@ -36,6 +37,7 @@ export declare namespace PushClientTypes {
   interface EventArguments {
     push_request: BaseEventArgs<PushRequestEventArgs>;
     push_response: BaseEventArgs<PushResponseEventArgs>;
+    push_subscription: BaseEventArgs<PushResponseEventArgs>;
     push_message: BaseEventArgs<PushMessageRequestEventArgs>;
     push_delete: BaseEventArgs<PushDeleteRequestEventArgs>;
   }
@@ -62,10 +64,13 @@ export declare namespace PushClientTypes {
     };
   }
 
+  type ScopeMap = Record<string, { description: string; enabled: boolean }>;
+
   interface PushSubscriptionRequest {
     publicKey: string;
     metadata: Metadata;
     account: string;
+    scope: ScopeMap;
   }
 
   interface PushSubscription {
@@ -73,7 +78,7 @@ export declare namespace PushClientTypes {
     account: string;
     relay: RelayerTypes.ProtocolOptions;
     metadata: Metadata;
-    scope: Record<string, { description: string; enabled: boolean }>;
+    scope: ScopeMap;
     expiry: number;
   }
 
@@ -82,6 +87,7 @@ export declare namespace PushClientTypes {
     body: string;
     icon: string;
     url: string;
+    type?: string;
   }
 
   interface PushMessageRecord {
@@ -89,6 +95,31 @@ export declare namespace PushClientTypes {
     topic: string;
     message: PushMessage;
     publishedAt: number;
+  }
+
+  interface PushDidDocument {
+    "@context": string[];
+    id: string;
+    verificationMethod: Array<{
+      id: string;
+      type: string;
+      controller: string;
+      publicKeyJwk: {
+        kty: string;
+        crv: string;
+        x: string;
+      };
+    }>;
+    keyAgreement: string[];
+  }
+
+  interface PushConfigDocument {
+    version: number;
+    lastModified: number;
+    types: Array<{
+      name: string;
+      description: string;
+    }>;
   }
 }
 
@@ -103,7 +134,10 @@ export abstract class IBaseClient {
   public abstract engine: IPushEngine;
   public abstract requests: IStore<
     number,
-    { topic: string; request: PushClientTypes.PushSubscriptionRequest }
+    {
+      topic: string;
+      request: PushClientTypes.PushSubscriptionRequest;
+    }
   >;
   public abstract subscriptions: IStore<
     string,
