@@ -221,7 +221,7 @@ describe("WalletClient", () => {
   beforeEach(async () => {
     wallet = await WalletClient.init({
       name: "testWalletClient",
-      logger: "trace",
+      logger: "error",
       relayUrl: process.env.TEST_RELAY_URL || "wss://relay.walletconnect.com",
       projectId: process.env.TEST_PROJECT_ID!,
     });
