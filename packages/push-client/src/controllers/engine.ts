@@ -447,7 +447,7 @@ export class PushEngine extends IPushEngine {
     };
 
     this.client.logger.info(
-      `[Push] subscribe > generating subscriptionAuth JWT for payload: ${JSON.stringify(
+      `[Push] update > generating subscriptionAuth JWT for payload: ${JSON.stringify(
         payload
       )}`
     );
@@ -458,7 +458,7 @@ export class PushEngine extends IPushEngine {
     );
 
     this.client.logger.info(
-      `[Push] subscribe > generated subscriptionAuth JWT: ${subscriptionAuth}`
+      `[Push] update > generated subscriptionAuth JWT: ${subscriptionAuth}`
     );
 
     const id = await this.sendRequest(topic, "wc_pushUpdate", {
