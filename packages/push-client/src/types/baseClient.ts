@@ -11,7 +11,8 @@ export declare namespace PushClientTypes {
     | "push_response"
     | "push_subscription"
     | "push_message"
-    | "push_delete";
+    | "push_delete"
+    | "push_update";
 
   type PushRequestEventArgs = {
     id: number;
@@ -40,6 +41,7 @@ export declare namespace PushClientTypes {
     push_subscription: BaseEventArgs<PushResponseEventArgs>;
     push_message: BaseEventArgs<PushMessageRequestEventArgs>;
     push_delete: BaseEventArgs<PushDeleteRequestEventArgs>;
+    push_update: BaseEventArgs<PushResponseEventArgs>;
   }
 
   interface DappClientOptions extends CoreTypes.Options {
@@ -71,6 +73,7 @@ export declare namespace PushClientTypes {
     metadata: Metadata;
     account: string;
     scope: ScopeMap;
+    scopeUpdate?: string[];
   }
 
   interface PushSubscription {
