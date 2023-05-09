@@ -27,8 +27,8 @@ import {
   hashKey,
   parseExpirerTarget,
 } from "@walletconnect/utils";
-import jwt from "jsonwebtoken";
 import axios from "axios";
+import jwt_decode from "jwt-decode";
 
 import {
   DEFAULT_RELAY_SERVER_URL,
@@ -789,9 +789,7 @@ export class PushEngine extends IPushEngine {
       const { request } = this.client.requests.get(id);
       const selfPublicKey = request.publicKey;
 
-      const decodedPayload = jwt.decode(result.subscriptionAuth, {
-        json: true,
-      }) as JwtPayload;
+      const decodedPayload = jwt_decode(result.subscriptionAuth) as JwtPayload;
 
       if (!decodedPayload) {
         throw new Error(
