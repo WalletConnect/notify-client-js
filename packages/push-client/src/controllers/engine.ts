@@ -1159,12 +1159,10 @@ export class PushEngine extends IPushEngine {
         `[Push] Engine.onPushResponse > POST to Cast Server at ${reqUrl} with body ${bodyString}`
       );
 
-      const res = await fetch(reqUrl, {
-        method: "POST",
+      const res = await axios.post(reqUrl, bodyString, {
         headers: {
           "Content-Type": "application/json",
         },
-        body: bodyString,
       });
 
       this.client.logger.info(
