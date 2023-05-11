@@ -1172,6 +1172,7 @@ export class PushEngine extends IPushEngine {
       this.client.logger.error(
         `[Push] Could not register push subscription on Cast Server via POST with body: ${bodyString} to ${reqUrl}: ${error.message}`
       );
+      throw error;
     }
   };
 
