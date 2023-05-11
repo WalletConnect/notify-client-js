@@ -12,12 +12,6 @@ import {
 } from "../src/";
 import { disconnectSocket } from "./helpers/ws";
 
-// @ts-expect-error
-global.fetch = vi.fn(async () => ({
-  status: 201,
-  statusText: "Created",
-}));
-
 const dappMetadata = {
   name: "dapp (requester)",
   description: "Test DappClient as Requester",
@@ -88,7 +82,7 @@ const createPushSubscription = async (
   });
 
   const { id } = await dapp.request({
-    account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+    account: mockAccount,
     pairingTopic,
   });
 
@@ -166,7 +160,7 @@ describe("DappClient", () => {
       });
 
       const { id } = await dapp.request({
-        account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        account: mockAccount,
         pairingTopic,
       });
 
@@ -269,7 +263,7 @@ describe("WalletClient", () => {
       });
 
       const { id } = await dapp.request({
-        account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        account: mockAccount,
         pairingTopic,
       });
 
@@ -310,7 +304,7 @@ describe("WalletClient", () => {
       });
 
       const { id } = await dapp.request({
-        account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        account: mockAccount,
         pairingTopic,
       });
 
@@ -398,8 +392,6 @@ describe("WalletClient", () => {
 
       await waitForEvent(() => gotPushSubscriptionResponse);
 
-      console.log(initialPushSubscription.scope);
-
       expect(initialPushSubscription.metadata).to.deep.equal(gmDappMetadata);
       expect(initialPushSubscription.topic).toBeDefined();
 
@@ -444,7 +436,7 @@ describe("WalletClient", () => {
       });
 
       const { id } = await dapp.request({
-        account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        account: mockAccount,
         pairingTopic,
       });
 
@@ -597,7 +589,7 @@ describe("Common (BaseClient)", () => {
       });
 
       const { id } = await dapp.request({
-        account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        account: mockAccount,
         pairingTopic,
       });
 
@@ -643,7 +635,7 @@ describe("Common (BaseClient)", () => {
       });
 
       const { id } = await dapp.request({
-        account: "0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71",
+        account: mockAccount,
         pairingTopic,
       });
 
