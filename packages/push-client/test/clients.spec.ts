@@ -20,8 +20,8 @@ import {
 import { createPushSubscription, setupKnownPairing } from "./helpers/push";
 import { waitForEvent } from "./helpers/async";
 
-const DEFAULT_RELAY_URL = "wss://staging.relay.walletconnect.com";
-const DEFAULT_CAST_URL = "https://staging.cast.walletconnect.com";
+const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
+const DEFAULT_CAST_URL = "https://cast.walletconnect.com";
 
 if (!process.env.TEST_PROJECT_ID) {
   throw new ReferenceError("TEST_PROJECT_ID env variable not set");
