@@ -20,6 +20,13 @@ import {
 import { createPushSubscription, setupKnownPairing } from "./helpers/push";
 import { waitForEvent } from "./helpers/async";
 
+const DEFAULT_RELAY_URL = "wss://staging.relay.walletconnect.com";
+const DEFAULT_CAST_URL = "https://staging.cast.walletconnect.com";
+
+if (!process.env.TEST_PROJECT_ID) {
+  throw new ReferenceError("TEST_PROJECT_ID env variable not set");
+}
+
 describe("Push", () => {
   let dapp: IDappClient;
   let wallet: IWalletClient;
@@ -28,19 +35,16 @@ describe("Push", () => {
     dapp = await DappClient.init({
       name: "testDappClient",
       logger: "error",
-      relayUrl:
-        process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
-      castUrl:
-        process.env.TEST_CAST_URL || "https://staging.cast.walletconnect.com",
-      projectId: process.env.TEST_PROJECT_ID!,
+      relayUrl: process.env.TEST_RELAY_URL || DEFAULT_RELAY_URL,
+      castUrl: process.env.TEST_CAST_URL || DEFAULT_CAST_URL,
+      projectId: process.env.TEST_PROJECT_ID,
       metadata: dappMetadata,
     });
     wallet = await WalletClient.init({
       name: "testWalletClient",
       logger: "error",
-      relayUrl:
-        process.env.TEST_RELAY_URL || "wss://staging.relay.walletconnect.com",
-      projectId: process.env.TEST_PROJECT_ID!,
+      relayUrl: process.env.TEST_RELAY_URL || DEFAULT_RELAY_URL,
+      projectId: process.env.TEST_PROJECT_ID,
     });
 
     // Mocking identity key methods.
