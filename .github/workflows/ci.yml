@@ -29,7 +29,7 @@ jobs:
         run: echo "::set-output name=dir::$(npm config get cache)"
 
       - name: Check npm cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache-npm-cache
         with:
           path: ${{ steps.npm-cache-dir-path.outputs.dir }}
@@ -39,7 +39,7 @@ jobs:
 
       - name: Check node_modules cache
         id: cache-node-modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           TEST_RELAY_URL: ${{ secrets.TEST_RELAY_URL }}
           TEST_PROJECT_ID: ${{ secrets.TEST_PROJECT_ID }}
