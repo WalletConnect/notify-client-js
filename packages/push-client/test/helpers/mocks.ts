@@ -18,7 +18,7 @@ export const gmDappMetadata = {
 };
 
 export const mockAccount =
-  "eip155:1:0xB68328542D0C08c47882D1276c7cC4D6fB9eAe71";
+  "eip155:1:0x3d3429CEe7af5884618079aBfCD2566f67CefBc3";
 
 export const onSignMock = () =>
   Promise.resolve(
@@ -30,7 +30,7 @@ export const mockIdentityMethods = (wallet: IWalletClient) => {
     return "0x";
   });
   wallet.identityKeys.generateIdAuth = vi.fn(async () => {
-    return "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODI1MjUwMjQsImV4cCI6MTc2ODkyNTAyNCwiaXNzIjoiZGlkOmtleTp6Nk1ranVEdXFFU3JHN2ZTSldDNjhiajF6MXJxUU05NHBzU2Q1aktuRmRtMVc5NHMiLCJzdWIiOiJkaWQ6cGtoOmVpcDE1NToxOjB4ZEEzRkI3ZENiOTY2OGI2NTVlZkU0ZjZEMDFCN0YyQjE4OTUzOEYxNSIsImF1ZCI6Imh0dHBzOi8vZ20ud2FsbGV0Y29ubmVjdC5jb20iLCJrc3UiOiJodHRwczovL2tleXMud2FsbGV0Y29ubmVjdC5jb20iLCJzY3AiOiJwcm9tb3Rpb25hbCBwcml2YXRlIGFsZXJ0cyIsImFjdCI6InB1c2hfc3Vic2NyaXB0aW9uIn0.Buc9iTbfT_CmJjxgDy9gL53KLqdBiLsKk0IyQ1ynCMJTw2_XvMjwI_9jZfvwGzBXhjtK6XpQzrerxrUGO_5XAA";
+    return "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhY3QiOiJwdXNoX3N1YnNjcmlwdGlvbiIsImlhdCI6MTY4NDQwMjYzOCwic3ViIjoiZGlkOnBraDplaXAxNTU6MToweDNkMzQyOUNFZTdhZjU4ODQ2MTgwNzlhQmZDRDI1NjZmNjdDZWZCYzMiLCJleHAiOjE2ODQzMTYyMzgxNDAsImF1ZCI6Imh0dHBzOi8vZ20ud2FsbGV0Y29ubmVjdC5jb20iLCJrc3UiOiJodHRwczovL2tleXMud2FsbGV0Y29ubmVjdC5jb20iLCJpc3MiOiJkaWQ6a2V5Ono2TWtuUFlyNU5LU1VneVoyZjdZam9WUXpZRVhNZ0tEeEpuenEzVG5jTjk5dWJ4ZSJ9.raKQ88Z7YR9Jq524jjod1H3JOUFXqLHYY266CsYWrBLrezkBHJ_3qrxhBxuFpKu03A8PHf2lfzeyRkIvkhaTDg";
   });
   wallet.identityKeys.getIdentity = vi.fn(
     async () =>
