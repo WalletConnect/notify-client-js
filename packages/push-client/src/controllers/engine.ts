@@ -923,7 +923,10 @@ export class PushEngine extends IPushEngine {
         });
 
         // SPEC: Wallet subscribes to derived pushTopic.
-        this.client.core.relayer.subscribe(pushTopic);
+        await this.client.core.relayer.subscribe(pushTopic);
+
+        // Wallet unsubscribes from response topic.
+        await this.client.core.relayer.unsubscribe(responseTopic);
 
         await this.cleanupRequest(id);
 
