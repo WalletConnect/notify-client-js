@@ -928,8 +928,6 @@ export class PushEngine extends IPushEngine {
         // Wallet unsubscribes from response topic.
         await this.client.core.relayer.unsubscribe(responseTopic);
 
-        await this.cleanupRequest(id);
-
         // Emit the PushSubscription at client level.
         this.client.emit("push_subscription", {
           id: response.id,
@@ -950,7 +948,7 @@ export class PushEngine extends IPushEngine {
       }
 
       // Clean up the original request regardless of concrete result.
-      this.cleanupRequest(response.id, true);
+      this.cleanupRequest(response.id);
     };
 
   protected onPushMessageRequest: IPushEngine["onPushMessageRequest"] = async (
