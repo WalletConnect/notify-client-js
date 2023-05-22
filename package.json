@@ -1,7 +1,7 @@
 {
   "name": "push-client-js",
   "description": "Repository for all packages related to the WalletConnect Push Client",
-  "version": "0.0.1",
+  "version": "0.9.2-0383e8c",
   "private": true,
   "author": "WalletConnect, Inc. <walletconnect.com>",
   "homepage": "https://github.com/walletconnect/push-client-js/",
