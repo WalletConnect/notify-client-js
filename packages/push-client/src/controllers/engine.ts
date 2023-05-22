@@ -137,8 +137,12 @@ export class PushEngine extends IPushEngine {
 
     const { request } = this.client.requests.get(id);
 
+    this.client.logger.debug("[Push] Engine.approve > registering identity");
     // Retrieve existing identity or register a new one for this account on this device.
     await this.registerIdentity(request.account, onSign);
+    this.client.logger.debug(
+      "[Push] Engine.approve > registerIdentity successful"
+    );
 
     const dappUrl = request.metadata.url;
     const issuedAt = Math.round(Date.now() / 1000);
