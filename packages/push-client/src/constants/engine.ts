@@ -60,4 +60,14 @@ export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
       tag: 4009,
     },
   },
+  wc_pushPropose: {
+    req: {
+      ttl: ONE_DAY,
+      tag: 4010,
+    },
+    res: {
+      ttl: ONE_DAY,
+      tag: 4011,
+    },
+  },
 };

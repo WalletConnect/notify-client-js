@@ -9,12 +9,19 @@ export declare namespace PushClientTypes {
   type Event =
     | "push_request"
     | "push_response"
+    | "push_proposal"
     | "push_subscription"
     | "push_message"
     | "push_delete"
     | "push_update";
 
   type PushRequestEventArgs = {
+    id: number;
+    account: string;
+    metadata: Metadata;
+  };
+
+  type PushProposalRequestEventArgs = {
     id: number;
     account: string;
     metadata: Metadata;
@@ -37,6 +44,7 @@ export declare namespace PushClientTypes {
 
   interface EventArguments {
     push_request: BaseEventArgs<PushRequestEventArgs>;
+    push_proposal: BaseEventArgs<PushProposalRequestEventArgs>;
     push_response: BaseEventArgs<PushResponseEventArgs>;
     push_subscription: BaseEventArgs<PushResponseEventArgs>;
     push_message: BaseEventArgs<PushMessageRequestEventArgs>;
@@ -74,6 +82,13 @@ export declare namespace PushClientTypes {
     account: string;
     scope: ScopeMap;
     scopeUpdate?: string[];
+  }
+
+  interface PushProposal {
+    publicKey: string;
+    metadata: PushClientTypes.Metadata;
+    account: string;
+    scope: string[];
   }
 
   interface PushSubscription {
@@ -140,6 +155,13 @@ export abstract class IBaseClient {
     {
       topic: string;
       request: PushClientTypes.PushSubscriptionRequest;
+    }
+  >;
+  public abstract proposals: IStore<
+    number,
+    {
+      topic: string;
+      proposal: PushClientTypes.PushProposal;
     }
   >;
   public abstract subscriptions: IStore<

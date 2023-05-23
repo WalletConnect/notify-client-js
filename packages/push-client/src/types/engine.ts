@@ -39,6 +39,13 @@ export abstract class IPushEngine {
     pairingTopic: string;
   }): Promise<{ id: number }>;
 
+  // propose push subscription
+  public abstract propose(params: {
+    account: string;
+    pairingTopic: string;
+    scope: string[];
+  }): Promise<{ id: number }>;
+
   // send push notification message
   public abstract notify(params: {
     topic: string;
@@ -140,6 +147,11 @@ export abstract class IPushEngine {
       | JsonRpcError,
     senderPublicKey?: string
   ): void;
+
+  protected abstract onPushProposeRequest(
+    topic: string,
+    payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_pushPropose"]>
+  ): Promise<void>;
 
   protected abstract onPushSubscribeResponse(
     topic: string,

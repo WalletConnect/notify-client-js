@@ -68,6 +68,7 @@ export class PushEngine extends IPushEngine {
 
   // ---------- Public (Dapp) ----------------------------------------- //
 
+  // TODO: remove - DEPRECATED
   public request: IPushEngine["request"] = async ({
     account,
     pairingTopic,
@@ -115,6 +116,51 @@ export class PushEngine extends IPushEngine {
 
     this.client.logger.info(
       `[Push] Engine.request > subscribed to response topic ${responseTopic}`
+    );
+
+    return { id };
+  };
+
+  public propose: IPushEngine["propose"] = async ({
+    account,
+    pairingTopic,
+    scope,
+  }) => {
+    this.isInitialized();
+
+    // SPEC: Dapp generates public key X
+    const publicKey = await this.client.core.crypto.generateKeyPair();
+    // SPEC: Response topic is derived from hash of public key X
+    const responseTopic = hashKey(publicKey);
+
+    // SPEC: Dapp sends push proposal on known pairing P
+    const proposal = {
+      publicKey,
+      account,
+      metadata: (this.client as IDappClient).metadata,
+      scope,
+    };
+    const id = await this.sendRequest(pairingTopic, "wc_pushPropose", proposal);
+
+    this.client.logger.info(
+      `[Push] Engine.propose > sent push subscription proposal on pairing ${pairingTopic} with id: ${id}. Request: ${JSON.stringify(
+        proposal
+      )}`
+    );
+
+    await this.client.proposals.set(id, {
+      topic: responseTopic,
+      proposal,
+    });
+
+    // Set the expiry for the push subscription proposal.
+    this.client.core.expirer.set(id, calcExpiry(PUSH_REQUEST_EXPIRY));
+
+    // Dapp subscribes to response topic, which is the sha256 hash of public key X
+    await this.client.core.relayer.subscribe(responseTopic);
+
+    this.client.logger.info(
+      `[Push] Engine.propose > subscribed to response topic ${responseTopic}`
     );
 
     return { id };
@@ -391,6 +437,7 @@ export class PushEngine extends IPushEngine {
       {}
     );
 
+    // TODO: make `client.requests` WalletClient-only
     // Store the pending subscription request.
     this.client.requests.set(id, {
       topic: responseTopic,
@@ -639,6 +686,7 @@ export class PushEngine extends IPushEngine {
 
         let receiverPublicKey: string | undefined;
 
+        // TODO: remove `proposalKeys` entirely when we remove `dappClient.request`?
         if (
           this.client instanceof IDappClient &&
           this.client.proposalKeys.keys.includes(topic)
@@ -699,6 +747,8 @@ export class PushEngine extends IPushEngine {
     switch (reqMethod) {
       case "wc_pushRequest":
         return this.onPushRequest(topic, payload);
+      case "wc_pushPropose":
+        return this.onPushProposeRequest(topic, payload);
       case "wc_pushMessage":
         // `wc_pushMessage` requests being broadcast to all subscribers
         // by Cast server should only be handled by the wallet client.
@@ -873,6 +923,41 @@ export class PushEngine extends IPushEngine {
 
     // Clean up the original request regardless of concrete result.
     this.cleanupRequest(response.id);
+  };
+
+  protected onPushProposeRequest: IPushEngine["onPushProposeRequest"] = async (
+    topic,
+    payload
+  ) => {
+    this.client.logger.info({
+      event: "onPushProposeRequest",
+      topic,
+      payload,
+    });
+
+    try {
+      // Store the push subscription proposal so we can reference later for a response.
+      await this.client.proposals.set(payload.id, {
+        topic,
+        proposal: payload.params,
+      });
+
+      // Set the expiry for the push subscription proposal.
+      this.client.core.expirer.set(payload.id, calcExpiry(PUSH_REQUEST_EXPIRY));
+
+      this.client.emit("push_proposal", {
+        id: payload.id,
+        topic,
+        params: {
+          id: payload.id,
+          account: payload.params.account,
+          metadata: payload.params.metadata,
+        },
+      });
+    } catch (err: any) {
+      await this.sendError(payload.id, topic, err);
+      this.client.logger.error(err);
+    }
   };
 
   protected onPushSubscribeResponse: IPushEngine["onPushSubscribeResponse"] =

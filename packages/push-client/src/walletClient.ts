@@ -29,6 +29,7 @@ export class WalletClient extends IWalletClient {
   public events: IWalletClient["events"] = new EventEmitter();
   public engine: IWalletClient["engine"];
   public requests: IWalletClient["requests"];
+  public proposals: IWalletClient["proposals"];
   public subscriptions: IWalletClient["subscriptions"];
   public messages: IWalletClient["messages"];
   public identityKeys: IWalletClient["identityKeys"];
@@ -61,6 +62,12 @@ export class WalletClient extends IWalletClient {
       this.core,
       this.logger,
       "requests",
+      PUSH_CLIENT_STORAGE_PREFIX
+    );
+    this.proposals = new Store(
+      this.core,
+      this.logger,
+      "proposals",
       PUSH_CLIENT_STORAGE_PREFIX
     );
     this.subscriptions = new Store(
@@ -202,6 +209,7 @@ export class WalletClient extends IWalletClient {
     try {
       await this.core.start();
       await this.requests.init();
+      await this.proposals.init();
       await this.subscriptions.init();
       await this.messages.init();
       await this.identityKeys.init();

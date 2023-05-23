@@ -31,6 +31,7 @@ export class DappClient extends IDappClient {
   public requests: IDappClient["requests"];
   public subscriptions: IDappClient["subscriptions"];
   public proposalKeys: IDappClient["proposalKeys"];
+  public proposals: IDappClient["proposals"];
 
   static async init(opts: PushClientTypes.DappClientOptions) {
     const client = new DappClient(opts);
@@ -74,6 +75,13 @@ export class DappClient extends IDappClient {
       this.core,
       this.logger,
       "proposalKeys",
+      PUSH_CLIENT_STORAGE_PREFIX,
+      (keys: ProposalKeychain) => keys.responseTopic
+    );
+    this.proposals = new Store(
+      this.core,
+      this.logger,
+      "proposals",
       PUSH_CLIENT_STORAGE_PREFIX,
       (keys: ProposalKeychain) => keys.responseTopic
     );
@@ -159,6 +167,7 @@ export class DappClient extends IDappClient {
       await this.requests.init();
       await this.subscriptions.init();
       await this.proposalKeys.init();
+      await this.proposals.init();
       await this.engine.init();
       this.logger.info(`PushDappClient Initialization Success`);
     } catch (error: any) {
