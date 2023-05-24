@@ -153,6 +153,14 @@ export abstract class IPushEngine {
     payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_pushPropose"]>
   ): Promise<void>;
 
+  protected abstract onPushProposeResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_pushPropose"]>
+      | JsonRpcError,
+    senderPublicKey?: string
+  ): void;
+
   protected abstract onPushSubscribeResponse(
     topic: string,
     payload:

@@ -778,6 +778,8 @@ export class PushEngine extends IPushEngine {
     switch (resMethod) {
       case "wc_pushRequest":
         return this.onPushResponse(topic, payload, senderPublicKey);
+      case "wc_pushPropose":
+        return this.onPushProposeResponse(topic, payload, senderPublicKey);
       case "wc_pushSubscribe":
         return this.onPushSubscribeResponse(topic, payload);
       case "wc_pushMessage":
@@ -962,6 +964,110 @@ export class PushEngine extends IPushEngine {
       await this.sendError(payload.id, topic, err);
       this.client.logger.error(err);
     }
+  };
+
+  protected onPushProposeResponse: IPushEngine["onPushResponse"] = async (
+    topic,
+    response,
+    senderPublicKey
+  ) => {
+    this.client.logger.info({
+      event: "onPushProposeResponse",
+      topic,
+      response,
+      senderPublicKey,
+    });
+
+    if (isJsonRpcResult(response)) {
+      const { id, result } = response;
+
+      const { proposal } = this.client.proposals.get(id);
+      const selfPublicKey = proposal.publicKey;
+      const dappPushConfig = await this.resolvePushConfig(
+        proposal.metadata.url
+      );
+
+      const decodedPayload = jwt_decode(result.subscriptionAuth) as JwtPayload;
+
+      if (!decodedPayload) {
+        throw new Error(
+          "[Push] Engine.onPushProposeResponse > Empty `subscriptionAuth` payload"
+        );
+      }
+
+      this.client.logger.info(
+        `[Push] Engine.onPushProposeResponse > decoded subscriptionAuth payload: ${JSON.stringify(
+          decodedPayload
+        )}`
+      );
+
+      if (!senderPublicKey) {
+        throw new Error(
+          "[Push] Engine.onPushProposeResponse > Missing `senderPublicKey`, cannot derive shared key."
+        );
+      }
+
+      // SPEC: Wallet derives symmetric key from keys X and Y.
+      // SPEC: Push topic is derived from sha256 hash of symmetric key.
+      // `crypto.generateSharedKey` returns the sha256 hash of the symmetric key, i.e. the push topic.
+      const pushTopic = await this.client.core.crypto.generateSharedKey(
+        selfPublicKey,
+        senderPublicKey
+      );
+      const symKey = this.client.core.crypto.keychain.get(pushTopic);
+
+      this.client.logger.info(
+        `[Push] Engine.onPushProposeResponse > derived pushTopic ${pushTopic} from symKey: ${symKey}`
+      );
+
+      // DappClient subscribes to pushTopic.
+      await this.client.core.relayer.subscribe(pushTopic);
+
+      const pushSubscription = {
+        topic: pushTopic,
+        account: proposal.account,
+        relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
+        metadata: proposal.metadata,
+        scope: this.generateScopeMapFromConfig(
+          dappPushConfig.types,
+          proposal.scope
+        ),
+        expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
+      };
+
+      // Store the new PushSubscription.
+      await this.client.subscriptions.set(pushTopic, pushSubscription);
+
+      // Clean up the keypair used to derive a shared symKey.
+      await this.client.core.crypto.deleteKeyPair(selfPublicKey);
+
+      // Clean up the proposal key.
+      await (this.client as IDappClient).proposalKeys.delete(topic, {
+        code: -1,
+        message: "Proposal key deleted.",
+      });
+
+      // Emit the PushSubscription at client level.
+      this.client.emit("push_response", {
+        id: response.id,
+        topic,
+        params: {
+          subscription: pushSubscription,
+        },
+      });
+    } else if (isJsonRpcError(response)) {
+      // Emit the error response at client level.
+      this.client.emit("push_response", {
+        id: response.id,
+        topic,
+        params: {
+          error: response.error,
+        },
+      });
+    }
+
+    // Clean up the original request regardless of concrete result.
+    this.cleanupProposal(response.id);
   };
 
   protected onPushSubscribeResponse: IPushEngine["onPushSubscribeResponse"] =
