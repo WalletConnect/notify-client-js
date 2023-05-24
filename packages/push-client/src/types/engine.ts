@@ -43,7 +43,7 @@ export abstract class IPushEngine {
   public abstract propose(params: {
     account: string;
     pairingTopic: string;
-    scope: string[];
+    scope?: string[];
   }): Promise<{ id: number }>;
 
   // send push notification message

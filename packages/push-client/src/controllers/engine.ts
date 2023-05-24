@@ -138,7 +138,7 @@ export class PushEngine extends IPushEngine {
       publicKey,
       account,
       metadata: (this.client as IDappClient).metadata,
-      scope,
+      scope: scope ?? [],
     };
     const id = await this.sendRequest(pairingTopic, "wc_pushPropose", proposal);
 
@@ -151,6 +151,11 @@ export class PushEngine extends IPushEngine {
     await this.client.proposals.set(id, {
       topic: responseTopic,
       proposal,
+    });
+
+    await (this.client as IDappClient).proposalKeys.set(responseTopic, {
+      responseTopic,
+      proposalKeyPub: publicKey,
     });
 
     // Set the expiry for the push subscription proposal.
@@ -181,25 +186,42 @@ export class PushEngine extends IPushEngine {
   public approve: IPushEngine["approve"] = async ({ id, onSign }) => {
     this.isInitialized();
 
-    const { request } = this.client.requests.get(id);
+    const { proposal } = this.client.proposals.get(id);
+    const dappPushConfig = await this.resolvePushConfig(proposal.metadata.url);
+
+    // Check if the dapp has requested any scopes that are not supported.
+    const unsupportedScopes = proposal.scope.filter(
+      (scope) => !dappPushConfig.types.map((type) => type.name).includes(scope)
+    );
+
+    if (unsupportedScopes.length > 0) {
+      throw new Error(
+        `[Push] approve: ${
+          proposal.metadata.url
+        } does not seem to support following proposed scopes: ${JSON.stringify(
+          unsupportedScopes
+        )}`
+      );
+    }
 
     // Retrieve existing identity or register a new one for this account on this device.
-    await this.registerIdentity(request.account, onSign);
+    await this.registerIdentity(proposal.account, onSign);
 
-    const dappUrl = request.metadata.url;
+    const dappUrl = proposal.metadata.url;
     const issuedAt = Math.round(Date.now() / 1000);
     const payload: JwtPayload = {
       iat: issuedAt,
       exp: jwtExp(issuedAt),
-      iss: encodeEd25519Key(request.publicKey),
-      sub: composeDidPkh(request.account),
+      iss: encodeEd25519Key(proposal.publicKey),
+      sub: composeDidPkh(proposal.account),
       aud: dappUrl,
       ksu: (this.client as IWalletClient).keyserverUrl,
       act: "push_subscription",
+      scp: proposal.scope?.join(JWT_SCP_SEPARATOR),
     };
 
     const subscriptionAuth = await this.generateSubscriptionAuth(
-      request.account,
+      proposal.account,
       payload
     );
 
@@ -211,15 +233,15 @@ export class PushEngine extends IPushEngine {
     const selfPublicKey = await this.client.core.crypto.generateKeyPair();
 
     this.client.logger.info(
-      `[Push] Engine.approve > generating shared key from selfPublicKey ${selfPublicKey} and proposer publicKey ${request.publicKey}`
+      `[Push] Engine.approve > generating shared key from selfPublicKey ${selfPublicKey} and proposer publicKey ${proposal.publicKey}`
     );
 
-    // SPEC: Wallet derives symmetric key from self-generated publicKey (pubKey Y) and requester publicKey (pubKey X).
+    // SPEC: Wallet derives symmetric key from requester publicKey (pubKey X) self-generated publicKey (pubKey Y).
     // SPEC: Push topic is derived from sha256 hash of symmetric key.
-    // `crypto.generateSharedKey` returns the sha256 hash of the symmetric key, i.e. the push topic.
+    // `crypto.generateSharedKey` returns the sha256 hash of the symmetric key, i.e. in this case the push topic.
     const pushTopic = await this.client.core.crypto.generateSharedKey(
       selfPublicKey,
-      request.publicKey
+      proposal.publicKey
     );
 
     this.client.logger.info(
@@ -230,14 +252,14 @@ export class PushEngine extends IPushEngine {
     await this.client.core.relayer.subscribe(pushTopic);
 
     // SPEC: Wallet derives response topic from sha246 hash of requester publicKey (pubKey X)
-    const responseTopic = hashKey(request.publicKey);
+    const responseTopic = hashKey(proposal.publicKey);
 
     this.client.logger.info(
       `[Push] Engine.approve > derived responseTopic: ${responseTopic}`
     );
 
-    // SPEC: Wallet sends proposal response on pairing P with publicKey Y
-    await this.sendResult<"wc_pushRequest">(
+    // SPEC: Wallet responds with type 1 envelope on response topic
+    await this.sendResult<"wc_pushPropose">(
       id,
       responseTopic,
       {
@@ -246,17 +268,20 @@ export class PushEngine extends IPushEngine {
       {
         type: TYPE_1,
         senderPublicKey: selfPublicKey,
-        receiverPublicKey: request.publicKey,
+        receiverPublicKey: proposal.publicKey,
       }
     );
 
     // Store the new PushSubscription.
     await this.client.subscriptions.set(pushTopic, {
       topic: pushTopic,
-      account: request.account,
+      account: proposal.account,
       relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
-      metadata: request.metadata,
-      scope: {},
+      metadata: proposal.metadata,
+      scope: this.generateScopeMapFromConfig(
+        dappPushConfig.types,
+        proposal.scope
+      ),
       expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
     });
 
@@ -267,7 +292,7 @@ export class PushEngine extends IPushEngine {
     });
 
     // Clean up the original request.
-    this.cleanupRequest(id);
+    this.cleanupProposal(id);
 
     // Clean up the keypair used to derive a shared symKey.
     await this.client.core.crypto.deleteKeyPair(selfPublicKey);
@@ -276,20 +301,20 @@ export class PushEngine extends IPushEngine {
   public reject: IPushEngine["reject"] = async ({ id, reason }) => {
     this.isInitialized();
 
-    const { topic: pairingTopic } = this.client.requests.get(id);
+    const { topic: responseTopic } = this.client.proposals.get(id);
 
     // SPEC: Wallet sends error response (i.e. proposal rejection) on pairing P
-    await this.sendError(id, pairingTopic, {
+    await this.sendError(id, responseTopic, {
       code: SDK_ERRORS["USER_REJECTED"].code,
       message: `${SDK_ERRORS["USER_REJECTED"].message} Reason: ${reason}.`,
     });
 
     this.client.logger.info(
-      `[Push] Engine.reject > rejected push subscription request on pairing topic ${pairingTopic}`
+      `[Push] Engine.reject > rejected push subscription proposal on response topic ${responseTopic}`
     );
 
-    // Clean up the original request.
-    this.cleanupRequest(id);
+    // Clean up the original proposal.
+    this.cleanupProposal(id);
   };
 
   public subscribe: IPushEngine["subscribe"] = async ({
@@ -300,7 +325,6 @@ export class PushEngine extends IPushEngine {
     this.isInitialized();
 
     let didDoc: PushClientTypes.PushDidDocument;
-    let pushConfig: PushClientTypes.PushConfigDocument;
 
     try {
       // Fetch dapp's public key from its hosted DID doc.
@@ -314,21 +338,7 @@ export class PushEngine extends IPushEngine {
       );
     }
 
-    try {
-      // Fetch dapp's Push config from its hosted wc-push-config.
-      const pushConfigResp = await axios.get(
-        `${metadata.url}/.well-known/wc-push-config.json`
-      );
-      pushConfig = pushConfigResp.data;
-
-      this.client.logger.info(
-        `[Push] subscribe > got push config: ${JSON.stringify(pushConfig)}`
-      );
-    } catch (error: any) {
-      throw new Error(
-        `Failed to fetch dapp's Push config from ${metadata.url}/.well-known/wc-push-config.json. Error: ${error.message}`
-      );
-    }
+    const pushConfig = await this.resolvePushConfig(metadata.url);
 
     // Retrieve existing identity or register a new one for this account on this device.
     await this.registerIdentity(account, onSign);
@@ -429,13 +439,7 @@ export class PushEngine extends IPushEngine {
       },
     });
 
-    const scopeMap: PushClientTypes.ScopeMap = pushConfig.types.reduce(
-      (map, type) => {
-        map[type.name] = { description: type.description, enabled: true };
-        return map;
-      },
-      {}
-    );
+    const scopeMap = this.generateScopeMapFromConfig(pushConfig.types);
 
     // TODO: make `client.requests` WalletClient-only
     // Store the pending subscription request.
@@ -686,7 +690,7 @@ export class PushEngine extends IPushEngine {
 
         let receiverPublicKey: string | undefined;
 
-        // TODO: remove `proposalKeys` entirely when we remove `dappClient.request`?
+        // TODO: factor out the need for `proposalKeys` entirely.
         if (
           this.client instanceof IDappClient &&
           this.client.proposalKeys.keys.includes(topic)
@@ -1208,6 +1212,16 @@ export class PushEngine extends IPushEngine {
     ]);
   };
 
+  private cleanupProposal = async (id: number, expirerHasDeleted?: boolean) => {
+    await Promise.all([
+      this.client.proposals.delete(id, {
+        code: -1,
+        message: "Proposal deleted.",
+      }),
+      expirerHasDeleted ? Promise.resolve() : this.client.core.expirer.del(id),
+    ]);
+  };
+
   private cleanupSubscription = async (topic: string) => {
     // Await the unsubscribe first to avoid deleting the symKey too early below.
     await this.client.core.relayer.unsubscribe(topic);
@@ -1280,5 +1294,39 @@ export class PushEngine extends IPushEngine {
       accountId,
       onSign,
     });
+  };
+
+  private resolvePushConfig = async (
+    dappUrl: string
+  ): Promise<PushClientTypes.PushConfigDocument> => {
+    try {
+      // Fetch dapp's Push config from its hosted wc-push-config.
+      const pushConfigResp = await axios.get(
+        `${dappUrl}/.well-known/wc-push-config.json`
+      );
+      const pushConfig = pushConfigResp.data;
+
+      this.client.logger.info(
+        `[Push] subscribe > got push config: ${JSON.stringify(pushConfig)}`
+      );
+      return pushConfig;
+    } catch (error: any) {
+      throw new Error(
+        `Failed to fetch dapp's Push config from ${dappUrl}/.well-known/wc-push-config.json. Error: ${error.message}`
+      );
+    }
+  };
+
+  private generateScopeMapFromConfig = (
+    typesConfig: PushClientTypes.PushConfigDocument["types"],
+    selected?: string[]
+  ): PushClientTypes.ScopeMap => {
+    return typesConfig.reduce((map, type) => {
+      map[type.name] = {
+        description: type.description,
+        enabled: selected?.includes(type.name) ?? true,
+      };
+      return map;
+    }, {});
   };
 }
