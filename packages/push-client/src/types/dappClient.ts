@@ -23,5 +23,6 @@ export abstract class IDappClient extends IBaseClient {
   // ---------- Public Methods (dapp) ----------------------------------------------- //
 
   public abstract request: IPushEngine["request"];
+  public abstract propose: IPushEngine["propose"];
   public abstract notify: IPushEngine["notify"];
 }

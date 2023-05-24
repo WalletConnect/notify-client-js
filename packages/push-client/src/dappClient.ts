@@ -107,6 +107,15 @@ export class DappClient extends IDappClient {
     }
   };
 
+  public propose: IDappClient["propose"] = async (params) => {
+    try {
+      return await this.engine.propose(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   public notify: IDappClient["notify"] = async (params) => {
     try {
       return await this.engine.notify(params);
