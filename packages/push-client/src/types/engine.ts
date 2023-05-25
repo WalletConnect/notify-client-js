@@ -67,7 +67,7 @@ export abstract class IPushEngine {
     metadata: PushClientTypes.Metadata;
     account: string;
     onSign: (message: string) => Promise<string>;
-  }): Promise<boolean>;
+  }): Promise<{ id: number; subscriptionAuth: string }>;
 
   public abstract update(params: {
     topic: string;
