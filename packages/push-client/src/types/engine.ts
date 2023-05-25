@@ -33,24 +33,12 @@ export abstract class IPushEngine {
 
   // ---------- Public Methods (dapp) ----------------------------------- //
 
-  // request push subscription
-  public abstract request(params: {
-    account: string;
-    pairingTopic: string;
-  }): Promise<{ id: number }>;
-
   // propose push subscription
   public abstract propose(params: {
     account: string;
     pairingTopic: string;
     scope?: string[];
   }): Promise<{ id: number }>;
-
-  // send push notification message
-  public abstract notify(params: {
-    topic: string;
-    message: PushClientTypes.PushMessage;
-  }): Promise<void>;
 
   // ---------- Public Methods (wallet) --------------------------------- //
 
@@ -85,6 +73,9 @@ export abstract class IPushEngine {
     topic: string;
   }): Record<number, PushClientTypes.PushMessageRecord>;
 
+  // delete active subscription
+  public abstract deleteSubscription(params: { topic: string }): Promise<void>;
+
   public abstract deletePushMessage(params: { id: number }): void;
 
   // ---------- Public Methods (common) --------------------------------- //
@@ -94,9 +85,6 @@ export abstract class IPushEngine {
     string,
     PushClientTypes.PushSubscription
   >;
-
-  // delete active subscription
-  public abstract deleteSubscription(params: { topic: string }): Promise<void>;
 
   // ---------- Protected Helpers --------------------------------------- //
 
@@ -134,19 +122,6 @@ export abstract class IPushEngine {
   ): Promise<void>;
 
   // ---------- Protected Relay Event Handlers --------------------------------- //
-
-  protected abstract onPushRequest(
-    topic: string,
-    payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_pushRequest"]>
-  ): Promise<void>;
-
-  protected abstract onPushResponse(
-    topic: string,
-    payload:
-      | JsonRpcResult<JsonRpcTypes.Results["wc_pushRequest"]>
-      | JsonRpcError,
-    senderPublicKey?: string
-  ): void;
 
   protected abstract onPushProposeRequest(
     topic: string,

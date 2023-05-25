@@ -2,7 +2,6 @@ import { PushClientTypes } from "./baseClient";
 
 export declare namespace JsonRpcTypes {
   export type WcMethod =
-    | "wc_pushRequest"
     | "wc_pushPropose"
     | "wc_pushSubscribe"
     | "wc_pushMessage"
@@ -11,11 +10,6 @@ export declare namespace JsonRpcTypes {
 
   // ---- JSON-RPC Requests -----------------------------
   export interface RequestParams {
-    wc_pushRequest: {
-      publicKey: string;
-      account: string;
-      metadata: PushClientTypes.Metadata;
-    };
     wc_pushSubscribe: {
       subscriptionAuth: string;
     };
@@ -43,9 +37,6 @@ export declare namespace JsonRpcTypes {
 
   // ---- JSON-RPC Responses -----------------------------
   export interface Results {
-    wc_pushRequest: {
-      subscriptionAuth: string;
-    };
     wc_pushSubscribe: {
       publicKey: string;
     };

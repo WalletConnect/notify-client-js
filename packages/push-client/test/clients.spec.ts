@@ -60,7 +60,6 @@ describe("Push", () => {
       expect(dapp.core).toBeDefined();
       expect(dapp.events).toBeDefined();
       expect(dapp.logger).toBeDefined();
-      expect(dapp.requests).toBeDefined();
       expect(dapp.subscriptions).toBeDefined();
       expect(dapp.core.expirer).toBeDefined();
       expect(dapp.core.history).toBeDefined();
@@ -359,6 +358,26 @@ describe("Push", () => {
       });
     });
 
+    describe("deleteSubscription", () => {
+      it("can delete a currently active push subscription", async () => {
+        const { responseEvent } = await createPushSubscription(dapp, wallet);
+
+        expect(responseEvent.params.subscription.topic).toBeDefined();
+
+        expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(1);
+
+        const walletSubscriptionTopic = Object.keys(
+          wallet.getActiveSubscriptions()
+        )[0];
+
+        await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
+
+        // Check that wallet is in expected state.
+        expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
+        expect(wallet.messages.keys.length).toBe(0);
+      });
+    });
+
     describe("deletePushMessage", async () => {
       it("deletes the push message associated with the provided `id`", async () => {
         await createPushSubscription(dapp, wallet);
@@ -412,38 +431,6 @@ describe("Push", () => {
         expect(Object.keys(walletSubscriptions).length).toBe(1);
         // Check that dapp is in expected state.
         expect(Object.keys(dappSubscriptions).length).toBe(1);
-      });
-    });
-
-    describe.skip("deleteSubscription", () => {
-      it("can delete a currently active push subscription", async () => {
-        let gotPushDelete = false;
-        let pushDeleteEvent: any;
-
-        const { responseEvent } = await createPushSubscription(dapp, wallet);
-
-        expect(responseEvent.params.subscription.topic).toBeDefined();
-
-        expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(1);
-        expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(1);
-
-        const walletSubscriptionTopic = Object.keys(
-          wallet.getActiveSubscriptions()
-        )[0];
-
-        dapp.once("push_delete", (event) => {
-          gotPushDelete = true;
-          pushDeleteEvent = event;
-        });
-
-        await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
-        await waitForEvent(() => gotPushDelete);
-
-        // Check that wallet is in expected state.
-        expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
-        expect(wallet.messages.keys.length).toBe(0);
-        // Check that dapp is in expected state.
-        expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(0);
       });
     });
   });

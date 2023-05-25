@@ -28,7 +28,6 @@ export class DappClient extends IDappClient {
   public logger: IDappClient["logger"];
   public events: IDappClient["events"] = new EventEmitter();
   public engine: IDappClient["engine"];
-  public requests: IDappClient["requests"];
   public subscriptions: IDappClient["subscriptions"];
   public proposalKeys: IDappClient["proposalKeys"];
   public proposals: IDappClient["proposals"];
@@ -59,12 +58,7 @@ export class DappClient extends IDappClient {
 
     this.core = opts.core || new Core(opts);
     this.logger = generateChildLogger(logger, this.name);
-    this.requests = new Store(
-      this.core,
-      this.logger,
-      "requests",
-      PUSH_CLIENT_STORAGE_PREFIX
-    );
+
     this.subscriptions = new Store(
       this.core,
       this.logger,
@@ -98,15 +92,6 @@ export class DappClient extends IDappClient {
 
   // ---------- Engine ----------------------------------------------- //
 
-  public request: IDappClient["request"] = async (params) => {
-    try {
-      return await this.engine.request(params);
-    } catch (error: any) {
-      this.logger.error(error.message);
-      throw error;
-    }
-  };
-
   public propose: IDappClient["propose"] = async (params) => {
     try {
       return await this.engine.propose(params);
@@ -116,29 +101,9 @@ export class DappClient extends IDappClient {
     }
   };
 
-  public notify: IDappClient["notify"] = async (params) => {
-    try {
-      return await this.engine.notify(params);
-    } catch (error: any) {
-      this.logger.error(error.message);
-      throw error;
-    }
-  };
-
   public getActiveSubscriptions: IDappClient["getActiveSubscriptions"] = () => {
     try {
       return this.engine.getActiveSubscriptions();
-    } catch (error: any) {
-      this.logger.error(error.message);
-      throw error;
-    }
-  };
-
-  public deleteSubscription: IDappClient["deleteSubscription"] = async (
-    params
-  ) => {
-    try {
-      return await this.engine.deleteSubscription(params);
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;
@@ -173,7 +138,6 @@ export class DappClient extends IDappClient {
     this.logger.trace(`Initialized`);
     try {
       await this.core.start();
-      await this.requests.init();
       await this.subscriptions.init();
       await this.proposalKeys.init();
       await this.proposals.init();

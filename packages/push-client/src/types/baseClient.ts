@@ -7,7 +7,6 @@ import { IPushEngine } from "./engine";
 
 export declare namespace PushClientTypes {
   type Event =
-    | "push_request"
     | "push_response"
     | "push_proposal"
     | "push_subscription"
@@ -150,13 +149,7 @@ export abstract class IBaseClient {
   public abstract events: EventEmitter;
   public abstract logger: Logger;
   public abstract engine: IPushEngine;
-  public abstract requests: IStore<
-    number,
-    {
-      topic: string;
-      request: PushClientTypes.PushSubscriptionRequest;
-    }
-  >;
+
   public abstract proposals: IStore<
     number,
     {
@@ -172,7 +165,6 @@ export abstract class IBaseClient {
   // ---------- Public Methods (common) ----------------------------------------------- //
 
   public abstract getActiveSubscriptions: IPushEngine["getActiveSubscriptions"];
-  public abstract deleteSubscription: IPushEngine["deleteSubscription"];
 
   // ---------- Event Handlers ----------------------------------------------- //
 

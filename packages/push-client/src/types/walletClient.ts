@@ -12,6 +12,13 @@ export interface IdentityKeychain {
 export abstract class IWalletClient extends IBaseClient {
   public abstract readonly keyserverUrl: string;
 
+  public abstract requests: IStore<
+    number,
+    {
+      topic: string;
+      request: PushClientTypes.PushSubscriptionRequest;
+    }
+  >;
   public abstract messages: IStore<
     string,
     {
@@ -33,5 +40,6 @@ export abstract class IWalletClient extends IBaseClient {
   public abstract update: IPushEngine["update"];
   public abstract decryptMessage: IPushEngine["decryptMessage"];
   public abstract getMessageHistory: IPushEngine["getMessageHistory"];
+  public abstract deleteSubscription: IPushEngine["deleteSubscription"];
   public abstract deletePushMessage: IPushEngine["deletePushMessage"];
 }

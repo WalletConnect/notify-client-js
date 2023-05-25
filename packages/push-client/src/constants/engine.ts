@@ -10,16 +10,6 @@ export const JWT_SCP_SEPARATOR = " ";
 
 // RPC Options
 export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
-  wc_pushRequest: {
-    req: {
-      ttl: PUSH_REQUEST_EXPIRY,
-      tag: 4000,
-    },
-    res: {
-      ttl: PUSH_REQUEST_EXPIRY,
-      tag: 4001,
-    },
-  },
   wc_pushMessage: {
     req: {
       ttl: ONE_DAY,
