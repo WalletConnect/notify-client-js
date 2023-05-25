@@ -146,15 +146,21 @@ export class PushEngine extends IPushEngine {
 
     const dappUrl = request.metadata.url;
     const issuedAt = Math.round(Date.now() / 1000);
+    const iss = encodeEd25519Key(request.publicKey);
+    this.client.logger.debug(`[Push] Engine.approve > iss: ${iss}`);
+    const sub = composeDidPkh(request.account);
+    this.client.logger.debug(`[Push] Engine.approve > sub: ${sub}`);
+
     const payload: JwtPayload = {
       iat: issuedAt,
       exp: jwtExp(issuedAt),
-      iss: encodeEd25519Key(request.publicKey),
-      sub: composeDidPkh(request.account),
+      iss,
+      sub,
       aud: dappUrl,
       ksu: (this.client as IWalletClient).keyserverUrl,
       act: "push_subscription",
     };
+    this.client.logger.debug(`[Push] Engine.approve > payload: ${payload}`);
 
     const subscriptionAuth = await this.generateSubscriptionAuth(
       request.account,
