@@ -1,7 +1,7 @@
 {
   "name": "@walletconnect/push-client",
   "description": "WalletConnect Push Client",
-  "version": "0.9.2-c2cd256",
+  "version": "0.9.2-33f6f1f",
   "author": "WalletConnect, Inc. <walletconnect.com>",
   "homepage": "https://github.com/walletconnect/push-client-js/",
   "license": "Apache-2.0",
@@ -35,7 +35,7 @@
     "@walletconnect/cacao": "1.0.2",
     "@walletconnect/core": "^2.7.2",
     "@walletconnect/did-jwt": "2.0.1",
-    "@walletconnect/identity-keys": "^0.1.5-a079ddc",
+    "@walletconnect/identity-keys": "^0.1.5-4a50d81",
     "@walletconnect/jsonrpc-utils": "1.0.7",
     "@walletconnect/time": "1.0.2",
     "@walletconnect/utils": "^2.7.2",
