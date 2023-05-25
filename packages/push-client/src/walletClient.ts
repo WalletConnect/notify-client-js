@@ -7,7 +7,7 @@ import {
 import { EventEmitter } from "events";
 import pino from "pino";
 
-import { IdentityKeys } from "@walletconnect/identity-keys/dist/cjs";
+import { IdentityKeys } from "@walletconnect/identity-keys/dist/esm";
 import {
   DEFAULT_KEYSERVER_URL,
   PUSH_CLIENT_PROTOCOL,
