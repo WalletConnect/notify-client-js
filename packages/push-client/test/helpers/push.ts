@@ -22,27 +22,29 @@ export const createPushSubscription = async (
   wallet: IWalletClient
 ) => {
   const pairingTopic = await setupKnownPairing(wallet, dapp);
-  let gotPushRequest = false;
-  let pushRequestEvent: any;
+  let gotPushPropose = false;
+  let pushProposeEvent: any;
   let gotResponse = false;
   let responseEvent: any;
 
-  wallet.once("push_request", (event) => {
-    gotPushRequest = true;
-    pushRequestEvent = event;
+  wallet.once("push_proposal", (event) => {
+    gotPushPropose = true;
+    pushProposeEvent = event;
   });
   dapp.once("push_response", (event) => {
     gotResponse = true;
     responseEvent = event;
   });
 
-  const { id } = await dapp.request({
+  const { id } = await dapp.propose({
     account: mockAccount,
     pairingTopic,
   });
 
-  await waitForEvent(() => gotPushRequest);
+  await waitForEvent(() => gotPushPropose);
 
   await wallet.approve({ id, onSign: onSignMock });
   await waitForEvent(() => gotResponse);
+
+  return { proposalId: id, pushProposeEvent, responseEvent };
 };
