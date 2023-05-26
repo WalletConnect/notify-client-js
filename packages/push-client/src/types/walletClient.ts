@@ -1,4 +1,4 @@
-import { IdentityKeys } from "@walletconnect/identity-keys";
+import { IdentityKeys } from "@walletconnect/identity-keys/dist/esm";
 import { IStore } from "@walletconnect/types";
 import { IBaseClient, PushClientTypes } from "./baseClient";
 import { IPushEngine } from "./engine";
