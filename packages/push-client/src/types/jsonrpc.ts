@@ -45,6 +45,7 @@ export declare namespace JsonRpcTypes {
     wc_pushUpdate: true;
     wc_pushPropose: {
       subscriptionAuth: string;
+      subscriptionSymKey: string;
     };
   }
 }

@@ -159,15 +159,22 @@ export class PushEngine extends IPushEngine {
     });
 
     // TODO: make this expire/timeout
-    await new Promise<
+    // TODO: handle error emit case
+    const pushSubscriptionEvent = await new Promise<
       PushClientTypes.BaseEventArgs<PushClientTypes.PushResponseEventArgs>
     >((resolve) => {
-      this.client.once("push_subscription", (args) => {
-        if (args.id === subscribeId) {
-          resolve(args);
+      this.client.once("push_subscription", (event) => {
+        if (event.id === subscribeId) {
+          resolve(event);
         }
       });
     });
+
+    this.client.logger.info(
+      `[Push] Engine.approve > got push_subscription event for id ${subscribeId}: ${JSON.stringify(
+        pushSubscriptionEvent
+      )}`
+    );
 
     // SPEC: Wallet derives response topic from sha246 hash of requester publicKey (pubKey X)
     const responseTopic = hashKey(proposal.publicKey);
@@ -181,12 +188,17 @@ export class PushEngine extends IPushEngine {
       `[Push] Engine.approve > derived publicKey Z for response: ${selfPublicKey}`
     );
 
-    // SPEC: Wallet responds with type 1 envelope containing subscriptionAuth on response topic
+    const subscriptionSymKey = this.client.core.crypto.keychain.get(
+      pushSubscriptionEvent.params.subscription!.topic
+    );
+
+    // SPEC: Wallet responds with type 1 envelope on response topic with subscriptionAuth and subscription symKey
     await this.sendResult<"wc_pushPropose">(
       id,
       responseTopic,
       {
         subscriptionAuth,
+        subscriptionSymKey,
       },
       {
         type: TYPE_1,
@@ -771,16 +783,13 @@ export class PushEngine extends IPushEngine {
           );
         }
 
-        // SPEC: Push topic is derived from sha256 hash of symmetric key.
-        // `crypto.generateSharedKey` returns the sha256 hash of the symmetric key, i.e. the push topic.
-        const pushTopic = await this.client.core.crypto.generateSharedKey(
-          selfPublicKey,
-          senderPublicKey
+        // SPEC: Dapp receives the response and derives a subscription topic from sha256 hash of subscription symKey
+        const pushTopic = await this.client.core.crypto.setSymKey(
+          result.subscriptionSymKey
         );
-        const symKey = this.client.core.crypto.keychain.get(pushTopic);
 
         this.client.logger.info(
-          `[Push] Engine.onPushProposeResponse > derived pushTopic ${pushTopic} from symKey: ${symKey}`
+          `[Push] Engine.onPushProposeResponse > derived pushTopic ${pushTopic} from response.subscriptionSymKey: ${result.subscriptionSymKey}`
         );
 
         // DappClient subscribes to pushTopic.
