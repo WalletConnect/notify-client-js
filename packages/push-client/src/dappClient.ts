@@ -76,8 +76,7 @@ export class DappClient extends IDappClient {
       this.core,
       this.logger,
       "proposals",
-      PUSH_CLIENT_STORAGE_PREFIX,
-      (keys: ProposalKeychain) => keys.responseTopic
+      PUSH_CLIENT_STORAGE_PREFIX
     );
     this.engine = new PushEngine(this);
   }
