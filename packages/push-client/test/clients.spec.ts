@@ -361,6 +361,8 @@ describe("Push", () => {
     describe("deleteSubscription", () => {
       it("can delete a currently active push subscription", async () => {
         const { responseEvent } = await createPushSubscription(dapp, wallet);
+        let gotPushDeleteEvent = false;
+        let pushDeleteEvent: any;
 
         expect(responseEvent.params.subscription.topic).toBeDefined();
 
@@ -370,11 +372,20 @@ describe("Push", () => {
           wallet.getActiveSubscriptions()
         )[0];
 
-        await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
+        dapp.once("push_delete", (event) => {
+          gotPushDeleteEvent = true;
+          pushDeleteEvent = event;
+        });
 
+        await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
+        await waitForEvent(() => gotPushDeleteEvent);
+
+        expect(pushDeleteEvent.topic).toBe(walletSubscriptionTopic);
         // Check that wallet is in expected state.
         expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
         expect(wallet.messages.keys.length).toBe(0);
+        // Check that dapp is in expected state.
+        expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(0);
       });
     });
 
@@ -431,6 +442,10 @@ describe("Push", () => {
         expect(Object.keys(walletSubscriptions).length).toBe(1);
         // Check that dapp is in expected state.
         expect(Object.keys(dappSubscriptions).length).toBe(1);
+        // Check that topics of subscriptions match.
+        expect(Object.keys(walletSubscriptions)).toEqual(
+          Object.keys(dappSubscriptions)
+        );
       });
     });
   });
