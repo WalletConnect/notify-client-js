@@ -23,6 +23,7 @@ import { ExpirerTypes, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
   calcExpiry,
+  createExpiringPromise,
   getInternalError,
   hashKey,
   parseExpirerTarget,
@@ -127,8 +128,8 @@ export class PushEngine extends IPushEngine {
 
     this.client.logger.info(
       `[Push] Engine.approve > approving push subscription proposal with id: ${id}. Proposal: ${JSON.stringify(`
-      ${proposal}
-      `)}`
+        ${proposal}
+        `)}`
     );
     this.client.logger.info(
       `[Push] Engine.approve > resolved push config for proposal URL ${
@@ -158,16 +159,16 @@ export class PushEngine extends IPushEngine {
       onSign,
     });
 
-    // TODO: make this expire/timeout
-    const pushSubscriptionEvent = await new Promise<
-      PushClientTypes.BaseEventArgs<PushClientTypes.PushResponseEventArgs>
-    >((resolve) => {
-      this.client.once("push_subscription", (event) => {
-        if (event.id === subscribeId) {
-          resolve(event);
-        }
-      });
-    });
+    const pushSubscriptionEvent = (await createExpiringPromise(
+      new Promise((resolve) => {
+        this.client.once("push_subscription", (event) => {
+          if (event.id === subscribeId) {
+            resolve(event);
+          }
+        });
+      }),
+      10_000
+    )) as PushClientTypes.BaseEventArgs<PushClientTypes.PushResponseEventArgs>;
 
     if (pushSubscriptionEvent.params.error) {
       throw new Error(
