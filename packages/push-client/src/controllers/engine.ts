@@ -761,6 +761,12 @@ export class PushEngine extends IPushEngine {
           proposal.metadata.url
         );
 
+        if (typeof result.subscriptionAuth !== "string") {
+          throw new Error(
+            `[Push] Engine.onPushProposeResponse > subscriptionAuth: expected string, got ${result.subscriptionAuth}`
+          );
+        }
+
         const decodedPayload = jwt_decode(
           result.subscriptionAuth
         ) as JwtPayload;
