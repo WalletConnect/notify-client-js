@@ -159,7 +159,6 @@ export class PushEngine extends IPushEngine {
     });
 
     // TODO: make this expire/timeout
-    // TODO: handle error emit case
     const pushSubscriptionEvent = await new Promise<
       PushClientTypes.BaseEventArgs<PushClientTypes.PushResponseEventArgs>
     >((resolve) => {
@@ -169,6 +168,12 @@ export class PushEngine extends IPushEngine {
         }
       });
     });
+
+    if (pushSubscriptionEvent.params.error) {
+      throw new Error(
+        `[Push] Engine.approve > failed to subscribe to push server: ${pushSubscriptionEvent.params.error}`
+      );
+    }
 
     this.client.logger.info(
       `[Push] Engine.approve > got push_subscription event for id ${subscribeId}: ${JSON.stringify(
