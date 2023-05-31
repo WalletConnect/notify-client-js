@@ -985,6 +985,11 @@ export class PushEngine extends IPushEngine {
     payload
   ) => {
     const { id } = payload;
+    this.client.logger.info(
+      "[Push] Engine.onPushDeleteRequest",
+      topic,
+      payload
+    );
     try {
       await this.sendResult<"wc_pushDelete">(id, topic, true);
       await this.cleanupSubscription(topic);
