@@ -992,11 +992,11 @@ export class PushEngine extends IPushEngine {
     );
     try {
       await this.sendResult<"wc_pushDelete">(id, topic, true);
-      await this.cleanupSubscription(topic);
       this.client.events.emit("push_delete", { id, topic });
+      await this.cleanupSubscription(topic);
     } catch (err: any) {
-      await this.sendError(id, topic, err);
       this.client.logger.error(err);
+      await this.sendError(id, topic, err);
     }
   };
 
