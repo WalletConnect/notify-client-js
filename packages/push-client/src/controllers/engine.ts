@@ -523,11 +523,14 @@ export class PushEngine extends IPushEngine {
 
   // ---------- Public (Common) --------------------------------------- //
 
-  public getActiveSubscriptions: IPushEngine["getActiveSubscriptions"] = (params) => {
+  public getActiveSubscriptions: IPushEngine["getActiveSubscriptions"] = (
+    params
+  ) => {
     this.isInitialized();
 
-    const subscriptions = this.client.subscriptions.getAll(params)
-                            .map(subscription => [subscription.topic, subscription]);
+    const subscriptions = this.client.subscriptions
+      .getAll(params)
+      .map((subscription) => [subscription.topic, subscription]);
 
     return Object.fromEntries(subscriptions);
   };
