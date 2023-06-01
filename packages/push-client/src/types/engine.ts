@@ -81,7 +81,7 @@ export abstract class IPushEngine {
   // ---------- Public Methods (common) --------------------------------- //
 
   // query all active subscriptions
-  public abstract getActiveSubscriptions(): Record<
+  public abstract getActiveSubscriptions(params?: { account: string }): Record<
     string,
     PushClientTypes.PushSubscription
   >;

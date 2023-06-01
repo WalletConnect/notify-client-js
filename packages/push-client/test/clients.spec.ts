@@ -18,6 +18,7 @@ import {
 } from "./helpers/mocks";
 import { createPushSubscription, setupKnownPairing } from "./helpers/push";
 import { waitForEvent } from "./helpers/async";
+import { RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
 
 const DEFAULT_RELAY_URL = "wss://staging.relay.walletconnect.com";
 const DEFAULT_CAST_URL = "https://staging.cast.walletconnect.com";
@@ -447,6 +448,29 @@ describe("Push", () => {
         expect(Object.keys(walletSubscriptions)).toEqual(
           Object.keys(dappSubscriptions)
         );
+      });
+      it("can filter currently active push subscriptions", async () => {
+        [1, 2].forEach((num) => {
+          wallet.subscriptions.set(`topic${num}`, {
+            account: `account${num}`,
+            expiry: Date.now(),
+            relay: {
+              protocol: RELAYER_DEFAULT_PROTOCOL,
+            },
+            scope: {},
+            metadata: gmDappMetadata,
+            topic: `topic${num}`,
+          });
+        });
+
+        const walletSubscriptions = wallet.getActiveSubscriptions({
+          account: "account2",
+        });
+
+        expect(Object.keys(walletSubscriptions).length).toBe(1);
+        expect(
+          Object.values(walletSubscriptions).map((sub) => sub.account)
+        ).toEqual(["account2"]);
       });
     });
   });
