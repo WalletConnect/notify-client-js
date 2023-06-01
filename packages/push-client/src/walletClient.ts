@@ -159,15 +159,16 @@ export class WalletClient extends IWalletClient {
     }
   };
 
-  public getActiveSubscriptions: IWalletClient["getActiveSubscriptions"] =
-    (params) => {
-      try {
-        return this.engine.getActiveSubscriptions(params);
-      } catch (error: any) {
-        this.logger.error(error.message);
-        throw error;
-      }
-    };
+  public getActiveSubscriptions: IWalletClient["getActiveSubscriptions"] = (
+    params
+  ) => {
+    try {
+      return this.engine.getActiveSubscriptions(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
 
   public deleteSubscription: IWalletClient["deleteSubscription"] = async (
     params
