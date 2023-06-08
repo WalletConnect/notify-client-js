@@ -29,7 +29,7 @@ npm install
 1. Bump the version for the specific package and create the equivalent tag, e.g. for a patch:
 
 ```sh
-cd packages/auth-client
+cd packages/push-client
 npm version patch # will update package.json and package-lock.json
 git commit -m "chore(release): 2.x.x"
 git tag 2.x.x
