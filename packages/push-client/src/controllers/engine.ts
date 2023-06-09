@@ -167,7 +167,8 @@ export class PushEngine extends IPushEngine {
           }
         });
       }),
-      10_000
+      10_000,
+      "[Push] Engine.approve > Awaiting push_subscription event timed out."
     )) as PushClientTypes.BaseEventArgs<PushClientTypes.PushResponseEventArgs>;
 
     if (pushSubscriptionEvent.params.error) {
