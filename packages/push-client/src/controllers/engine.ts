@@ -811,9 +811,6 @@ export class PushEngine extends IPushEngine {
           `[Push] Engine.onPushProposeResponse > derived pushTopic ${pushTopic} from response.subscriptionSymKey: ${result.subscriptionSymKey}`
         );
 
-        // DappClient subscribes to pushTopic.
-        await this.client.core.relayer.subscribe(pushTopic);
-
         const pushSubscription = {
           topic: pushTopic,
           account: proposal.account,
