@@ -150,6 +150,66 @@ describe("Push", () => {
         expect(dapp.subscriptions.length).toBe(1);
         expect(dapp.proposals.length).toBe(0);
       });
+
+      it("can deny proposal when subscription exists", async () => {
+        const pairingTopic = await setupKnownPairing(wallet, dapp);
+        let gotPushPropose = false;
+        let pushProposeEvent: any;
+        let gotResponse = false;
+        let responseEvent: any;
+
+        wallet.once("push_proposal", (event) => {
+          gotPushPropose = true;
+          pushProposeEvent = event;
+        });
+
+        const { id } = await dapp.propose({
+          account: mockAccount,
+          pairingTopic,
+        });
+
+        await waitForEvent(() => gotPushPropose);
+
+        dapp.once("push_response", (event) => {
+          gotResponse = true;
+          responseEvent = event;
+        });
+
+        await wallet.approve({ id, onSign: onSignMock });
+        await waitForEvent(() => gotResponse);
+
+        expect(responseEvent.params.subscription.topic).toBeDefined();
+
+        // Check that wallet is in expected state.
+        expect(wallet.subscriptions.length).toBe(1);
+        expect(wallet.messages.length).toBe(1);
+        expect(wallet.proposals.length).toBe(0);
+
+        // Check that dapp is in expected state.
+        expect(dapp.subscriptions.length).toBe(1);
+        expect(dapp.proposals.length).toBe(0);
+
+        await dapp.propose({
+          account: mockAccount,
+          pairingTopic,
+        });
+
+        await waitForEvent(
+          () =>
+            wallet.core.history.values.filter((record) => {
+              if (record.response && "error" in record.response) {
+                return (
+                  record.response.error.code ===
+                  SDK_ERRORS.USER_HAS_EXISTING_SUBSCRIPTION.code
+                );
+              }
+              return false;
+            }).length > 0
+        );
+
+        // Check that wallet is in expected state.
+        expect(wallet.subscriptions.length).toBe(1);
+      });
     });
 
     describe("reject", () => {
