@@ -14,6 +14,10 @@ export const SDK_ERRORS = {
     message: "User unsubscribed.",
     code: 6000,
   },
+  USER_HAS_EXISTING_SUBSCRIPTION: {
+    message: "User has existing push subscription with dapp.",
+    code: 6001,
+  },
   /* ----- FAILURE (7xxx) ----- */
   APPROVAL_FAILED: {
     message: "Approval failed.",

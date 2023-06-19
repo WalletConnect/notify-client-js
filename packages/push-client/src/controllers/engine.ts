@@ -731,6 +731,22 @@ export class PushEngine extends IPushEngine {
       payload,
     });
 
+    const existingSubscriptions = this.client.subscriptions
+      .getAll()
+      .filter((sub) => sub.metadata.url === payload.params.metadata.url);
+
+    if (existingSubscriptions.length) {
+      await this.sendError(
+        payload.id,
+        topic,
+        SDK_ERRORS.USER_HAS_EXISTING_SUBSCRIPTION
+      );
+      this.client.logger.error(
+        SDK_ERRORS.USER_HAS_EXISTING_SUBSCRIPTION.message
+      );
+      return;
+    }
+
     try {
       // Store the push subscription proposal so we can reference later for a response.
       await this.client.proposals.set(payload.id, {
