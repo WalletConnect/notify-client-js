@@ -996,8 +996,8 @@ export class PushEngine extends IPushEngine {
     );
     try {
       await this.sendResult<"wc_pushDelete">(id, topic, true);
-      this.client.events.emit("push_delete", { id, topic });
       await this.cleanupSubscription(topic);
+      this.client.events.emit("push_delete", { id, topic });
     } catch (err: any) {
       this.client.logger.error(err);
       await this.sendError(id, topic, err);
