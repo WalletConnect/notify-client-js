@@ -96,20 +96,6 @@ describe("Push", () => {
         expect(dapp.core.expirer.has(id)).toBe(true);
       });
     });
-  });
-
-  describe("WalletClient", () => {
-    it("can be instantiated", () => {
-      expect(wallet instanceof WalletClient).toBe(true);
-      expect(wallet.core).toBeDefined();
-      expect(wallet.events).toBeDefined();
-      expect(wallet.logger).toBeDefined();
-      expect(wallet.requests).toBeDefined();
-      expect(wallet.subscriptions).toBeDefined();
-      expect(wallet.core.expirer).toBeDefined();
-      expect(wallet.core.history).toBeDefined();
-      expect(wallet.core.pairing).toBeDefined();
-    });
 
     describe("deleteSubscription", () => {
       it("can delete a currently active push subscription", async () => {
@@ -140,6 +126,20 @@ describe("Push", () => {
         // Check that dapp is in expected state.
         expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(0);
       });
+    });
+  });
+
+  describe("WalletClient", () => {
+    it("can be instantiated", () => {
+      expect(wallet instanceof WalletClient).toBe(true);
+      expect(wallet.core).toBeDefined();
+      expect(wallet.events).toBeDefined();
+      expect(wallet.logger).toBeDefined();
+      expect(wallet.requests).toBeDefined();
+      expect(wallet.subscriptions).toBeDefined();
+      expect(wallet.core.expirer).toBeDefined();
+      expect(wallet.core.history).toBeDefined();
+      expect(wallet.core.pairing).toBeDefined();
     });
 
     describe("approve", () => {
