@@ -166,6 +166,8 @@ export abstract class IBaseClient {
 
   public abstract getActiveSubscriptions: IPushEngine["getActiveSubscriptions"];
 
+  public abstract deleteSubscription: IPushEngine["deleteSubscription"];
+
   // ---------- Event Handlers ----------------------------------------------- //
 
   public abstract emit: <E extends PushClientTypes.Event>(

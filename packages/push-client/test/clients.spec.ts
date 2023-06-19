@@ -96,6 +96,37 @@ describe("Push", () => {
         expect(dapp.core.expirer.has(id)).toBe(true);
       });
     });
+
+    describe("deleteSubscription", () => {
+      it("can delete a currently active push subscription", async () => {
+        const { responseEvent } = await createPushSubscription(dapp, wallet);
+        let gotPushDeleteEvent = false;
+        let pushDeleteEvent: any;
+
+        expect(responseEvent.params.subscription.topic).toBeDefined();
+
+        expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(1);
+
+        const walletSubscriptionTopic = Object.keys(
+          wallet.getActiveSubscriptions()
+        )[0];
+
+        wallet.once("push_delete", (event) => {
+          gotPushDeleteEvent = true;
+          pushDeleteEvent = event;
+        });
+
+        await dapp.deleteSubscription({ topic: walletSubscriptionTopic });
+        await waitForEvent(() => gotPushDeleteEvent);
+
+        expect(pushDeleteEvent.topic).toBe(walletSubscriptionTopic);
+        // Check that wallet is in expected state.
+        expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
+        expect(wallet.messages.keys.length).toBe(0);
+        // Check that dapp is in expected state.
+        expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(0);
+      });
+    });
   });
 
   describe("WalletClient", () => {
