@@ -147,6 +147,7 @@ describe("Push", () => {
         const pairingTopic = await setupKnownPairing(wallet, dapp);
         let gotPushPropose = false;
         let pushProposeEvent: any;
+
         let gotResponse = false;
         let responseEvent: any;
 
@@ -223,6 +224,43 @@ describe("Push", () => {
         // Check that dapp is in expected state.
         expect(dapp.subscriptions.length).toBe(0);
         expect(dapp.proposals.length).toBe(0);
+      });
+
+      it("automatically rejects proposal when subscription exists", async () => {
+        const { responseEvent, pairingTopic } = await createPushSubscription(
+          dapp,
+          wallet
+        );
+
+        let hasError = false;
+        let gotNewResponse = false;
+        expect(responseEvent.params.subscription.topic).toBeDefined();
+
+        // Check that wallet is in expected state.
+        expect(wallet.subscriptions.length).toBe(1);
+        expect(wallet.messages.length).toBe(1);
+        expect(wallet.proposals.length).toBe(0);
+
+        // Check that dapp is in expected state.
+        expect(dapp.subscriptions.length).toBe(1);
+        expect(dapp.proposals.length).toBe(0);
+
+        dapp.on("push_response", (ev) => {
+          gotNewResponse = true;
+          hasError = Boolean(ev.params.error);
+        });
+
+        await dapp.propose({
+          account: mockAccount,
+          pairingTopic,
+        });
+
+        await waitForEvent(() => gotNewResponse);
+
+        expect(hasError).toEqual(true);
+
+        // Check that wallet is in expected state.
+        expect(wallet.subscriptions.length).toBe(1);
       });
     });
 

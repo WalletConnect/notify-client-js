@@ -46,5 +46,5 @@ export const createPushSubscription = async (
   await wallet.approve({ id, onSign: onSignMock });
   await waitForEvent(() => gotResponse);
 
-  return { proposalId: id, pushProposeEvent, responseEvent };
+  return { proposalId: id, pushProposeEvent, responseEvent, pairingTopic };
 };
