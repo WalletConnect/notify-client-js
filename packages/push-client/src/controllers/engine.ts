@@ -831,6 +831,7 @@ export class PushEngine extends IPushEngine {
           ),
           expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
           selfPublicKey,
+          selfPrivateKey: this.client.core.crypto.keychain.get(selfPublicKey),
           dappPublicKey: senderPublicKey,
         };
 
@@ -906,6 +907,9 @@ export class PushEngine extends IPushEngine {
           scope: request.scope,
           expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
           selfPublicKey: request.publicKey,
+          selfPrivateKey: this.client.core.crypto.keychain.get(
+            request.publicKey
+          ),
           dappPublicKey: response.result.publicKey,
         };
 
