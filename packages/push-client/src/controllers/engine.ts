@@ -45,7 +45,6 @@ import {
   JsonRpcTypes,
   PushClientTypes,
 } from "../types";
-import { WalletClient } from "../walletClient";
 
 export class PushEngine extends IPushEngine {
   public name = "pushEngine";
