@@ -198,4 +198,10 @@ export abstract class IBaseClient {
     event: E,
     listener: (args: PushClientTypes.EventArguments[E]) => void
   ) => EventEmitter;
+
+  // ---------- Helpers  ------------------------------------------------------------ //
+  public abstract initSyncStores: (params: {
+    account: string;
+    signature: string;
+  }) => Promise<void>;
 }

@@ -17,6 +17,7 @@ import {
 } from "./constants";
 import { PushEngine } from "./controllers";
 import { IWalletClient, PushClientTypes } from "./types";
+import { ISyncClient } from "@walletconnect/sync-client";
 
 export class WalletClient extends IWalletClient {
   public readonly protocol = PUSH_CLIENT_PROTOCOL;
