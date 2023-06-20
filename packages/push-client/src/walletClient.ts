@@ -232,13 +232,6 @@ export class WalletClient extends IWalletClient {
       (subTopic, subscription) => {
         if (!subscription) return;
 
-        console.log(
-          "Public: ",
-          subscription.selfPublicKey,
-          " // Private: ",
-          subscription.selfPrivateKey
-        );
-
         this.core.crypto.keychain
           .set(subscription.selfPublicKey, subscription.selfPrivateKey)
           .then(() => {
