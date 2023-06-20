@@ -45,6 +45,7 @@ import {
   JsonRpcTypes,
   PushClientTypes,
 } from "../types";
+import { WalletClient } from "../walletClient";
 
 export class PushEngine extends IPushEngine {
   public name = "pushEngine";
@@ -119,6 +120,14 @@ export class PushEngine extends IPushEngine {
   };
 
   // ---------- Public (Wallet) --------------------------------------- //
+
+  public register: IPushEngine["register"] = async ({ account, onSign }) => {
+    const client = (this.client as IWalletClient).syncClient;
+    const signature = await onSign(await client.getMessage({ account }));
+    await client.register({ account, signature });
+
+    await (this.client as IWalletClient).initSyncStores({ account, signature });
+  };
 
   public approve: IPushEngine["approve"] = async ({ id, onSign }) => {
     this.isInitialized();
@@ -821,6 +830,8 @@ export class PushEngine extends IPushEngine {
             proposal.scope
           ),
           expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
+          selfPublicKey,
+          dappPublicKey: senderPublicKey,
         };
 
         // Store the new PushSubscription.
@@ -894,6 +905,8 @@ export class PushEngine extends IPushEngine {
           metadata: request.metadata,
           scope: request.scope,
           expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
+          selfPublicKey: request.publicKey,
+          dappPublicKey: response.result.publicKey,
         };
 
         // Store the new PushSubscription.

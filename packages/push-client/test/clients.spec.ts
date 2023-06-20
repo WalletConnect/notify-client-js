@@ -18,7 +18,9 @@ import {
 } from "./helpers/mocks";
 import { createPushSubscription, setupKnownPairing } from "./helpers/push";
 import { waitForEvent } from "./helpers/async";
-import { RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
+import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
+import { ISyncClient, SyncClient, SyncStore } from "@walletconnect/sync-client";
+import { Wallet } from "@ethersproject/wallet";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 const DEFAULT_CAST_URL = "https://cast.walletconnect.com";
@@ -27,24 +29,38 @@ if (!process.env.TEST_PROJECT_ID) {
   throw new ReferenceError("TEST_PROJECT_ID env variable not set");
 }
 
+const projectId = process.env.TEST_PROJECT_ID;
+
 describe("Push", () => {
   let dapp: IDappClient;
   let wallet: IWalletClient;
+  let syncClient: ISyncClient;
 
   beforeEach(async () => {
+    const core = new Core({
+      projectId,
+    });
+
+    syncClient = await SyncClient.init({
+      core,
+      projectId,
+    });
+
     dapp = await DappClient.init({
       name: "testDappClient",
       logger: "error",
       relayUrl: process.env.TEST_RELAY_URL || DEFAULT_RELAY_URL,
       castUrl: process.env.TEST_CAST_URL || DEFAULT_CAST_URL,
-      projectId: process.env.TEST_PROJECT_ID,
+      projectId,
       metadata: gmDappMetadata,
     });
     wallet = await WalletClient.init({
       name: "testWalletClient",
       logger: "error",
       relayUrl: process.env.TEST_RELAY_URL || DEFAULT_RELAY_URL,
-      projectId: process.env.TEST_PROJECT_ID,
+      syncClient,
+      SyncStoreController: SyncStore,
+      projectId,
     });
 
     // Mocking identity key methods.
@@ -461,6 +477,51 @@ describe("Push", () => {
     });
   });
 
+  describe("Sync Functionality", () => {
+    describe("Push Subscriptions", () => {
+      it("Syncs push subscriptions", async () => {
+        let gotSyncUpdate = false;
+        const corePeer = new Core({ projectId });
+        const syncPeer = await SyncClient.init({
+          core: corePeer,
+          projectId,
+        });
+        const walletPeer = await WalletClient.init({
+          SyncStoreController: SyncStore,
+          syncClient: syncPeer,
+          core: corePeer,
+          projectId,
+        });
+
+        const ethersWallet = Wallet.createRandom();
+        await wallet.register({
+          account: `eip155:1:${ethersWallet.address}`,
+          onSign: (message) => {
+            return ethersWallet.signMessage(message);
+          },
+        });
+        await walletPeer.register({
+          account: `eip155:1:${ethersWallet.address}`,
+          onSign: (message) => {
+            return ethersWallet.signMessage(message);
+          },
+        });
+
+        walletPeer.syncClient.on("sync_update", () => {
+          gotSyncUpdate = true;
+        });
+
+        await createPushSubscription(dapp, wallet);
+
+        await waitForEvent(() => gotSyncUpdate);
+
+        expect(walletPeer.getActiveSubscriptions()).toEqual(
+          wallet.getActiveSubscriptions()
+        );
+      });
+    });
+  });
+
   describe("Common (BaseClient)", () => {
     describe("getActiveSubscriptions", () => {
       it("can query currently active push subscriptions", async () => {
@@ -491,6 +552,9 @@ describe("Push", () => {
             scope: {},
             metadata: gmDappMetadata,
             topic: `topic${num}`,
+            selfPublicKey: "",
+            dappPublicKey: "",
+            selfPrivateKey: "",
           });
         });
 

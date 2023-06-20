@@ -42,6 +42,11 @@ export abstract class IPushEngine {
 
   // ---------- Public Methods (wallet) --------------------------------- //
 
+  public abstract register(params: {
+    account: string;
+    onSign: (message: string) => Promise<string>;
+  }): Promise<void>;
+
   // approve push subscription
   public abstract approve(params: {
     id: number;

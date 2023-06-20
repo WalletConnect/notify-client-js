@@ -4,6 +4,7 @@ import EventEmitter from "events";
 import { Logger } from "pino";
 
 import { IPushEngine } from "./engine";
+import { ISyncClient, SyncStore } from "@walletconnect/sync-client";
 
 export declare namespace PushClientTypes {
   type Event =
@@ -60,6 +61,8 @@ export declare namespace PushClientTypes {
   interface WalletClientOptions extends CoreTypes.Options {
     core?: ICore;
     keyserverUrl?: string;
+    syncClient: ISyncClient;
+    SyncStoreController: typeof SyncStore;
   }
 
   interface Metadata {
@@ -97,6 +100,9 @@ export declare namespace PushClientTypes {
     metadata: Metadata;
     scope: ScopeMap;
     expiry: number;
+    selfPublicKey: string;
+    selfPrivateKey: string;
+    dappPublicKey: string;
   }
 
   interface PushMessage {
@@ -168,7 +174,7 @@ export abstract class IBaseClient {
 
   public abstract deleteSubscription: IPushEngine["deleteSubscription"];
 
-  // ---------- Event Handlers ----------------------------------------------- //
+  // ---------- Event Handlers ------------------------------------------------------- //
 
   public abstract emit: <E extends PushClientTypes.Event>(
     event: E,
@@ -194,4 +200,10 @@ export abstract class IBaseClient {
     event: E,
     listener: (args: PushClientTypes.EventArguments[E]) => void
   ) => EventEmitter;
+
+  // ---------- Helpers  ------------------------------------------------------------ //
+  public abstract initSyncStores: (params: {
+    account: string;
+    signature: string;
+  }) => Promise<void>;
 }

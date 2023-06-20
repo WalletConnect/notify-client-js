@@ -17,6 +17,7 @@ import {
 } from "./constants";
 import { PushEngine } from "./controllers";
 import { IWalletClient, PushClientTypes } from "./types";
+import { ISyncClient } from "@walletconnect/sync-client";
 
 export class WalletClient extends IWalletClient {
   public readonly protocol = PUSH_CLIENT_PROTOCOL;
@@ -33,6 +34,9 @@ export class WalletClient extends IWalletClient {
   public subscriptions: IWalletClient["subscriptions"];
   public messages: IWalletClient["messages"];
   public identityKeys: IWalletClient["identityKeys"];
+
+  public syncClient: IWalletClient["syncClient"];
+  public SyncStoreController: IWalletClient["SyncStoreController"];
 
   static async init(opts: PushClientTypes.WalletClientOptions) {
     const client = new WalletClient(opts);
@@ -54,6 +58,8 @@ export class WalletClient extends IWalletClient {
               level: opts.logger || "error",
             })
           );
+    this.syncClient = opts.syncClient;
+    this.SyncStoreController = opts.SyncStoreController;
 
     this.keyserverUrl = opts?.keyserverUrl ?? DEFAULT_KEYSERVER_URL;
     this.core = opts.core || new Core(opts);
@@ -181,6 +187,15 @@ export class WalletClient extends IWalletClient {
     }
   };
 
+  public register: IWalletClient["register"] = async ({ account, onSign }) => {
+    try {
+      return await this.engine.register({ account, onSign });
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   // ---------- Events ----------------------------------------------- //
 
   public emit: IWalletClient["emit"] = (name, listener) => {
@@ -201,6 +216,45 @@ export class WalletClient extends IWalletClient {
 
   public removeListener: IWalletClient["removeListener"] = (name, listener) => {
     return this.events.removeListener(name, listener);
+  };
+
+  // ---------- Helpers ----------------------------------------------- //
+
+  public initSyncStores: IWalletClient["initSyncStores"] = async ({
+    account,
+    signature,
+  }) => {
+    this.subscriptions = new this.SyncStoreController(
+      "com.walletconnect.notify.pushSubscription",
+      this.syncClient,
+      account,
+      signature,
+      (subTopic, subscription) => {
+        if (!subscription) return;
+
+        console.log(
+          "Public: ",
+          subscription.selfPublicKey,
+          " // Private: ",
+          subscription.selfPrivateKey
+        );
+
+        this.core.crypto.keychain
+          .set(subscription.selfPublicKey, subscription.selfPrivateKey)
+          .then(() => {
+            return this.core.crypto.generateSharedKey(
+              subscription.selfPublicKey,
+              subscription.dappPublicKey,
+              subTopic
+            );
+          });
+
+        if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
+          this.core.relayer.subscriber.subscribe(subTopic);
+        }
+      }
+    );
+    await this.subscriptions.init();
   };
 
   // ---------- Private ----------------------------------------------- //
