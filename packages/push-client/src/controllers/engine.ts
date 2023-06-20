@@ -835,6 +835,9 @@ export class PushEngine extends IPushEngine {
           message: "Proposal key deleted.",
         });
 
+        // DappClient subscribes to pushTopic.
+        await this.client.core.relayer.subscribe(pushTopic);
+
         // Emit the PushSubscription at client level.
         this.client.emit("push_response", {
           id: response.id,
