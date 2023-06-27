@@ -72,3 +72,32 @@ export const sendPushMessage = async (
 
   return axios.post(url, body);
 };
+
+export const sendPushMessage = async (
+  projectId: string,
+  account: string,
+  messageBody: string
+) => {
+  const url = ` https://cast.walletconnect.com/${projectId}/notify`;
+
+  const body = {
+    notification: {
+      body: messageBody,
+      title: "Test Message",
+      icon: "",
+      url: "https://test.coms",
+      type: "gm_hourly",
+    },
+    accounts: [account],
+  };
+
+  return fetch(url, {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .catch((r) => console.error(r))
+    .then((res) => res && res.json());
+};
