@@ -91,13 +91,5 @@ export const sendPushMessage = async (
     accounts: [account],
   };
 
-  return fetch(url, {
-    method: "POST",
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-    },
-  })
-    .catch((r) => console.error(r))
-    .then((res) => res && res.json());
+  return axios.post(url, body);
 };
