@@ -232,19 +232,11 @@ export class WalletClient extends IWalletClient {
       (subTopic, subscription) => {
         if (!subscription) return;
 
-        this.core.crypto.keychain
-          .set(subscription.selfPublicKey, subscription.selfPrivateKey)
-          .then(() => {
-            return this.core.crypto.generateSharedKey(
-              subscription.selfPublicKey,
-              subscription.dappPublicKey,
-              subTopic
-            );
-          });
-
-        if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
-          this.core.relayer.subscriber.subscribe(subTopic);
-        }
+        this.core.crypto.setSymKey(subscription.symkey).then(() => {
+          if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
+            this.core.relayer.subscriber.subscribe(subTopic);
+          }
+        });
       }
     );
     await this.subscriptions.init();

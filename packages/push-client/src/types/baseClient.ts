@@ -100,9 +100,7 @@ export declare namespace PushClientTypes {
     metadata: Metadata;
     scope: ScopeMap;
     expiry: number;
-    selfPublicKey: string;
-    selfPrivateKey: string;
-    dappPublicKey: string;
+    symKey: string;
   }
 
   interface PushMessage {
