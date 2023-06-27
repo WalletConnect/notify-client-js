@@ -187,9 +187,12 @@ export class WalletClient extends IWalletClient {
     }
   };
 
-  public register: IWalletClient["register"] = async ({ account, onSign }) => {
+  public enableSync: IWalletClient["enableSync"] = async ({
+    account,
+    onSign,
+  }) => {
     try {
-      return await this.engine.register({ account, onSign });
+      return await this.engine.enableSync({ account, onSign });
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;
@@ -232,7 +235,8 @@ export class WalletClient extends IWalletClient {
       (subTopic, subscription) => {
         if (!subscription) return;
 
-        this.core.crypto.setSymKey(subscription.symkey).then(() => {
+        this.messages.set(subTopic, { topic: subTopic, messages: [] });
+        this.core.crypto.setSymKey(subscription.symKey).then(() => {
           if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
             this.core.relayer.subscriber.subscribe(subTopic);
           }

@@ -38,7 +38,7 @@ export abstract class IWalletClient extends IBaseClient {
 
   // ---------- Public Methods (wallet) ----------------------------------------------- //
 
-  public abstract register: IPushEngine["register"];
+  public abstract enableSync: IPushEngine["enableSync"];
   public abstract approve: IPushEngine["approve"];
   public abstract reject: IPushEngine["reject"];
   public abstract subscribe: IPushEngine["subscribe"];

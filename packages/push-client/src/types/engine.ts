@@ -42,7 +42,7 @@ export abstract class IPushEngine {
 
   // ---------- Public Methods (wallet) --------------------------------- //
 
-  public abstract register(params: {
+  public abstract enableSync(params: {
     account: string;
     onSign: (message: string) => Promise<string>;
   }): Promise<void>;

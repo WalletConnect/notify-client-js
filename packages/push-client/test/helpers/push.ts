@@ -19,7 +19,9 @@ export const setupKnownPairing = async (
 
 export const createPushSubscription = async (
   dapp: IDappClient,
-  wallet: IWalletClient
+  wallet: IWalletClient,
+  account?: string,
+  onSign?: (message: string) => Promise<string>
 ) => {
   const pairingTopic = await setupKnownPairing(wallet, dapp);
   let gotPushPropose = false;
@@ -37,14 +39,43 @@ export const createPushSubscription = async (
   });
 
   const { id } = await dapp.propose({
-    account: mockAccount,
+    account: account ?? mockAccount,
     pairingTopic,
   });
 
   await waitForEvent(() => gotPushPropose);
 
-  await wallet.approve({ id, onSign: onSignMock });
+  await wallet.approve({ id, onSign: onSign ?? onSignMock });
   await waitForEvent(() => gotResponse);
 
   return { proposalId: id, pushProposeEvent, responseEvent };
+};
+
+export const sendPushMessage = async (
+  projectId: string,
+  account: string,
+  messageBody: string
+) => {
+  const url = ` https://cast.walletconnect.com/${projectId}/notify`;
+
+  const body = {
+    notification: {
+      body: messageBody,
+      title: "Test Message",
+      icon: "",
+      url: "https://test.coms",
+      type: "gm_hourly",
+    },
+    accounts: [account],
+  };
+
+  return fetch(url, {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .catch((r) => console.error(r))
+    .then((res) => res && res.json());
 };

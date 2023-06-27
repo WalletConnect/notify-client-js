@@ -120,7 +120,10 @@ export class PushEngine extends IPushEngine {
 
   // ---------- Public (Wallet) --------------------------------------- //
 
-  public register: IPushEngine["register"] = async ({ account, onSign }) => {
+  public enableSync: IPushEngine["enableSync"] = async ({
+    account,
+    onSign,
+  }) => {
     const client = (this.client as IWalletClient).syncClient;
     const signature = await onSign(await client.getMessage({ account }));
     await client.register({ account, signature });
