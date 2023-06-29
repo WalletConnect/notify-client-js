@@ -274,18 +274,7 @@ export class WalletClient extends IWalletClient {
     try {
       await this.historyClient.registerTags({
         relayUrl: this.core.relayUrl || RELAYER_DEFAULT_RELAY_URL,
-        tags: [
-          "4002",
-          "4003",
-          "4006",
-          "4007",
-          "4008",
-          "4009",
-          "5000",
-          "5001",
-          "5002",
-          "5003",
-        ],
+        tags: ["4002", "5000", "5002"],
       });
 
       await this.core.start();
