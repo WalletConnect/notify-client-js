@@ -3,6 +3,7 @@ import { IStore } from "@walletconnect/types";
 import { IBaseClient, PushClientTypes } from "./baseClient";
 import { IPushEngine } from "./engine";
 import { ISyncClient, SyncStore } from "@walletconnect/sync-client";
+import { HistoryClient } from "@walletconnect/history";
 
 export interface IdentityKeychain {
   accountId: string;
@@ -12,6 +13,8 @@ export interface IdentityKeychain {
 
 export abstract class IWalletClient extends IBaseClient {
   public abstract readonly keyserverUrl: string;
+
+  public abstract historyClient: HistoryClient;
 
   public abstract readonly syncClient: ISyncClient;
   public abstract readonly SyncStoreController: typeof SyncStore;
