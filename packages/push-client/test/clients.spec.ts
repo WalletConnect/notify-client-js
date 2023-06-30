@@ -62,6 +62,7 @@ describe("Push", () => {
       name: "testWalletClient",
       logger: "error",
       relayUrl: process.env.TEST_RELAY_URL || DEFAULT_RELAY_URL,
+      core,
       syncClient,
       SyncStoreController: SyncStore,
       projectId,
