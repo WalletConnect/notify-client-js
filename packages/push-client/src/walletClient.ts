@@ -34,6 +34,9 @@ export class WalletClient extends IWalletClient {
   public messages: IWalletClient["messages"];
   public identityKeys: IWalletClient["identityKeys"];
 
+  public syncClient: IWalletClient["syncClient"];
+  public SyncStoreController: IWalletClient["SyncStoreController"];
+
   static async init(opts: PushClientTypes.WalletClientOptions) {
     const client = new WalletClient(opts);
     await client.initialize();
@@ -54,6 +57,8 @@ export class WalletClient extends IWalletClient {
               level: opts.logger || "error",
             })
           );
+    this.syncClient = opts.syncClient;
+    this.SyncStoreController = opts.SyncStoreController;
 
     this.keyserverUrl = opts?.keyserverUrl ?? DEFAULT_KEYSERVER_URL;
     this.core = opts.core || new Core(opts);
@@ -181,6 +186,18 @@ export class WalletClient extends IWalletClient {
     }
   };
 
+  public enableSync: IWalletClient["enableSync"] = async ({
+    account,
+    onSign,
+  }) => {
+    try {
+      return await this.engine.enableSync({ account, onSign });
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   // ---------- Events ----------------------------------------------- //
 
   public emit: IWalletClient["emit"] = (name, listener) => {
@@ -201,6 +218,31 @@ export class WalletClient extends IWalletClient {
 
   public removeListener: IWalletClient["removeListener"] = (name, listener) => {
     return this.events.removeListener(name, listener);
+  };
+
+  // ---------- Helpers ----------------------------------------------- //
+
+  public initSyncStores: IWalletClient["initSyncStores"] = async ({
+    account,
+    signature,
+  }) => {
+    this.subscriptions = new this.SyncStoreController(
+      "com.walletconnect.notify.pushSubscription",
+      this.syncClient,
+      account,
+      signature,
+      (subTopic, subscription) => {
+        if (!subscription) return;
+
+        this.messages.set(subTopic, { topic: subTopic, messages: [] });
+        this.core.crypto.setSymKey(subscription.symKey).then(() => {
+          if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
+            this.core.relayer.subscriber.subscribe(subTopic);
+          }
+        });
+      }
+    );
+    await this.subscriptions.init();
   };
 
   // ---------- Private ----------------------------------------------- //

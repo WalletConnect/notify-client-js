@@ -120,6 +120,17 @@ export class PushEngine extends IPushEngine {
 
   // ---------- Public (Wallet) --------------------------------------- //
 
+  public enableSync: IPushEngine["enableSync"] = async ({
+    account,
+    onSign,
+  }) => {
+    const client = (this.client as IWalletClient).syncClient;
+    const signature = await onSign(await client.getMessage({ account }));
+    await client.register({ account, signature });
+
+    await (this.client as IWalletClient).initSyncStores({ account, signature });
+  };
+
   public approve: IPushEngine["approve"] = async ({ id, onSign }) => {
     this.isInitialized();
 
@@ -837,6 +848,7 @@ export class PushEngine extends IPushEngine {
             proposal.scope
           ),
           expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
+          symKey: result.subscriptionSymKey,
         };
 
         // Store the new PushSubscription.
@@ -913,6 +925,7 @@ export class PushEngine extends IPushEngine {
           metadata: request.metadata,
           scope: request.scope,
           expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
+          symKey: this.client.core.crypto.keychain.get(pushTopic),
         };
 
         // Store the new PushSubscription.

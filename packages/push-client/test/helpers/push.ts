@@ -2,6 +2,7 @@ import { generateRandomBytes32 } from "@walletconnect/utils";
 import { IDappClient, IWalletClient } from "../../src";
 import { mockAccount, onSignMock } from "./mocks";
 import { waitForEvent } from "../helpers/async";
+import axios from "axios";
 
 export const setupKnownPairing = async (
   clientA: IWalletClient | IDappClient,
@@ -19,7 +20,9 @@ export const setupKnownPairing = async (
 
 export const createPushSubscription = async (
   dapp: IDappClient,
-  wallet: IWalletClient
+  wallet: IWalletClient,
+  account?: string,
+  onSign?: (message: string) => Promise<string>
 ) => {
   const pairingTopic = await setupKnownPairing(wallet, dapp);
   let gotPushPropose = false;
@@ -37,14 +40,35 @@ export const createPushSubscription = async (
   });
 
   const { id } = await dapp.propose({
-    account: mockAccount,
+    account: account ?? mockAccount,
     pairingTopic,
   });
 
   await waitForEvent(() => gotPushPropose);
 
-  await wallet.approve({ id, onSign: onSignMock });
+  await wallet.approve({ id, onSign: onSign ?? onSignMock });
   await waitForEvent(() => gotResponse);
 
   return { proposalId: id, pushProposeEvent, responseEvent, pairingTopic };
+};
+
+export const sendPushMessage = async (
+  projectId: string,
+  account: string,
+  messageBody: string
+) => {
+  const url = ` https://cast.walletconnect.com/${projectId}/notify`;
+
+  const body = {
+    notification: {
+      body: messageBody,
+      title: "Test Message",
+      icon: "",
+      url: "https://test.coms",
+      type: "gm_hourly",
+    },
+    accounts: [account],
+  };
+
+  return axios.post(url, body);
 };
