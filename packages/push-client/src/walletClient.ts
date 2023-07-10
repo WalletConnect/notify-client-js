@@ -242,6 +242,10 @@ export class WalletClient extends IWalletClient {
       (subTopic, subscription) => {
         if (!subscription) return;
 
+        const existingSubExists =
+          this.messages.getAll({ topic: subTopic }).length > 0;
+        if (existingSubExists) return;
+
         this.messages.set(subTopic, { topic: subTopic, messages: [] });
         this.core.crypto.setSymKey(subscription.symKey).then(() => {
           if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
@@ -261,9 +265,23 @@ export class WalletClient extends IWalletClient {
       });
 
     stores.forEach((store) => {
-      fetchAndInjectHistory(store.topic, store.key, this.historyClient).catch(
-        (e) => this.logger.error(e.message)
-      );
+      fetchAndInjectHistory(
+        store.topic,
+        store.key,
+        this.core,
+        this.historyClient
+      )
+        .catch((e) => this.logger.error(e.message))
+        .then(() => {
+          this.subscriptions.getAll().forEach(({ topic, metadata }) => {
+            fetchAndInjectHistory(
+              topic,
+              metadata.name,
+              this.core,
+              this.historyClient
+            );
+          });
+        });
     });
   };
 
