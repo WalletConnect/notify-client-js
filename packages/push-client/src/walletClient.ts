@@ -240,7 +240,13 @@ export class WalletClient extends IWalletClient {
       account,
       signature,
       (subTopic, subscription) => {
-        if (!subscription) return;
+        if (!subscription) {
+          if (this.core.relayer.subscriber.topics.includes(subTopic)) {
+            this.core.relayer.subscriber.unsubscribe(subTopic);
+          }
+
+          return;
+        }
 
         const existingSubExists =
           this.messages.getAll({ topic: subTopic }).length > 0;
