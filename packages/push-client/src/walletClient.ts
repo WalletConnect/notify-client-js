@@ -242,6 +242,11 @@ export class WalletClient extends IWalletClient {
       (subTopic, subscription) => {
         if (!subscription) {
           if (this.core.relayer.subscriber.topics.includes(subTopic)) {
+            this.messages.delete(subTopic, {
+              code: -1,
+              message: "Deleted subscription",
+            });
+            this.core.crypto.deleteSymKey(subTopic);
             this.core.relayer.subscriber.unsubscribe(subTopic);
           }
 
