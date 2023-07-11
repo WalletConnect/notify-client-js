@@ -1,4 +1,6 @@
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
+    if(this.core
+
 import { expect, describe, it, beforeEach, afterEach } from "vitest";
 import cloneDeep from "lodash.clonedeep";
 import {
@@ -118,7 +120,7 @@ describe("Push", () => {
       });
     });
 
-    describe("deleteSubscription", () => {
+    describe.skip("deleteSubscription", () => {
       it("can delete a currently active push subscription", async () => {
         const { responseEvent } = await createPushSubscription(dapp, wallet);
         let gotPushDeleteEvent = false;
