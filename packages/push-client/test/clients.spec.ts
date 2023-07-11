@@ -1,6 +1,4 @@
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
-    if(this.core
-
 import { expect, describe, it, beforeEach, afterEach } from "vitest";
 import cloneDeep from "lodash.clonedeep";
 import {
