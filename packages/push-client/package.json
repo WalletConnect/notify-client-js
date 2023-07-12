@@ -25,7 +25,7 @@
     "lint": "eslint -c '../../.eslintrc' --fix './src/**/*.ts'",
     "prettier": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}'",
     "prettier:write": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}' --write",
-    "test": "vitest run --dir test",
+    "test": "vitest run --dir  test",
     "test:watch": "vitest watch --dir test",
     "prepublishOnly": "npm run test && npm run build"
   },
@@ -45,7 +45,6 @@
   "devDependencies": {
     "@ethersproject/wallet": "^5.7.0",
     "@types/lodash.clonedeep": "^4.5.7",
-    "@walletconnect/sync-client": "^0.3.6",
     "@walletconnect/types": "^2.8.0",
     "lodash.clonedeep": "^4.5.0"
   }

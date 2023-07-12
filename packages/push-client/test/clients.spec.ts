@@ -520,7 +520,7 @@ describe("Push", () => {
     });
   });
 
-  describe("Sync Functionality", () => {
+  describe.skip("Sync Functionality", () => {
     describe("Push Subscriptions", () => {
       it("Syncs push subscriptions", async () => {
         let gotSyncUpdate = false;

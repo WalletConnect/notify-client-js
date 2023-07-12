@@ -242,21 +242,22 @@ export class WalletClient extends IWalletClient {
       (subTopic, subscription) => {
         if (!subscription) {
           if (this.core.relayer.subscriber.topics.includes(subTopic)) {
-            this.messages.delete(subTopic, {
-              code: -1,
-              message: "Deleted subscription",
-            });
-            this.core.crypto.deleteSymKey(subTopic);
-            this.core.relayer.subscriber.unsubscribe(subTopic);
+            // this.messages.delete(subTopic, {
+            //   code: -1,
+            //   message: "Deleted subscription",
+            // });
+            // this.core.crypto.deleteSymKey(subTopic);
+            // this.core.relayer.subscriber.unsubscribe(subTopic);
           }
 
           return;
         }
 
-        const existingSubExists =
-          this.messages.getAll({ topic: subTopic }).length > 0;
-        if (existingSubExists) return;
+        // const existingSubExists =
+        //   this.messages.getAll({ topic: subTopic }).length > 0;
+        // if (existingSubExists) return;
 
+        console.log("Setting symkey", subscription.symKey);
         this.messages.set(subTopic, { topic: subTopic, messages: [] });
         this.core.crypto.setSymKey(subscription.symKey).then(() => {
           if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
