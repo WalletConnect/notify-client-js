@@ -630,7 +630,9 @@ export class PushEngine extends IPushEngine {
       async (event: RelayerTypes.MessageEvent) => {
         const { topic, message, publishedAt } = event;
 
-        if (message.length === 0) return;
+        if (!message || message.length === 0) {
+          return;
+        }
 
         const isType1Payload =
           this.client.core.crypto.getPayloadType(message) === TYPE_1;
