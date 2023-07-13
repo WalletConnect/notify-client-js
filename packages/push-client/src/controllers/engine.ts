@@ -489,7 +489,7 @@ export class PushEngine extends IPushEngine {
 
       return payload.params;
     } catch (e) {
-      this.client.logger.error("Could not decode payload", encryptedMessage);
+      this.client.logger.error(`Could not decode payload "${encryptedMessage}" on topic ${topic}`);
       throw new Error("Could not decode payload");
     }
   };
