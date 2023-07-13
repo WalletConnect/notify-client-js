@@ -241,14 +241,18 @@ export class WalletClient extends IWalletClient {
       signature,
       (subTopic, subscription) => {
         if (!subscription) {
+          // Unsubscribe only if currently subscribed
           if (this.core.relayer.subscriber.topics.includes(subTopic)) {
-            this.messages.delete(subTopic, {
-              code: -1,
-              message: "Deleted subscription",
-            });
-            this.core.crypto.deleteSymKey(subTopic);
             this.core.relayer.subscriber.unsubscribe(subTopic);
           }
+          // Delete messages since subscription was removed
+          this.messages.delete(subTopic, {
+            code: -1,
+            message: "Deleted parent subscription",
+          });
+
+          // Delete symkey since subscription was removed
+          this.core.crypto.deleteSymKey(subTopic);
 
           return;
         }
@@ -257,7 +261,6 @@ export class WalletClient extends IWalletClient {
           this.messages.getAll({ topic: subTopic }).length > 0;
         if (existingSubExists) return;
 
-        console.log("Setting symkey", subscription.symKey);
         this.messages.set(subTopic, { topic: subTopic, messages: [] });
         this.core.crypto.setSymKey(subscription.symKey).then(() => {
           if (!this.core.relayer.subscriber.topics.includes(subTopic)) {

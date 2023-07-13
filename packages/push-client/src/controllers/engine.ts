@@ -489,8 +489,12 @@ export class PushEngine extends IPushEngine {
 
       return payload.params;
     } catch (e) {
-      this.client.logger.error(`Could not decode payload "${encryptedMessage}" on topic ${topic}`);
-      throw new Error("Could not decode payload");
+      this.client.logger.error(
+        `Could not decode payload "${encryptedMessage}" on topic ${topic}`
+      );
+      throw new Error(
+        `Could not decode payload "${encryptedMessage}" on topic ${topic}`
+      );
     }
   };
 
@@ -630,10 +634,6 @@ export class PushEngine extends IPushEngine {
       async (event: RelayerTypes.MessageEvent) => {
         const { topic, message, publishedAt } = event;
 
-        if (!message || message.length === 0) {
-          return;
-        }
-
         const isType1Payload =
           this.client.core.crypto.getPayloadType(message) === TYPE_1;
 
@@ -663,23 +663,9 @@ export class PushEngine extends IPushEngine {
 
         let payload: JsonRpcPayload<any, any> | void = undefined;
 
-        payload = await this.client.core.crypto
-          .decode(topic, message, {
-            receiverPublicKey,
-          })
-          .catch((r) => {
-            this.client.logger.warn(
-              `Incoming message can not be handled by push client, maybe it's a sync client message? ${r}`
-            );
-            console.log("FAILED", {
-              isType1Payload,
-              message,
-              receiverPublicKey,
-            });
-          })
-          .then((v) => {
-            return v;
-          });
+        payload = await this.client.core.crypto.decode(topic, message, {
+          receiverPublicKey,
+        });
 
         if (!payload) return;
 
