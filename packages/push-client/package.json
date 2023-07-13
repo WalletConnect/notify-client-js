@@ -25,7 +25,7 @@
     "lint": "eslint -c '../../.eslintrc' --fix './src/**/*.ts'",
     "prettier": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}'",
     "prettier:write": "prettier --check '{src,test}/**/*.{js,ts,jsx,tsx}' --write",
-    "test": "vitest run --dir  test",
+    "test": "vitest run --dir test",
     "test:watch": "vitest watch --dir test",
     "prepublishOnly": "npm run test && npm run build"
   },
