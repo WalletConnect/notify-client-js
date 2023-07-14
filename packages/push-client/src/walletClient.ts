@@ -1,4 +1,4 @@
-import { Core, Store } from "@walletconnect/core";
+import { Core, RELAYER_DEFAULT_RELAY_URL, Store } from "@walletconnect/core";
 import {
   generateChildLogger,
   getDefaultLoggerOptions,
@@ -17,6 +17,8 @@ import {
 } from "./constants";
 import { PushEngine } from "./controllers";
 import { IWalletClient, PushClientTypes } from "./types";
+import { HistoryClient } from "@walletconnect/history";
+import { fetchAndInjectHistory } from "./utils/history";
 
 export class WalletClient extends IWalletClient {
   public readonly protocol = PUSH_CLIENT_PROTOCOL;
@@ -33,6 +35,8 @@ export class WalletClient extends IWalletClient {
   public subscriptions: IWalletClient["subscriptions"];
   public messages: IWalletClient["messages"];
   public identityKeys: IWalletClient["identityKeys"];
+
+  public historyClient: HistoryClient;
 
   public syncClient: IWalletClient["syncClient"];
   public SyncStoreController: IWalletClient["SyncStoreController"];
@@ -57,11 +61,15 @@ export class WalletClient extends IWalletClient {
               level: opts.logger || "error",
             })
           );
+
     this.syncClient = opts.syncClient;
     this.SyncStoreController = opts.SyncStoreController;
 
     this.keyserverUrl = opts?.keyserverUrl ?? DEFAULT_KEYSERVER_URL;
     this.core = opts.core || new Core(opts);
+
+    this.historyClient = new HistoryClient(this.core);
+
     this.logger = generateChildLogger(logger, this.name);
     this.requests = new Store(
       this.core,
@@ -232,7 +240,26 @@ export class WalletClient extends IWalletClient {
       account,
       signature,
       (subTopic, subscription) => {
-        if (!subscription) return;
+        if (!subscription) {
+          // Unsubscribe only if currently subscribed
+          if (this.core.relayer.subscriber.topics.includes(subTopic)) {
+            this.core.relayer.subscriber.unsubscribe(subTopic);
+          }
+          // Delete messages since subscription was removed
+          this.messages.delete(subTopic, {
+            code: -1,
+            message: "Deleted parent subscription",
+          });
+
+          // Delete symkey since subscription was removed
+          this.core.crypto.deleteSymKey(subTopic);
+
+          return;
+        }
+
+        const existingSubExists =
+          this.messages.getAll({ topic: subTopic }).length > 0;
+        if (existingSubExists) return;
 
         this.messages.set(subTopic, { topic: subTopic, messages: [] });
         this.core.crypto.setSymKey(subscription.symKey).then(() => {
@@ -243,6 +270,34 @@ export class WalletClient extends IWalletClient {
       }
     );
     await this.subscriptions.init();
+
+    const historyFetchedStores = ["com.walletconnect.notify.pushSubscription"];
+
+    const stores = this.syncClient.storeMap
+      .getAll({ account })
+      .filter((store) => {
+        return historyFetchedStores.includes(store.key);
+      });
+
+    stores.forEach((store) => {
+      fetchAndInjectHistory(
+        store.topic,
+        store.key,
+        this.core,
+        this.historyClient
+      )
+        .catch((e) => this.logger.error(e.message))
+        .then(() => {
+          this.subscriptions.getAll().forEach(({ topic, metadata }) => {
+            fetchAndInjectHistory(
+              topic,
+              metadata.name,
+              this.core,
+              this.historyClient
+            );
+          });
+        });
+    });
   };
 
   // ---------- Private ----------------------------------------------- //
@@ -250,6 +305,11 @@ export class WalletClient extends IWalletClient {
   private async initialize() {
     this.logger.trace(`Initialized`);
     try {
+      await this.historyClient.registerTags({
+        relayUrl: this.core.relayUrl || RELAYER_DEFAULT_RELAY_URL,
+        tags: ["4002", "5000", "5002"],
+      });
+
       await this.core.start();
       await this.requests.init();
       await this.proposals.init();

@@ -476,17 +476,26 @@ export class PushEngine extends IPushEngine {
   }) => {
     this.isInitialized();
 
-    const payload: JsonRpcPayload<
-      JsonRpcTypes.RequestParams["wc_pushMessage"]
-    > = await this.client.core.crypto.decode(topic, encryptedMessage);
+    try {
+      const payload: JsonRpcPayload<
+        JsonRpcTypes.RequestParams["wc_pushMessage"]
+      > = await this.client.core.crypto.decode(topic, encryptedMessage);
 
-    if (!("params" in payload)) {
+      if (!("params" in payload)) {
+        throw new Error(
+          "Invalid message payload provided to `decryptMessage`: expected `params` key to be present."
+        );
+      }
+
+      return payload.params;
+    } catch (e) {
+      this.client.logger.error(
+        `Could not decode payload "${encryptedMessage}" on topic ${topic}`
+      );
       throw new Error(
-        "Invalid message payload provided to `decryptMessage`: expected `params` key to be present."
+        `Could not decode payload "${encryptedMessage}" on topic ${topic}`
       );
     }
-
-    return payload.params;
   };
 
   public getMessageHistory: IPushEngine["getMessageHistory"] = ({ topic }) => {
@@ -624,6 +633,7 @@ export class PushEngine extends IPushEngine {
       RELAYER_EVENTS.message,
       async (event: RelayerTypes.MessageEvent) => {
         const { topic, message, publishedAt } = event;
+
         const isType1Payload =
           this.client.core.crypto.getPayloadType(message) === TYPE_1;
 
@@ -651,9 +661,13 @@ export class PushEngine extends IPushEngine {
           return;
         }
 
-        const payload = await this.client.core.crypto.decode(topic, message, {
+        let payload: JsonRpcPayload<any, any> | void = undefined;
+
+        payload = await this.client.core.crypto.decode(topic, message, {
           receiverPublicKey,
         });
+
+        if (!payload) return;
 
         // Extract the encoded `senderPublicKey` if it's a TYPE_1 message.
         const senderPublicKey = isType1Payload
