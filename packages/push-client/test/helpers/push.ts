@@ -57,7 +57,12 @@ export const sendPushMessage = async (
   account: string,
   messageBody: string
 ) => {
-  const url = ` https://cast.walletconnect.com/${projectId}/notify`;
+  if (!process.env.GM_PROJECT_ID) {
+    throw new ReferenceError(
+      "Cannot send push message. GM_PROJECT_ID env variable not set"
+    );
+  }
+  const url = ` https://cast.walletconnect.com/${process.env.GM_PROJECT_ID}/notify`;
 
   const body = {
     notification: {
