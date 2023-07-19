@@ -12,7 +12,7 @@ export const JWT_SCP_SEPARATOR = " ";
 export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
   wc_pushMessage: {
     req: {
-      ttl: ONE_DAY,
+      ttl: THIRTY_DAYS,
       tag: 4002,
     },
     res: {
