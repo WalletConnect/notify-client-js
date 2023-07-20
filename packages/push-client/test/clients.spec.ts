@@ -1,14 +1,7 @@
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import { expect, describe, it, beforeEach, afterEach } from "vitest";
 import cloneDeep from "lodash.clonedeep";
-import {
-  DappClient,
-  WalletClient,
-  IDappClient,
-  IWalletClient,
-  SDK_ERRORS,
-  PushClientTypes,
-} from "../src/";
+import { WalletClient, IWalletClient, PushClientTypes } from "../src/";
 import { disconnectSocket } from "./helpers/ws";
 import {
   gmDappMetadata,
@@ -16,11 +9,7 @@ import {
   mockIdentityMethods,
   onSignMock,
 } from "./helpers/mocks";
-import {
-  createPushSubscription,
-  sendPushMessage,
-  setupKnownPairing,
-} from "./helpers/push";
+import { createPushSubscription, sendPushMessage } from "./helpers/push";
 import { waitForEvent } from "./helpers/async";
 import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
 import { ISyncClient, SyncClient, SyncStore } from "@walletconnect/sync-client";
@@ -36,7 +25,6 @@ if (!process.env.TEST_PROJECT_ID) {
 const projectId = process.env.TEST_PROJECT_ID;
 
 describe("Push", () => {
-  let dapp: IDappClient;
   let wallet: IWalletClient;
   let syncClient: ISyncClient;
 
@@ -50,14 +38,6 @@ describe("Push", () => {
       projectId,
     });
 
-    dapp = await DappClient.init({
-      name: "testDappClient",
-      logger: "error",
-      relayUrl: process.env.TEST_RELAY_URL || DEFAULT_RELAY_URL,
-      castUrl: process.env.TEST_CAST_URL || DEFAULT_CAST_URL,
-      projectId,
-      metadata: gmDappMetadata,
-    });
     wallet = await WalletClient.init({
       name: "testWalletClient",
       logger: "error",
@@ -72,82 +52,7 @@ describe("Push", () => {
     mockIdentityMethods(wallet);
   });
   afterEach(async () => {
-    await disconnectSocket(dapp.core);
     await disconnectSocket(wallet.core);
-  });
-
-  describe("DappClient", () => {
-    it("can be instantiated", () => {
-      expect(dapp instanceof DappClient).toBe(true);
-      expect(dapp.core).toBeDefined();
-      expect(dapp.events).toBeDefined();
-      expect(dapp.logger).toBeDefined();
-      expect(dapp.subscriptions).toBeDefined();
-      expect(dapp.core.expirer).toBeDefined();
-      expect(dapp.core.history).toBeDefined();
-      expect(dapp.core.pairing).toBeDefined();
-    });
-
-    describe("propose", () => {
-      it("can propose a push subscription on a known pairing topic", async () => {
-        // Set up known pairing.
-        const pairingTopic = await setupKnownPairing(dapp, wallet);
-        let gotPushPropose = false;
-        let pushProposeEvent: any;
-
-        wallet.once("push_proposal", (event) => {
-          gotPushPropose = true;
-          pushProposeEvent = event;
-        });
-
-        const { id } = await dapp.propose({
-          account: mockAccount,
-          pairingTopic,
-        });
-
-        await waitForEvent(() => gotPushPropose);
-
-        expect(pushProposeEvent.params.metadata).to.deep.equal(gmDappMetadata);
-
-        // Check that wallet is in expected state.
-        expect(wallet.proposals.get(id)).toBeDefined();
-        expect(wallet.core.expirer.has(id)).toBe(true);
-        // Check that dapp is in expected state.
-        expect(dapp.proposals.get(id)).toBeDefined();
-        expect(dapp.core.expirer.has(id)).toBe(true);
-      });
-    });
-
-    describe.skip("deleteSubscription", () => {
-      it("can delete a currently active push subscription", async () => {
-        const { responseEvent } = await createPushSubscription(dapp, wallet);
-        let gotPushDeleteEvent = false;
-        let pushDeleteEvent: any;
-
-        expect(responseEvent.params.subscription.topic).toBeDefined();
-
-        expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(1);
-
-        const walletSubscriptionTopic = Object.keys(
-          wallet.getActiveSubscriptions()
-        )[0];
-
-        wallet.once("push_delete", (event) => {
-          gotPushDeleteEvent = true;
-          pushDeleteEvent = event;
-        });
-
-        await dapp.deleteSubscription({ topic: walletSubscriptionTopic });
-        await waitForEvent(() => gotPushDeleteEvent);
-
-        expect(pushDeleteEvent.topic).toBe(walletSubscriptionTopic);
-        // Check that wallet is in expected state.
-        expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
-        expect(wallet.messages.keys.length).toBe(0);
-        // Check that dapp is in expected state.
-        expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(0);
-      });
-    });
   });
 
   describe("WalletClient", () => {
@@ -161,128 +66,6 @@ describe("Push", () => {
       expect(wallet.core.expirer).toBeDefined();
       expect(wallet.core.history).toBeDefined();
       expect(wallet.core.pairing).toBeDefined();
-    });
-
-    describe("approve", () => {
-      it("can approve a previously received proposal on a known pairing topic", async () => {
-        const pairingTopic = await setupKnownPairing(wallet, dapp);
-        let gotPushPropose = false;
-        let pushProposeEvent: any;
-
-        let gotResponse = false;
-        let responseEvent: any;
-
-        wallet.once("push_proposal", (event) => {
-          gotPushPropose = true;
-          pushProposeEvent = event;
-        });
-
-        const { id } = await dapp.propose({
-          account: mockAccount,
-          pairingTopic,
-        });
-
-        await waitForEvent(() => gotPushPropose);
-
-        dapp.once("push_response", (event) => {
-          gotResponse = true;
-          responseEvent = event;
-        });
-
-        await wallet.approve({ id, onSign: onSignMock });
-        await waitForEvent(() => gotResponse);
-
-        expect(responseEvent.params.subscription.topic).toBeDefined();
-
-        // Check that wallet is in expected state.
-        expect(wallet.subscriptions.length).toBe(1);
-        expect(wallet.messages.length).toBe(1);
-        expect(wallet.proposals.length).toBe(0);
-
-        // Check that dapp is in expected state.
-        expect(dapp.subscriptions.length).toBe(1);
-        expect(dapp.proposals.length).toBe(0);
-      });
-    });
-
-    describe("reject", () => {
-      it("can reject a previously received `push_request` on a known pairing topic", async () => {
-        const rejectionReason = "this is a rejection reason";
-        const pairingTopic = await setupKnownPairing(wallet, dapp);
-        let gotPushProposal = false;
-        let pushProposeEvent: any;
-        let gotResponse = false;
-        let responseEvent: any;
-
-        wallet.once("push_proposal", (event) => {
-          gotPushProposal = true;
-          pushProposeEvent = event;
-        });
-
-        const { id } = await dapp.propose({
-          account: mockAccount,
-          pairingTopic,
-        });
-
-        await waitForEvent(() => gotPushProposal);
-
-        dapp.once("push_response", (event) => {
-          gotResponse = true;
-          responseEvent = event;
-        });
-
-        await wallet.reject({ id, reason: rejectionReason });
-        await waitForEvent(() => gotResponse);
-
-        expect(responseEvent.params.error).toBeDefined();
-        expect(responseEvent.params.error.message).toBe(
-          `${SDK_ERRORS.USER_REJECTED.message} Reason: ${rejectionReason}.`
-        );
-
-        // Check that wallet is in expected state.
-        expect(wallet.subscriptions.length).toBe(0);
-        expect(wallet.proposals.length).toBe(0);
-        // Check that dapp is in expected state.
-        expect(dapp.subscriptions.length).toBe(0);
-        expect(dapp.proposals.length).toBe(0);
-      });
-
-      it("automatically rejects proposal when subscription exists", async () => {
-        const { responseEvent, pairingTopic } = await createPushSubscription(
-          dapp,
-          wallet
-        );
-
-        let hasError = false;
-        let gotNewResponse = false;
-        expect(responseEvent.params.subscription.topic).toBeDefined();
-
-        // Check that wallet is in expected state.
-        expect(wallet.subscriptions.length).toBe(1);
-        expect(wallet.messages.length).toBe(1);
-        expect(wallet.proposals.length).toBe(0);
-
-        // Check that dapp is in expected state.
-        expect(dapp.subscriptions.length).toBe(1);
-        expect(dapp.proposals.length).toBe(0);
-
-        dapp.on("push_response", (ev) => {
-          gotNewResponse = true;
-          hasError = Boolean(ev.params.error);
-        });
-
-        await dapp.propose({
-          account: mockAccount,
-          pairingTopic,
-        });
-
-        await waitForEvent(() => gotNewResponse);
-
-        expect(hasError).toEqual(true);
-
-        // Check that wallet is in expected state.
-        expect(wallet.subscriptions.length).toBe(1);
-      });
     });
 
     describe("subscribe", () => {
@@ -373,7 +156,7 @@ describe("Push", () => {
 
     describe("decryptMessage", () => {
       it("can decrypt an encrypted message for a known push topic", async () => {
-        await createPushSubscription(dapp, wallet);
+        await createPushSubscription(wallet);
 
         const plaintextMessage = "this is a test for decryptMessage";
         const topic = wallet.subscriptions.keys[0];
@@ -397,8 +180,8 @@ describe("Push", () => {
 
     describe("getMessageHistory", async () => {
       it("can get message history for a known push topic", async () => {
-        await createPushSubscription(dapp, wallet);
-        const [subscription] = dapp.subscriptions.getAll();
+        await createPushSubscription(wallet);
+        const [subscription] = wallet.subscriptions.getAll();
         const { topic } = subscription;
         const message1 = {
           title: "Test Push 1",
@@ -449,42 +232,41 @@ describe("Push", () => {
       });
     });
 
-    // TODO: debug why this specifically flakes on CI but not locally.
-    describe.skip("deleteSubscription", () => {
-      it("can delete a currently active push subscription", async () => {
-        const { responseEvent } = await createPushSubscription(dapp, wallet);
-        let gotPushDeleteEvent = false;
-        let pushDeleteEvent: any;
+    // describe.skip("deleteSubscription", () => {
+    //   it("can delete a currently active push subscription", async () => {
+    //     const { responseEvent } = await createPushSubscription(wallet);
+    //     let gotPushDeleteEvent = false;
+    //     let pushDeleteEvent: any;
 
-        expect(responseEvent.params.subscription.topic).toBeDefined();
+    //     expect(responseEvent.params.subscription.topic).toBeDefined();
 
-        expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(1);
+    //     expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(1);
 
-        const walletSubscriptionTopic = Object.keys(
-          wallet.getActiveSubscriptions()
-        )[0];
+    //     const walletSubscriptionTopic = Object.keys(
+    //       wallet.getActiveSubscriptions()
+    //     )[0];
 
-        dapp.once("push_delete", (event) => {
-          gotPushDeleteEvent = true;
-          pushDeleteEvent = event;
-        });
+    //     dapp.once("push_delete", (event) => {
+    //       gotPushDeleteEvent = true;
+    //       pushDeleteEvent = event;
+    //     });
 
-        await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
-        await waitForEvent(() => gotPushDeleteEvent);
+    //     await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
+    //     await waitForEvent(() => gotPushDeleteEvent);
 
-        expect(pushDeleteEvent.topic).toBe(walletSubscriptionTopic);
-        // Check that wallet is in expected state.
-        expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
-        expect(wallet.messages.keys.length).toBe(0);
-        // Check that dapp is in expected state.
-        expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(0);
-      });
-    });
+    //     expect(pushDeleteEvent.topic).toBe(walletSubscriptionTopic);
+    //     // Check that wallet is in expected state.
+    //     expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
+    //     expect(wallet.messages.keys.length).toBe(0);
+    //     // Check that dapp is in expected state.
+    //     expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(0);
+    //   });
+    // });
 
     describe("deletePushMessage", async () => {
       it("deletes the push message associated with the provided `id`", async () => {
-        await createPushSubscription(dapp, wallet);
-        const [subscription] = dapp.subscriptions.getAll();
+        await createPushSubscription(wallet);
+        const [subscription] = wallet.subscriptions.getAll();
         const { topic } = subscription;
         const message = {
           title: "Test Push",
@@ -612,21 +394,14 @@ describe("Push", () => {
   describe("Common (BaseClient)", () => {
     describe("getActiveSubscriptions", () => {
       it("can query currently active push subscriptions", async () => {
-        const { responseEvent } = await createPushSubscription(dapp, wallet);
+        const { pushSubscriptionEvent } = await createPushSubscription(wallet);
 
-        expect(responseEvent.params.subscription.topic).toBeDefined();
+        expect(pushSubscriptionEvent.params.subscription.topic).toBeDefined();
 
         const walletSubscriptions = wallet.getActiveSubscriptions();
-        const dappSubscriptions = dapp.getActiveSubscriptions();
 
         // Check that wallet is in expected state.
         expect(Object.keys(walletSubscriptions).length).toBe(1);
-        // Check that dapp is in expected state.
-        expect(Object.keys(dappSubscriptions).length).toBe(1);
-        // Check that topics of subscriptions match.
-        expect(Object.keys(walletSubscriptions)).toEqual(
-          Object.keys(dappSubscriptions)
-        );
       });
       it("can filter currently active push subscriptions", async () => {
         [1, 2].forEach((num) => {

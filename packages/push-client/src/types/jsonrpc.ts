@@ -1,8 +1,5 @@
-import { PushClientTypes } from "./baseClient";
-
 export declare namespace JsonRpcTypes {
   export type WcMethod =
-    | "wc_pushPropose"
     | "wc_pushSubscribe"
     | "wc_pushMessage"
     | "wc_pushDelete"
@@ -27,12 +24,6 @@ export declare namespace JsonRpcTypes {
     wc_pushUpdate: {
       subscriptionAuth: string;
     };
-    wc_pushPropose: {
-      publicKey: string;
-      account: string;
-      metadata: PushClientTypes.Metadata;
-      scope: string[];
-    };
   }
 
   // ---- JSON-RPC Responses -----------------------------
@@ -43,9 +34,5 @@ export declare namespace JsonRpcTypes {
     wc_pushMessage: true;
     wc_pushDelete: true;
     wc_pushUpdate: true;
-    wc_pushPropose: {
-      subscriptionAuth: string;
-      subscriptionSymKey: string;
-    };
   }
 }

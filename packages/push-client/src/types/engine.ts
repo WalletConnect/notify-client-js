@@ -10,7 +10,6 @@ import {
 import { JsonRpcTypes } from "./jsonrpc";
 import { PushClientTypes } from "./baseClient";
 import { IWalletClient } from "./walletClient";
-import { IDappClient } from "./dappClient";
 
 export interface RpcOpts {
   req: RelayerTypes.PublishOptions;
@@ -22,39 +21,20 @@ export declare namespace PushEngineTypes {
     topic: string;
     payload: T;
     publishedAt: number;
-    senderPublicKey?: string;
   }
 }
 
 export abstract class IPushEngine {
-  constructor(public client: IWalletClient | IDappClient) {}
+  constructor(public client: IWalletClient) {}
 
   public abstract init(): void;
 
-  // ---------- Public Methods (dapp) ----------------------------------- //
-
-  // propose push subscription
-  public abstract propose(params: {
-    account: string;
-    pairingTopic: string;
-    scope?: string[];
-  }): Promise<{ id: number }>;
-
-  // ---------- Public Methods (wallet) --------------------------------- //
+  // ---------- Public Methods ------------------------------------------ //
 
   public abstract enableSync(params: {
     account: string;
     onSign: (message: string) => Promise<string>;
   }): Promise<void>;
-
-  // approve push subscription
-  public abstract approve(params: {
-    id: number;
-    onSign: (message: string) => Promise<string>;
-  }): Promise<void>;
-
-  // reject push subscription
-  public abstract reject(params: { id: number; reason: string }): Promise<void>;
 
   public abstract subscribe(params: {
     metadata: PushClientTypes.Metadata;
@@ -83,7 +63,7 @@ export abstract class IPushEngine {
 
   public abstract deletePushMessage(params: { id: number }): void;
 
-  // ---------- Public Methods (common) --------------------------------- //
+  // ---------- Public Methods ------------------------------------------ //
 
   // query all active subscriptions
   public abstract getActiveSubscriptions(params?: {
@@ -126,19 +106,6 @@ export abstract class IPushEngine {
   ): Promise<void>;
 
   // ---------- Protected Relay Event Handlers --------------------------------- //
-
-  protected abstract onPushProposeRequest(
-    topic: string,
-    payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_pushPropose"]>
-  ): Promise<void>;
-
-  protected abstract onPushProposeResponse(
-    topic: string,
-    payload:
-      | JsonRpcResult<JsonRpcTypes.Results["wc_pushPropose"]>
-      | JsonRpcError,
-    senderPublicKey?: string
-  ): void;
 
   protected abstract onPushSubscribeResponse(
     topic: string,

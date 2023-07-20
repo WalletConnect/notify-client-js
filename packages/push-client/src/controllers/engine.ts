@@ -23,13 +23,11 @@ import { ExpirerTypes, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
   calcExpiry,
-  createExpiringPromise,
   getInternalError,
   hashKey,
   parseExpirerTarget,
 } from "@walletconnect/utils";
 import axios from "axios";
-import jwt_decode from "jwt-decode";
 
 import {
   ENGINE_RPC_OPTS,
@@ -39,7 +37,6 @@ import {
   SDK_ERRORS,
 } from "../constants";
 import {
-  IDappClient,
   IPushEngine,
   IWalletClient,
   JsonRpcTypes,
@@ -66,59 +63,7 @@ export class PushEngine extends IPushEngine {
     }
   };
 
-  // ---------- Public (Dapp) ----------------------------------------- //
-
-  public propose: IPushEngine["propose"] = async ({
-    account,
-    pairingTopic,
-    scope,
-  }) => {
-    this.isInitialized();
-
-    // SPEC: Dapp generates public key X
-    const publicKey = await this.client.core.crypto.generateKeyPair();
-    // SPEC: Response topic is derived from hash of public key X
-    const responseTopic = hashKey(publicKey);
-
-    // SPEC: Dapp sends push proposal on known pairing P
-    const proposal = {
-      publicKey,
-      account,
-      metadata: (this.client as IDappClient).metadata,
-      scope: scope ?? [],
-    };
-    const id = await this.sendRequest(pairingTopic, "wc_pushPropose", proposal);
-
-    this.client.logger.info(
-      `[Push] Engine.propose > sent push subscription proposal on pairing ${pairingTopic} with id: ${id}. Request: ${JSON.stringify(
-        proposal
-      )}`
-    );
-
-    await this.client.proposals.set(id, {
-      topic: responseTopic,
-      proposal,
-    });
-
-    await (this.client as IDappClient).proposalKeys.set(responseTopic, {
-      responseTopic,
-      proposalKeyPub: publicKey,
-    });
-
-    // Set the expiry for the push subscription proposal.
-    this.client.core.expirer.set(id, calcExpiry(PUSH_REQUEST_EXPIRY));
-
-    // Dapp subscribes to response topic, which is the sha256 hash of public key X
-    await this.client.core.relayer.subscribe(responseTopic);
-
-    this.client.logger.info(
-      `[Push] Engine.propose > subscribed to response topic ${responseTopic}`
-    );
-
-    return { id };
-  };
-
-  // ---------- Public (Wallet) --------------------------------------- //
+  // ---------- Public --------------------------------------- //
 
   public enableSync: IPushEngine["enableSync"] = async ({
     account,
@@ -129,126 +74,6 @@ export class PushEngine extends IPushEngine {
     await client.register({ account, signature });
 
     await (this.client as IWalletClient).initSyncStores({ account, signature });
-  };
-
-  public approve: IPushEngine["approve"] = async ({ id, onSign }) => {
-    this.isInitialized();
-
-    const { proposal } = this.client.proposals.get(id);
-    const dappPushConfig = await this.resolvePushConfig(proposal.metadata.url);
-
-    this.client.logger.info(
-      `[Push] Engine.approve > approving push subscription proposal with id: ${id}. Proposal: ${JSON.stringify(`
-        ${proposal}
-        `)}`
-    );
-    this.client.logger.info(
-      `[Push] Engine.approve > resolved push config for proposal URL ${
-        proposal.metadata.url
-      }: ${JSON.stringify(dappPushConfig)}`
-    );
-
-    // Check if the dapp has requested any scopes that are not supported.
-    const unsupportedScopes = proposal.scope.filter(
-      (scope) => !dappPushConfig.types.map((type) => type.name).includes(scope)
-    );
-
-    if (unsupportedScopes.length > 0) {
-      throw new Error(
-        `[Push] approve: ${
-          proposal.metadata.url
-        } does not seem to support following proposed scopes: ${JSON.stringify(
-          unsupportedScopes
-        )}`
-      );
-    }
-
-    // SPEC: Wallet sends push subscribe request to Cast/Push Server with subscriptionAuth
-    const { id: subscribeId, subscriptionAuth } = await this.subscribe({
-      metadata: proposal.metadata,
-      account: proposal.account,
-      onSign,
-    });
-
-    const pushSubscriptionEvent = (await createExpiringPromise(
-      new Promise((resolve) => {
-        this.client.once("push_subscription", (event) => {
-          if (event.id === subscribeId) {
-            resolve(event);
-          }
-        });
-      }),
-      10_000,
-      "[Push] Engine.approve > Awaiting push_subscription event timed out."
-    )) as PushClientTypes.BaseEventArgs<PushClientTypes.PushResponseEventArgs>;
-
-    if (pushSubscriptionEvent.params.error) {
-      throw new Error(
-        `[Push] Engine.approve > failed to subscribe to push server: ${pushSubscriptionEvent.params.error}`
-      );
-    }
-
-    this.client.logger.info(
-      `[Push] Engine.approve > got push_subscription event for id ${subscribeId}: ${JSON.stringify(
-        pushSubscriptionEvent
-      )}`
-    );
-
-    // SPEC: Wallet derives response topic from sha246 hash of requester publicKey (pubKey X)
-    const responseTopic = hashKey(proposal.publicKey);
-    // SPEC: Wallet generates key pair Z
-    const selfPublicKey = await this.client.core.crypto.generateKeyPair();
-
-    this.client.logger.info(
-      `[Push] Engine.approve > derived responseTopic: ${responseTopic}`
-    );
-    this.client.logger.info(
-      `[Push] Engine.approve > derived publicKey Z for response: ${selfPublicKey}`
-    );
-
-    const subscriptionSymKey = this.client.core.crypto.keychain.get(
-      pushSubscriptionEvent.params.subscription!.topic
-    );
-
-    // SPEC: Wallet responds with type 1 envelope on response topic with subscriptionAuth and subscription symKey
-    await this.sendResult<"wc_pushPropose">(
-      id,
-      responseTopic,
-      {
-        subscriptionAuth,
-        subscriptionSymKey,
-      },
-      {
-        type: TYPE_1,
-        senderPublicKey: selfPublicKey,
-        receiverPublicKey: proposal.publicKey,
-      }
-    );
-
-    // Clean up the original request.
-    this.cleanupProposal(id);
-
-    // Clean up the keypair used to derive a shared symKey.
-    await this.client.core.crypto.deleteKeyPair(selfPublicKey);
-  };
-
-  public reject: IPushEngine["reject"] = async ({ id, reason }) => {
-    this.isInitialized();
-
-    const { topic: responseTopic } = this.client.proposals.get(id);
-
-    // SPEC: Wallet sends error response (i.e. proposal rejection) on pairing P
-    await this.sendError(id, responseTopic, {
-      code: SDK_ERRORS["USER_REJECTED"].code,
-      message: `${SDK_ERRORS["USER_REJECTED"].message} Reason: ${reason}.`,
-    });
-
-    this.client.logger.info(
-      `[Push] Engine.reject > rejected push subscription proposal on response topic ${responseTopic}`
-    );
-
-    // Clean up the original proposal.
-    this.cleanupProposal(id);
   };
 
   public subscribe: IPushEngine["subscribe"] = async ({
@@ -542,8 +367,6 @@ export class PushEngine extends IPushEngine {
     );
   };
 
-  // ---------- Public (Common) --------------------------------------- //
-
   public getActiveSubscriptions: IPushEngine["getActiveSubscriptions"] = (
     params
   ) => {
@@ -634,45 +457,7 @@ export class PushEngine extends IPushEngine {
       async (event: RelayerTypes.MessageEvent) => {
         const { topic, message, publishedAt } = event;
 
-        const isType1Payload =
-          this.client.core.crypto.getPayloadType(message) === TYPE_1;
-
-        let receiverPublicKey: string | undefined;
-
-        // TODO: factor out the need for `proposalKeys` entirely.
-        if (
-          this.client instanceof IDappClient &&
-          this.client.proposalKeys.keys.includes(topic)
-        ) {
-          try {
-            const { proposalKeyPub } = this.client.proposalKeys.get(topic);
-            receiverPublicKey = proposalKeyPub;
-          } catch (error) {
-            this.client.logger.error(
-              `[Push] Engine > on RELAYER_EVENTS.message > Failed to get proposalKey for topic ${topic}: ${error}`
-            );
-          }
-        }
-
-        if (isType1Payload && !receiverPublicKey) {
-          this.client.logger.debug(
-            `[Push] Engine > on RELAYER_EVENTS.message > Skipping message on topic ${topic}, no receiverPublicKey found.`
-          );
-          return;
-        }
-
-        let payload: JsonRpcPayload<any, any> | void = undefined;
-
-        payload = await this.client.core.crypto.decode(topic, message, {
-          receiverPublicKey,
-        });
-
-        if (!payload) return;
-
-        // Extract the encoded `senderPublicKey` if it's a TYPE_1 message.
-        const senderPublicKey = isType1Payload
-          ? this.client.core.crypto.getPayloadSenderPublicKey(message)
-          : undefined;
+        const payload = await this.client.core.crypto.decode(topic, message);
 
         if (isJsonRpcRequest(payload)) {
           this.client.core.history.set(topic, payload);
@@ -680,7 +465,6 @@ export class PushEngine extends IPushEngine {
             topic,
             payload,
             publishedAt,
-            senderPublicKey,
           });
         } else if (isJsonRpcResponse(payload)) {
           await this.client.core.history.resolve(payload);
@@ -688,7 +472,6 @@ export class PushEngine extends IPushEngine {
             topic,
             payload,
             publishedAt,
-            senderPublicKey,
           });
         }
       }
@@ -702,8 +485,6 @@ export class PushEngine extends IPushEngine {
     const reqMethod = payload.method as JsonRpcTypes.WcMethod;
 
     switch (reqMethod) {
-      case "wc_pushPropose":
-        return this.onPushProposeRequest(topic, payload);
       case "wc_pushMessage":
         // `wc_pushMessage` requests being broadcast to all subscribers
         // by Cast server should only be handled by the wallet client.
@@ -722,13 +503,11 @@ export class PushEngine extends IPushEngine {
   protected onRelayEventResponse: IPushEngine["onRelayEventResponse"] = async (
     event
   ) => {
-    const { topic, payload, senderPublicKey } = event;
+    const { topic, payload } = event;
     const record = await this.client.core.history.get(topic, payload.id);
     const resMethod = record.request.method as JsonRpcTypes.WcMethod;
 
     switch (resMethod) {
-      case "wc_pushPropose":
-        return this.onPushProposeResponse(topic, payload, senderPublicKey);
       case "wc_pushSubscribe":
         return this.onPushSubscribeResponse(topic, payload);
       case "wc_pushMessage":
@@ -745,163 +524,6 @@ export class PushEngine extends IPushEngine {
   };
 
   // ---------- Relay Event Handlers --------------------------------- //
-
-  protected onPushProposeRequest: IPushEngine["onPushProposeRequest"] = async (
-    topic,
-    payload
-  ) => {
-    this.client.logger.info({
-      event: "onPushProposeRequest",
-      topic,
-      payload,
-    });
-
-    const existingSubscriptions = this.client.subscriptions
-      .getAll()
-      .filter((sub) => sub.metadata.url === payload.params.metadata.url);
-
-    if (existingSubscriptions.length) {
-      await this.sendError(
-        payload.id,
-        topic,
-        SDK_ERRORS.USER_HAS_EXISTING_SUBSCRIPTION
-      );
-      this.client.logger.error(
-        SDK_ERRORS.USER_HAS_EXISTING_SUBSCRIPTION.message
-      );
-      return;
-    }
-
-    try {
-      // Store the push subscription proposal so we can reference later for a response.
-      await this.client.proposals.set(payload.id, {
-        topic,
-        proposal: payload.params,
-      });
-
-      // Set the expiry for the push subscription proposal.
-      this.client.core.expirer.set(payload.id, calcExpiry(PUSH_REQUEST_EXPIRY));
-
-      this.client.emit("push_proposal", {
-        id: payload.id,
-        topic,
-        params: {
-          id: payload.id,
-          account: payload.params.account,
-          metadata: payload.params.metadata,
-        },
-      });
-    } catch (err: any) {
-      await this.sendError(payload.id, topic, err);
-      this.client.logger.error(err);
-    }
-  };
-
-  protected onPushProposeResponse: IPushEngine["onPushProposeResponse"] =
-    async (topic, response, senderPublicKey) => {
-      this.client.logger.info({
-        event: "onPushProposeResponse",
-        topic,
-        response,
-        senderPublicKey,
-      });
-
-      if (isJsonRpcResult(response)) {
-        const { id, result } = response;
-
-        const { proposal } = this.client.proposals.get(id);
-        const selfPublicKey = proposal.publicKey;
-        const dappPushConfig = await this.resolvePushConfig(
-          proposal.metadata.url
-        );
-
-        if (typeof result.subscriptionAuth !== "string") {
-          throw new Error(
-            `[Push] Engine.onPushProposeResponse > subscriptionAuth: expected string, got ${result.subscriptionAuth}`
-          );
-        }
-
-        const decodedPayload = jwt_decode(
-          result.subscriptionAuth
-        ) as JwtPayload;
-
-        if (!decodedPayload) {
-          throw new Error(
-            "[Push] Engine.onPushProposeResponse > Empty `subscriptionAuth` payload"
-          );
-        }
-
-        this.client.logger.info(
-          `[Push] Engine.onPushProposeResponse > decoded subscriptionAuth payload: ${JSON.stringify(
-            decodedPayload
-          )}`
-        );
-
-        if (!senderPublicKey) {
-          throw new Error(
-            "[Push] Engine.onPushProposeResponse > Missing `senderPublicKey`, cannot derive shared key."
-          );
-        }
-
-        // SPEC: Dapp receives the response and derives a subscription topic from sha256 hash of subscription symKey
-        const pushTopic = await this.client.core.crypto.setSymKey(
-          result.subscriptionSymKey
-        );
-
-        this.client.logger.info(
-          `[Push] Engine.onPushProposeResponse > derived pushTopic ${pushTopic} from response.subscriptionSymKey: ${result.subscriptionSymKey}`
-        );
-
-        const pushSubscription = {
-          topic: pushTopic,
-          account: proposal.account,
-          relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
-          metadata: proposal.metadata,
-          scope: this.generateScopeMapFromConfig(
-            dappPushConfig.types,
-            proposal.scope
-          ),
-          expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
-          symKey: result.subscriptionSymKey,
-        };
-
-        // Store the new PushSubscription.
-        await this.client.subscriptions.set(pushTopic, pushSubscription);
-
-        // Clean up the keypair used to derive a shared symKey.
-        await this.client.core.crypto.deleteKeyPair(selfPublicKey);
-
-        // Clean up the proposal key.
-        await (this.client as IDappClient).proposalKeys.delete(topic, {
-          code: -1,
-          message: "Proposal key deleted.",
-        });
-
-        // DappClient subscribes to pushTopic.
-        await this.client.core.relayer.subscribe(pushTopic);
-
-        // Emit the PushSubscription at client level.
-        this.client.emit("push_response", {
-          id: response.id,
-          topic,
-          params: {
-            subscription: pushSubscription,
-          },
-        });
-      } else if (isJsonRpcError(response)) {
-        // Emit the error response at client level.
-        this.client.emit("push_response", {
-          id: response.id,
-          topic,
-          params: {
-            error: response.error,
-          },
-        });
-      }
-
-      // Clean up the original request regardless of concrete result.
-      this.cleanupProposal(response.id);
-    };
 
   protected onPushSubscribeResponse: IPushEngine["onPushSubscribeResponse"] =
     async (responseTopic, response) => {
@@ -1131,9 +753,7 @@ export class PushEngine extends IPushEngine {
         const { id } = parseExpirerTarget(event.target);
 
         if (id) {
-          this.client.proposals.keys.includes(id)
-            ? await this.cleanupProposal(id, true)
-            : await this.cleanupRequest(id, true);
+          await this.cleanupRequest(id, true);
           this.client.events.emit("request_expire", { id });
         }
       }
@@ -1154,16 +774,6 @@ export class PushEngine extends IPushEngine {
       (this.client as IWalletClient).requests.delete(id, {
         code: -1,
         message: "Request deleted.",
-      }),
-      expirerHasDeleted ? Promise.resolve() : this.client.core.expirer.del(id),
-    ]);
-  };
-
-  private cleanupProposal = async (id: number, expirerHasDeleted?: boolean) => {
-    await Promise.all([
-      this.client.proposals.delete(id, {
-        code: -1,
-        message: "Proposal deleted.",
       }),
       expirerHasDeleted ? Promise.resolve() : this.client.core.expirer.del(id),
     ]);

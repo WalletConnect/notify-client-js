@@ -31,7 +31,6 @@ export class WalletClient extends IWalletClient {
   public events: IWalletClient["events"] = new EventEmitter();
   public engine: IWalletClient["engine"];
   public requests: IWalletClient["requests"];
-  public proposals: IWalletClient["proposals"];
   public subscriptions: IWalletClient["subscriptions"];
   public messages: IWalletClient["messages"];
   public identityKeys: IWalletClient["identityKeys"];
@@ -77,12 +76,6 @@ export class WalletClient extends IWalletClient {
       "requests",
       PUSH_CLIENT_STORAGE_PREFIX
     );
-    this.proposals = new Store(
-      this.core,
-      this.logger,
-      "proposals",
-      PUSH_CLIENT_STORAGE_PREFIX
-    );
     this.subscriptions = new Store(
       this.core,
       this.logger,
@@ -108,24 +101,6 @@ export class WalletClient extends IWalletClient {
   }
 
   // ---------- Engine ----------------------------------------------- //
-
-  public approve: IWalletClient["approve"] = async (params) => {
-    try {
-      return await this.engine.approve(params);
-    } catch (error: any) {
-      this.logger.error(error.message);
-      throw error;
-    }
-  };
-
-  public reject: IWalletClient["reject"] = async (params) => {
-    try {
-      return await this.engine.reject(params);
-    } catch (error: any) {
-      this.logger.error(error.message);
-      throw error;
-    }
-  };
 
   public subscribe: IWalletClient["subscribe"] = async (params) => {
     try {
@@ -312,7 +287,6 @@ export class WalletClient extends IWalletClient {
 
       await this.core.start();
       await this.requests.init();
-      await this.proposals.init();
       await this.subscriptions.init();
       await this.messages.init();
       await this.identityKeys.init();
