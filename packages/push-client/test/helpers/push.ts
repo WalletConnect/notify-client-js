@@ -66,6 +66,11 @@ export const sendPushMessage = async (
       "Cannot send push message. GM_PROJECT_ID env variable not set"
     );
   }
+  if (!process.env.GM_PROJECT_SECRET) {
+    throw new ReferenceError(
+      "Cannot send push message. GM_PROJECT_SECRET env variable not set"
+    );
+  }
   const url = ` https://cast.walletconnect.com/${process.env.GM_PROJECT_ID}/notify`;
 
   const body = {
@@ -79,5 +84,9 @@ export const sendPushMessage = async (
     accounts: [account],
   };
 
-  return axios.post(url, body);
+  return axios.post(url, body, {
+    headers: {
+      Authorization: `Bearer ${process.env.GM_PROJECT_SECRET}`,
+    },
+  });
 };

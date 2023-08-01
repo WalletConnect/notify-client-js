@@ -15,6 +15,7 @@ jobs:
     env:
       TEST_RELAY_URL: ${{ secrets.TEST_RELAY_URL }}
       TEST_PROJECT_ID: ${{ secrets.TEST_PROJECT_ID }}
+      GM_PROJECT_SECRET: ${{ secrets.GM_PROJECT_SECRET }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
