@@ -10,12 +10,7 @@ import {
   PushClientTypes,
 } from "../src/";
 import { disconnectSocket } from "./helpers/ws";
-import {
-  gmDappMetadata,
-  mockAccount,
-  mockIdentityMethods,
-  onSignMock,
-} from "./helpers/mocks";
+import { gmDappMetadata } from "./helpers/mocks";
 import {
   createPushSubscription,
   sendPushMessage,
@@ -24,7 +19,7 @@ import {
 import { waitForEvent } from "./helpers/async";
 import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
 import { ISyncClient, SyncClient, SyncStore } from "@walletconnect/sync-client";
-import { Wallet } from "@ethersproject/wallet";
+import { Wallet as EthersWallet } from "@ethersproject/wallet";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 const DEFAULT_CAST_URL = "https://cast.walletconnect.com";
@@ -39,6 +34,9 @@ describe("Push", () => {
   let dapp: IDappClient;
   let wallet: IWalletClient;
   let syncClient: ISyncClient;
+  let ethersWallet: EthersWallet;
+  let account: string;
+  let onSign: (message: string) => Promise<string>;
 
   beforeEach(async () => {
     const core = new Core({
@@ -50,6 +48,7 @@ describe("Push", () => {
       projectId,
     });
 
+    // Set up individual clients.
     dapp = await DappClient.init({
       name: "testDappClient",
       logger: "error",
@@ -68,8 +67,10 @@ describe("Push", () => {
       projectId,
     });
 
-    // Mocking identity key methods.
-    mockIdentityMethods(wallet);
+    // Set up the mock wallet account
+    ethersWallet = EthersWallet.createRandom();
+    account = `eip155:1:${ethersWallet.address}`;
+    onSign = (message: string) => ethersWallet.signMessage(message);
   });
   afterEach(async () => {
     await disconnectSocket(dapp.core);
@@ -101,7 +102,7 @@ describe("Push", () => {
         });
 
         const { id } = await dapp.propose({
-          account: mockAccount,
+          account,
           pairingTopic,
         });
 
@@ -178,7 +179,7 @@ describe("Push", () => {
         });
 
         const { id } = await dapp.propose({
-          account: mockAccount,
+          account,
           pairingTopic,
         });
 
@@ -189,7 +190,10 @@ describe("Push", () => {
           responseEvent = event;
         });
 
-        await wallet.approve({ id, onSign: onSignMock });
+        await wallet.approve({
+          id,
+          onSign,
+        });
         await waitForEvent(() => gotResponse);
 
         expect(responseEvent.params.subscription.topic).toBeDefined();
@@ -220,7 +224,7 @@ describe("Push", () => {
         });
 
         const { id } = await dapp.propose({
-          account: mockAccount,
+          account,
           pairingTopic,
         });
 
@@ -272,7 +276,7 @@ describe("Push", () => {
         });
 
         await dapp.propose({
-          account: mockAccount,
+          account,
           pairingTopic,
         });
 
@@ -296,9 +300,9 @@ describe("Push", () => {
         });
 
         await wallet.subscribe({
+          account,
+          onSign,
           metadata: gmDappMetadata,
-          account: mockAccount,
-          onSign: onSignMock,
         });
 
         await waitForEvent(() => gotPushSubscriptionResponse);
@@ -335,8 +339,8 @@ describe("Push", () => {
 
         await wallet.subscribe({
           metadata: gmDappMetadata,
-          account: mockAccount,
-          onSign: onSignMock,
+          account,
+          onSign,
         });
 
         await waitForEvent(() => gotPushSubscriptionResponse);
@@ -535,7 +539,6 @@ describe("Push", () => {
           projectId,
         });
 
-        // Can not use existing `wallet` as it has mocked identity keys
         const wallet1 = await WalletClient.init({
           SyncStoreController: SyncStore,
           syncClient: sync1,
@@ -549,7 +552,7 @@ describe("Push", () => {
           projectId,
         });
 
-        const ethersWallet = Wallet.createRandom();
+        const ethersWallet = EthersWallet.createRandom();
         await wallet1.enableSync({
           account: `eip155:1:${ethersWallet.address}`,
           onSign: (message) => {

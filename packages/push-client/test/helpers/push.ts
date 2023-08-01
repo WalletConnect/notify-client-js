@@ -1,8 +1,8 @@
 import { generateRandomBytes32 } from "@walletconnect/utils";
 import { IDappClient, IWalletClient } from "../../src";
-import { mockAccount, onSignMock } from "./mocks";
 import { waitForEvent } from "../helpers/async";
 import axios from "axios";
+import { Wallet as EthersWallet } from "@ethersproject/wallet";
 
 export const setupKnownPairing = async (
   clientA: IWalletClient | IDappClient,
@@ -30,6 +30,10 @@ export const createPushSubscription = async (
   let gotResponse = false;
   let responseEvent: any;
 
+  const ethersWallet = EthersWallet.createRandom();
+  account = `eip155:1:${ethersWallet.address}`;
+  onSign = (message: string) => ethersWallet.signMessage(message);
+
   wallet.once("push_proposal", (event) => {
     gotPushPropose = true;
     pushProposeEvent = event;
@@ -40,13 +44,13 @@ export const createPushSubscription = async (
   });
 
   const { id } = await dapp.propose({
-    account: account ?? mockAccount,
+    account,
     pairingTopic,
   });
 
   await waitForEvent(() => gotPushPropose);
 
-  await wallet.approve({ id, onSign: onSign ?? onSignMock });
+  await wallet.approve({ id, onSign });
   await waitForEvent(() => gotResponse);
 
   return { proposalId: id, pushProposeEvent, responseEvent, pairingTopic };
