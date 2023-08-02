@@ -526,7 +526,13 @@ describe("Push", () => {
 
   describe("Sync Functionality", () => {
     describe("Push Subscriptions", () => {
-      it("Syncs push subscriptions", async () => {
+      const hasGmSecret = typeof process.env.GM_PROJECT_SECRET !== "undefined";
+      if (!hasGmSecret) {
+        console.warn(
+          "Skipping sync push subscription test. GM_PROJECT_SECRET env variable not set."
+        );
+      }
+      it.skipIf(!hasGmSecret)("Syncs push subscriptions", async () => {
         let gotSyncUpdate = false;
         const core1 = new Core({ projectId });
         const sync1 = await SyncClient.init({
