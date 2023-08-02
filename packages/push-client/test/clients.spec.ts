@@ -3,17 +3,12 @@ import { expect, describe, it, beforeEach, afterEach } from "vitest";
 import cloneDeep from "lodash.clonedeep";
 import { WalletClient, IWalletClient, PushClientTypes } from "../src/";
 import { disconnectSocket } from "./helpers/ws";
-import {
-  gmDappMetadata,
-  mockAccount,
-  mockIdentityMethods,
-  onSignMock,
-} from "./helpers/mocks";
+import { gmDappMetadata } from "./helpers/mocks";
 import { createPushSubscription, sendPushMessage } from "./helpers/push";
 import { waitForEvent } from "./helpers/async";
 import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
 import { ISyncClient, SyncClient, SyncStore } from "@walletconnect/sync-client";
-import { Wallet } from "@ethersproject/wallet";
+import { Wallet as EthersWallet } from "@ethersproject/wallet";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 const DEFAULT_CAST_URL = "https://cast.walletconnect.com";
@@ -27,6 +22,9 @@ const projectId = process.env.TEST_PROJECT_ID;
 describe("Push", () => {
   let wallet: IWalletClient;
   let syncClient: ISyncClient;
+  let ethersWallet: EthersWallet;
+  let account: string;
+  let onSign: (message: string) => Promise<string>;
 
   beforeEach(async () => {
     const core = new Core({
@@ -48,8 +46,10 @@ describe("Push", () => {
       projectId,
     });
 
-    // Mocking identity key methods.
-    mockIdentityMethods(wallet);
+    // Set up the mock wallet account
+    ethersWallet = EthersWallet.createRandom();
+    account = `eip155:1:${ethersWallet.address}`;
+    onSign = (message: string) => ethersWallet.signMessage(message);
   });
   afterEach(async () => {
     await disconnectSocket(wallet.core);
@@ -79,9 +79,9 @@ describe("Push", () => {
         });
 
         await wallet.subscribe({
+          account,
+          onSign,
           metadata: gmDappMetadata,
-          account: mockAccount,
-          onSign: onSignMock,
         });
 
         await waitForEvent(() => gotPushSubscriptionResponse);
@@ -118,8 +118,8 @@ describe("Push", () => {
 
         await wallet.subscribe({
           metadata: gmDappMetadata,
-          account: mockAccount,
-          onSign: onSignMock,
+          account,
+          onSign,
         });
 
         await waitForEvent(() => gotPushSubscriptionResponse);
@@ -156,7 +156,7 @@ describe("Push", () => {
 
     describe("decryptMessage", () => {
       it("can decrypt an encrypted message for a known push topic", async () => {
-        await createPushSubscription(wallet);
+        await createPushSubscription(wallet, account, onSign);
 
         const plaintextMessage = "this is a test for decryptMessage";
         const topic = wallet.subscriptions.keys[0];
@@ -180,7 +180,7 @@ describe("Push", () => {
 
     describe("getMessageHistory", async () => {
       it("can get message history for a known push topic", async () => {
-        await createPushSubscription(wallet);
+        await createPushSubscription(wallet, account, onSign);
         const [subscription] = wallet.subscriptions.getAll();
         const { topic } = subscription;
         const message1 = {
@@ -265,7 +265,7 @@ describe("Push", () => {
 
     describe("deletePushMessage", async () => {
       it("deletes the push message associated with the provided `id`", async () => {
-        await createPushSubscription(wallet);
+        await createPushSubscription(wallet, account, onSign);
         const [subscription] = wallet.subscriptions.getAll();
         const { topic } = subscription;
         const message = {
@@ -304,7 +304,13 @@ describe("Push", () => {
 
   describe("Sync Functionality", () => {
     describe("Push Subscriptions", () => {
-      it("Syncs push subscriptions", async () => {
+      const hasGmSecret = typeof process.env.GM_PROJECT_SECRET !== "undefined";
+      if (!hasGmSecret) {
+        console.warn(
+          "Skipping sync push subscription test. GM_PROJECT_SECRET env variable not set."
+        );
+      }
+      it.skipIf(!hasGmSecret)("Syncs push subscriptions", async () => {
         let gotSyncUpdate = false;
         const core1 = new Core({ projectId });
         const sync1 = await SyncClient.init({
@@ -317,7 +323,6 @@ describe("Push", () => {
           projectId,
         });
 
-        // Can not use existing `wallet` as it has mocked identity keys
         const wallet1 = await WalletClient.init({
           SyncStoreController: SyncStore,
           syncClient: sync1,
@@ -331,7 +336,7 @@ describe("Push", () => {
           projectId,
         });
 
-        const ethersWallet = Wallet.createRandom();
+        const ethersWallet = EthersWallet.createRandom();
         await wallet1.enableSync({
           account: `eip155:1:${ethersWallet.address}`,
           onSign: (message) => {
@@ -394,7 +399,11 @@ describe("Push", () => {
   describe("Common (BaseClient)", () => {
     describe("getActiveSubscriptions", () => {
       it("can query currently active push subscriptions", async () => {
-        const { pushSubscriptionEvent } = await createPushSubscription(wallet);
+        const { pushSubscriptionEvent } = await createPushSubscription(
+          wallet,
+          account,
+          onSign
+        );
 
         expect(pushSubscriptionEvent.params.subscription.topic).toBeDefined();
 

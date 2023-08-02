@@ -1,12 +1,12 @@
 import { IWalletClient } from "../../src";
-import { gmDappMetadata, mockAccount, onSignMock } from "./mocks";
 import { waitForEvent } from "../helpers/async";
 import axios from "axios";
+import { gmDappMetadata } from "./mocks";
 
 export const createPushSubscription = async (
   wallet: IWalletClient,
-  account?: string,
-  onSign?: (message: string) => Promise<string>
+  account: string,
+  onSign: (message: string) => Promise<string>
 ) => {
   let gotPushSubscriptionResponse = false;
   let pushSubscriptionEvent: any;
@@ -18,8 +18,8 @@ export const createPushSubscription = async (
 
   await wallet.subscribe({
     metadata: gmDappMetadata,
-    account: mockAccount,
-    onSign: onSignMock,
+    account,
+    onSign,
   });
 
   await waitForEvent(() => gotPushSubscriptionResponse);
@@ -37,6 +37,11 @@ export const sendPushMessage = async (
       "Cannot send push message. GM_PROJECT_ID env variable not set"
     );
   }
+  if (!process.env.GM_PROJECT_SECRET) {
+    throw new ReferenceError(
+      "Cannot send push message. GM_PROJECT_SECRET env variable not set"
+    );
+  }
   const url = ` https://cast.walletconnect.com/${process.env.GM_PROJECT_ID}/notify`;
 
   const body = {
@@ -50,5 +55,9 @@ export const sendPushMessage = async (
     accounts: [account],
   };
 
-  return axios.post(url, body);
+  return axios.post(url, body, {
+    headers: {
+      Authorization: `Bearer ${process.env.GM_PROJECT_SECRET}`,
+    },
+  });
 };
