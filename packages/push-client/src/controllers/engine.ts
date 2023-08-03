@@ -28,6 +28,7 @@ import {
   parseExpirerTarget,
 } from "@walletconnect/utils";
 import axios from "axios";
+import jwtDecode, { InvalidTokenError } from "jwt-decode";
 
 import {
   ENGINE_RPC_OPTS,
@@ -312,13 +313,22 @@ export class NotifyEngine extends INotifyEngine {
         );
       }
 
-      return payload.params;
-    } catch (e) {
-      this.client.logger.error(
-        `Could not decode payload "${encryptedMessage}" on topic ${topic}`
+      if (!("messageAuth" in payload.params)) {
+        throw new Error(
+          "Invalid message payload provided to `decryptMessage`: expected `messageAuth` key to be present."
+        );
+      }
+
+      const messageClaims = this.decodeAndValidateMessageAuth(
+        payload.params.messageAuth
       );
+
+      return messageClaims.msg;
+    } catch (error: any) {
       throw new Error(
-        `Could not decode payload "${encryptedMessage}" on topic ${topic}`
+        `Could not decode payload "${encryptedMessage}" on topic ${topic}: ${
+          error.message || error
+        }`
       );
     }
   };
@@ -613,6 +623,20 @@ export class NotifyEngine extends INotifyEngine {
         payload
       );
 
+      let messageClaims: NotifyClientTypes.NotifyMessageJWTClaims;
+
+      try {
+        messageClaims = this.decodeAndValidateMessageAuth(
+          payload.params.messageAuth
+        );
+      } catch (error: any) {
+        this.client.logger.error(
+          `[Notify] Engine.onNotifyMessageRequest > decoding/validating messageAuth failed > ${error.message}`
+        );
+        await this.sendError(payload.id, topic, error);
+        return;
+      }
+
       const currentMessages = (this.client as IWalletClient).messages.get(
         topic
       ).messages;
@@ -622,7 +646,7 @@ export class NotifyEngine extends INotifyEngine {
           [payload.id]: {
             id: payload.id,
             topic,
-            message: payload.params,
+            message: messageClaims.msg,
             publishedAt,
           },
         },
@@ -631,7 +655,7 @@ export class NotifyEngine extends INotifyEngine {
       this.client.emit("notify_message", {
         id: payload.id,
         topic,
-        params: { message: payload.params },
+        params: { message: messageClaims.msg },
       });
     };
 
@@ -801,6 +825,30 @@ export class NotifyEngine extends INotifyEngine {
       accountId,
       payload
     );
+  };
+
+  private decodeAndValidateMessageAuth = (messageAuthJWT: string) => {
+    let messageClaims: NotifyClientTypes.NotifyMessageJWTClaims;
+
+    // Attempt to decode the messageAuth JWT. Will throw `InvalidTokenError` if invalid.
+    try {
+      messageClaims =
+        jwtDecode<NotifyClientTypes.NotifyMessageJWTClaims>(messageAuthJWT);
+    } catch (error: unknown) {
+      this.client.logger.error(
+        `[Notify] Engine.onNotifyMessageRequest > Failed to decode messageAuth JWT: ${messageAuthJWT}`
+      );
+      throw new Error((error as InvalidTokenError).message);
+    }
+
+    // Validate `act` claim is as expected.
+    if (messageClaims.act !== "notify_message") {
+      throw new Error(
+        `Invalid messageAuth JWT act claim: ${messageClaims.act}. Expected "notify_message"`
+      );
+    }
+
+    return messageClaims;
   };
 
   private registerIdentity = async (

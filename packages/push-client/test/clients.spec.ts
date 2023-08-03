@@ -16,6 +16,8 @@ if (!process.env.TEST_PROJECT_ID) {
   throw new ReferenceError("TEST_PROJECT_ID env variable not set");
 }
 
+const hasGmSecret = typeof process.env.NOTIFY_GM_PROJECT_SECRET !== "undefined";
+
 const projectId = process.env.TEST_PROJECT_ID;
 
 describe("Notify", () => {
@@ -105,6 +107,26 @@ describe("Notify", () => {
       });
     });
 
+    describe.skipIf(!hasGmSecret)("handling incoming notifyMessage", () => {
+      it("emits a `notify_message` event when a notifyMessage is received", async () => {
+        await createPushSubscription(wallet, account, onSign);
+
+        let gotPushMessageResponse = false;
+        let pushMessageEvent: any;
+
+        wallet.once("notify_message", (event) => {
+          gotPushMessageResponse = true;
+          pushMessageEvent = event;
+        });
+
+        await sendPushMessage(projectId, account, "Test");
+
+        await waitForEvent(() => gotPushMessageResponse);
+
+        expect(pushMessageEvent.params.message.body).toBe("Test");
+      });
+    });
+
     describe("update", () => {
       it("can update an existing push subscription with a new scope", async () => {
         let gotPushSubscriptionResponse = false;
@@ -157,12 +179,29 @@ describe("Notify", () => {
       it("can decrypt an encrypted message for a known push topic", async () => {
         await createPushSubscription(wallet, account, onSign);
 
-        const plaintextMessage = "this is a test for decryptMessage";
+        const messageClaims = {
+          iat: 1691064656,
+          exp: 1693656656,
+          iss: "did:key:z6MksfkEMFdEWmGiy9rnyrJSxovfKZVB3sAFjVSvKw78bAR1",
+          ksu: "https://keys.walletconnect.com",
+          aud: "did:pkh:eip155:1:0x9667790eFCa797fFfBaC94ecBd479A8C3c22565A",
+          act: "notify_message",
+          sub: "00f22c1de22f8128faa0424434a8caa984e91f41bbb82c1796b75d33e9dd9f98",
+          app: "https://gm.walletconnect.com",
+          msg: {
+            title: "Test Message",
+            body: "Test",
+            icon: "",
+            url: "https://test.coms",
+            type: "gm_hourly",
+          },
+        };
+        const messageAuth =
+          "eyJ0eXAiOiJKV1QiLCJhbGciOiJFZERTQSJ9.eyJpYXQiOjE2OTEwNjQ2NTEsImV4cCI6MTY5MzY1NjY1MSwiaXNzIjoiZGlkOmtleTp6Nk1rc2ZrRU1GZEVXbUdpeTlybnlySlN4b3ZmS1pWQjNzQUZqVlN2S3c3OGJBUjEiLCJrc3UiOiJodHRwczovL2tleXMud2FsbGV0Y29ubmVjdC5jb20iLCJhdWQiOiJkaWQ6cGtoOmVpcDE1NToxOjB4NTY2MkI3YTMyMzQ1ZDg0MzM2OGM2MDgzMGYzRTJiMDE1MDIyQkNFMSIsImFjdCI6Im5vdGlmeV9tZXNzYWdlIiwic3ViIjoiMDAyODY4OGMzY2ZkODYwNGRlMDgyOTdjZDQ4ZTM3NjYyYzJhMmE4MDc4MzAyYmZkNDJlZDQ1ZDkwMTE0YTQxYyIsImFwcCI6Imh0dHBzOi8vZ20ud2FsbGV0Y29ubmVjdC5jb20iLCJtc2ciOnsidGl0bGUiOiJUZXN0IE1lc3NhZ2UiLCJib2R5IjoiVGVzdCIsImljb24iOiIiLCJ1cmwiOiJodHRwczovL3Rlc3QuY29tcyIsInR5cGUiOiJnbV9ob3VybHkifX0.B2U5d6IejtRqC9I_qWnx2-AASeneX2Vtl_st8tAuoFMmBuB8r39Nr0zoslbmnyLHxt2PmEHVfzMHksFVAtrfDg";
         const topic = wallet.subscriptions.keys[0];
-        const payload = formatJsonRpcRequest(
-          "wc_notifyMessage",
-          plaintextMessage
-        );
+        const payload = formatJsonRpcRequest("wc_notifyMessage", {
+          messageAuth,
+        });
         const encryptedMessage = await wallet.core.crypto.encode(
           topic,
           payload
@@ -173,7 +212,7 @@ describe("Notify", () => {
           encryptedMessage,
         });
 
-        expect(decryptedMessage).toBe(plaintextMessage);
+        expect(decryptedMessage).toStrictEqual(messageClaims.msg);
       });
     });
 
@@ -303,8 +342,6 @@ describe("Notify", () => {
 
   describe("Sync Functionality", () => {
     describe("Notify Subscriptions", () => {
-      const hasGmSecret =
-        typeof process.env.NOTIFY_GM_PROJECT_SECRET !== "undefined";
       if (!hasGmSecret) {
         console.warn(
           "Skipping sync push subscription test. NOTIFY_GM_PROJECT_SECRET env variable not set."
