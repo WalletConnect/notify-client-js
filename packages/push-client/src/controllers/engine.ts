@@ -821,9 +821,9 @@ export class PushEngine extends IPushEngine {
     dappUrl: string
   ): Promise<PushClientTypes.PushConfigDocument> => {
     try {
-      // Fetch dapp's Push config from its hosted wc-push-config.
+      // Fetch dapp's Push config from its hosted wc-notify-config.
       const pushConfigResp = await axios.get(
-        `${dappUrl}/.well-known/wc-push-config.json`
+        `${dappUrl}/.well-known/wc-notify-config.json`
       );
       const pushConfig = pushConfigResp.data;
 
@@ -833,7 +833,7 @@ export class PushEngine extends IPushEngine {
       return pushConfig;
     } catch (error: any) {
       throw new Error(
-        `Failed to fetch dapp's Push config from ${dappUrl}/.well-known/wc-push-config.json. Error: ${error.message}`
+        `Failed to fetch dapp's Push config from ${dappUrl}/.well-known/wc-notify-config.json. Error: ${error.message}`
       );
     }
   };
