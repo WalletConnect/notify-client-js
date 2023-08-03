@@ -40,9 +40,9 @@ export const sendPushMessage = async (
       "Cannot send push message. GM_PROJECT_ID env variable not set"
     );
   }
-  if (!process.env.GM_PROJECT_SECRET) {
+  if (!process.env.NOTIFY_GM_PROJECT_SECRET) {
     throw new ReferenceError(
-      "Cannot send push message. GM_PROJECT_SECRET env variable not set"
+      "Cannot send notify message. NOTIFY_GM_PROJECT_SECRET env variable not set"
     );
   }
   const url = `${NOTIFY_SERVER_URL}/${process.env.GM_PROJECT_ID}/notify`;
@@ -60,7 +60,7 @@ export const sendPushMessage = async (
 
   return axios.post(url, body, {
     headers: {
-      Authorization: `Bearer ${process.env.GM_PROJECT_SECRET}`,
+      Authorization: `Bearer ${process.env.NOTIFY_GM_PROJECT_SECRET}`,
     },
   });
 };

@@ -303,10 +303,11 @@ describe("Push", () => {
 
   describe("Sync Functionality", () => {
     describe("Push Subscriptions", () => {
-      const hasGmSecret = typeof process.env.GM_PROJECT_SECRET !== "undefined";
+      const hasGmSecret =
+        typeof process.env.NOTIFY_GM_PROJECT_SECRET !== "undefined";
       if (!hasGmSecret) {
         console.warn(
-          "Skipping sync push subscription test. GM_PROJECT_SECRET env variable not set."
+          "Skipping sync push subscription test. NOTIFY_GM_PROJECT_SECRET env variable not set."
         );
       }
       it.skipIf(!hasGmSecret)("Syncs push subscriptions", async () => {
