@@ -130,7 +130,8 @@ describe("Notify", () => {
     describe("update", () => {
       it("can update an existing push subscription with a new scope", async () => {
         let gotPushSubscriptionResponse = false;
-        let initialPushSubscription = {} as NotifyClientTypes.PushSubscription;
+        let initialPushSubscription =
+          {} as NotifyClientTypes.NotifySubscription;
 
         wallet.once("notify_subscription", (event) => {
           gotPushSubscriptionResponse = true;

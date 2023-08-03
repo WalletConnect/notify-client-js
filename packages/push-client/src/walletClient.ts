@@ -213,7 +213,7 @@ export class WalletClient extends IWalletClient {
     signature,
   }) => {
     this.subscriptions = new this.SyncStoreController(
-      "com.walletconnect.notify.pushSubscription",
+      "com.walletconnect.notify.notifySubscription",
       this.syncClient,
       account,
       signature,
@@ -249,7 +249,9 @@ export class WalletClient extends IWalletClient {
     );
     await this.subscriptions.init();
 
-    const historyFetchedStores = ["com.walletconnect.notify.pushSubscription"];
+    const historyFetchedStores = [
+      "com.walletconnect.notify.notifySubscription",
+    ];
 
     const stores = this.syncClient.storeMap
       .getAll({ account })
@@ -294,9 +296,9 @@ export class WalletClient extends IWalletClient {
       await this.messages.init();
       await this.identityKeys.init();
       await this.engine.init();
-      this.logger.info(`PushWalletClient Initialization Success`);
+      this.logger.info(`NotifyWalletClient Initialization Success`);
     } catch (error: any) {
-      this.logger.info(`PushWalletClient Initialization Failure`);
+      this.logger.info(`NotifyWalletClient Initialization Failure`);
       this.logger.error(error.message);
       throw error;
     }

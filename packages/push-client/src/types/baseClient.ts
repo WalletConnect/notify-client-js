@@ -13,14 +13,16 @@ export declare namespace NotifyClientTypes {
     | "notify_delete"
     | "notify_update";
 
-  type PushResponseEventArgs = {
+  type NotifyResponseEventArgs = {
     error?: ErrorResponse;
-    subscription?: NotifyClientTypes.PushSubscription;
+    subscription?: NotifyClientTypes.NotifySubscription;
   };
 
-  type PushMessageRequestEventArgs = { message: NotifyClientTypes.PushMessage };
+  type NotifyMessageRequestEventArgs = {
+    message: NotifyClientTypes.NotifyMessage;
+  };
 
-  type PushDeleteRequestEventArgs = { id: number; topic: string };
+  type NotifyDeleteRequestEventArgs = { id: number; topic: string };
 
   interface BaseEventArgs<T = unknown> {
     id: number;
@@ -29,10 +31,10 @@ export declare namespace NotifyClientTypes {
   }
 
   interface EventArguments {
-    notify_subscription: BaseEventArgs<PushResponseEventArgs>;
-    notify_message: BaseEventArgs<PushMessageRequestEventArgs>;
-    notify_delete: BaseEventArgs<PushDeleteRequestEventArgs>;
-    notify_update: BaseEventArgs<PushResponseEventArgs>;
+    notify_subscription: BaseEventArgs<NotifyResponseEventArgs>;
+    notify_message: BaseEventArgs<NotifyMessageRequestEventArgs>;
+    notify_delete: BaseEventArgs<NotifyDeleteRequestEventArgs>;
+    notify_update: BaseEventArgs<NotifyResponseEventArgs>;
   }
 
   interface WalletClientOptions extends CoreTypes.Options {
@@ -55,7 +57,7 @@ export declare namespace NotifyClientTypes {
 
   type ScopeMap = Record<string, { description: string; enabled: boolean }>;
 
-  interface PushSubscriptionRequest {
+  interface NotifySubscriptionRequest {
     publicKey: string;
     metadata: Metadata;
     account: string;
@@ -63,7 +65,7 @@ export declare namespace NotifyClientTypes {
     scopeUpdate?: string[];
   }
 
-  interface PushSubscription {
+  interface NotifySubscription {
     topic: string;
     account: string;
     relay: RelayerTypes.ProtocolOptions;
@@ -82,10 +84,10 @@ export declare namespace NotifyClientTypes {
     act: string; // action intent (must be "notify_message")
     sub: string; // subscriptionId (sha256 hash of subscriptionAuth)
     app: string; // dapp domain url,
-    msg: PushMessage;
+    msg: NotifyMessage;
   }
 
-  interface PushMessage {
+  interface NotifyMessage {
     title: string;
     body: string;
     icon: string;
@@ -93,14 +95,14 @@ export declare namespace NotifyClientTypes {
     type?: string;
   }
 
-  interface PushMessageRecord {
+  interface NotifyMessageRecord {
     id: number;
     topic: string;
-    message: PushMessage;
+    message: NotifyMessage;
     publishedAt: number;
   }
 
-  interface PushDidDocument {
+  interface NotifyDidDocument {
     "@context": string[];
     id: string;
     verificationMethod: Array<{
@@ -116,7 +118,7 @@ export declare namespace NotifyClientTypes {
     keyAgreement: string[];
   }
 
-  interface PushConfigDocument {
+  interface NotifyConfigDocument {
     version: number;
     lastModified: number;
     types: Array<{
@@ -138,7 +140,7 @@ export abstract class IBaseClient {
 
   public abstract subscriptions: IStore<
     string,
-    NotifyClientTypes.PushSubscription
+    NotifyClientTypes.NotifySubscription
   >;
 
   // ---------- Public Methods (common) ----------------------------------------------- //

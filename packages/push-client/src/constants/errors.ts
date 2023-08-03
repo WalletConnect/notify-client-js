@@ -15,7 +15,7 @@ export const SDK_ERRORS = {
     code: 6000,
   },
   USER_HAS_EXISTING_SUBSCRIPTION: {
-    message: "User has existing push subscription with dapp.",
+    message: "User has existing notify subscription with dapp.",
     code: 6001,
   },
   /* ----- FAILURE (7xxx) ----- */

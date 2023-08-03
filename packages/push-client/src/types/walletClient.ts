@@ -23,14 +23,14 @@ export abstract class IWalletClient extends IBaseClient {
     number,
     {
       topic: string;
-      request: NotifyClientTypes.PushSubscriptionRequest;
+      request: NotifyClientTypes.NotifySubscriptionRequest;
     }
   >;
   public abstract messages: IStore<
     string,
     {
       topic: string;
-      messages: Record<number, NotifyClientTypes.PushMessageRecord>;
+      messages: Record<number, NotifyClientTypes.NotifyMessageRecord>;
     }
   >;
   public abstract identityKeys: IdentityKeys;

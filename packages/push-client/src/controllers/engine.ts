@@ -84,7 +84,7 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    let didDoc: NotifyClientTypes.PushDidDocument;
+    let didDoc: NotifyClientTypes.NotifyDidDocument;
 
     try {
       // Fetch dapp's public key from its hosted DID doc.
@@ -98,7 +98,7 @@ export class NotifyEngine extends INotifyEngine {
       );
     }
 
-    const pushConfig = await this.resolvePushConfig(metadata.url);
+    const notifyConfig = await this.resolveNotifyConfig(metadata.url);
 
     // Retrieve existing identity or register a new one for this account on this device.
     await this.registerIdentity(account, onSign);
@@ -132,7 +132,7 @@ export class NotifyEngine extends INotifyEngine {
     const dappUrl = metadata.url;
     const issuedAt = Math.round(Date.now() / 1000);
     this.client;
-    const scp = pushConfig.types
+    const scp = notifyConfig.types
       .map((type) => type.name)
       .join(JWT_SCP_SEPARATOR);
     const payload: JwtPayload = {
@@ -199,7 +199,7 @@ export class NotifyEngine extends INotifyEngine {
       },
     });
 
-    const scopeMap = this.generateScopeMapFromConfig(pushConfig.types);
+    const scopeMap = this.generateScopeMapFromConfig(notifyConfig.types);
 
     // Store the pending subscription request.
     (this.client as IWalletClient).requests.set(id, {
@@ -212,7 +212,7 @@ export class NotifyEngine extends INotifyEngine {
       },
     });
 
-    // Set the expiry for the push subscription request.
+    // Set the expiry for the notify subscription request.
     this.client.core.expirer.set(id, calcExpiry(NOTIFY_REQUEST_EXPIRY));
 
     return { id, subscriptionAuth };
@@ -222,12 +222,12 @@ export class NotifyEngine extends INotifyEngine {
     this.isInitialized();
 
     this.client.logger.info(
-      `[Notify] update > updating push subscription for topic ${topic} with new scope: ${JSON.stringify(
+      `[Notify] update > updating notify subscription for topic ${topic} with new scope: ${JSON.stringify(
         scope
       )}`
     );
 
-    let subscription: NotifyClientTypes.PushSubscription;
+    let subscription: NotifyClientTypes.NotifySubscription;
 
     // Retrieves the known subscription for the given topic or throws if no subscription is found.
     try {
@@ -354,7 +354,7 @@ export class NotifyEngine extends INotifyEngine {
     await this.cleanupSubscription(topic);
 
     this.client.logger.info(
-      `[Notify] Engine.delete > deleted push subscription on topic ${topic}`
+      `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
     );
   };
 
@@ -369,7 +369,7 @@ export class NotifyEngine extends INotifyEngine {
 
     if (!targetRecord) {
       throw new Error(
-        `No message with id ${id} found in push message history.`
+        `No message with id ${id} found in notify message history.`
       );
     }
 
@@ -557,47 +557,47 @@ export class NotifyEngine extends INotifyEngine {
         const { request } = (this.client as IWalletClient).requests.get(id);
 
         // SPEC: Wallet derives symmetric key P with keys Y and Z.
-        // SPEC: Push topic is derived from the sha256 hash of the symmetric key P
-        const pushTopic = await this.client.core.crypto.generateSharedKey(
+        // SPEC: Notify topic is derived from the sha256 hash of the symmetric key P
+        const notifyTopic = await this.client.core.crypto.generateSharedKey(
           request.publicKey,
           response.result.publicKey
         );
 
         this.client.logger.info(
-          `onNotifySubscribeResponse > derived pushTopic ${pushTopic} from selfPublicKey ${request.publicKey} and Cast publicKey ${response.result.publicKey}`
+          `onNotifySubscribeResponse > derived notifyTopic ${notifyTopic} from selfPublicKey ${request.publicKey} and Cast publicKey ${response.result.publicKey}`
         );
 
-        const pushSubscription = {
-          topic: pushTopic,
+        const notifySubscription = {
+          topic: notifyTopic,
           account: request.account,
           relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
           metadata: request.metadata,
           scope: request.scope,
           expiry: calcExpiry(NOTIFY_SUBSCRIPTION_EXPIRY),
-          symKey: this.client.core.crypto.keychain.get(pushTopic),
+          symKey: this.client.core.crypto.keychain.get(notifyTopic),
         };
 
-        // Store the new PushSubscription.
-        await this.client.subscriptions.set(pushTopic, pushSubscription);
+        // Store the new NotifySubscription.
+        await this.client.subscriptions.set(notifyTopic, notifySubscription);
 
-        // Set up a store for messages sent to this push topic.
-        await (this.client as IWalletClient).messages.set(pushTopic, {
-          topic: pushTopic,
+        // Set up a store for messages sent to this notify topic.
+        await (this.client as IWalletClient).messages.set(notifyTopic, {
+          topic: notifyTopic,
           messages: {},
         });
 
-        // SPEC: Wallet subscribes to derived pushTopic.
-        await this.client.core.relayer.subscribe(pushTopic);
+        // SPEC: Wallet subscribes to derived notifyTopic.
+        await this.client.core.relayer.subscribe(notifyTopic);
 
         // Wallet unsubscribes from response topic.
         await this.client.core.relayer.unsubscribe(responseTopic);
 
-        // Emit the PushSubscription at client level.
+        // Emit the NotifySubscription at client level.
         this.client.emit("notify_subscription", {
           id: response.id,
-          topic: pushTopic,
+          topic: notifyTopic,
           params: {
-            subscription: pushSubscription,
+            subscription: notifySubscription,
           },
         });
       } else if (isJsonRpcError(response)) {
@@ -710,7 +710,7 @@ export class NotifyEngine extends INotifyEngine {
 
         if (!request.scopeUpdate) {
           throw new Error(
-            `No scope update found in request for push update: ${JSON.stringify(
+            `No scope update found in request for notify update: ${JSON.stringify(
               request
             )}`
           );
@@ -726,10 +726,10 @@ export class NotifyEngine extends INotifyEngine {
             }
             return map;
           },
-          {} as NotifyClientTypes.PushSubscription["scope"]
+          {} as NotifyClientTypes.NotifySubscription["scope"]
         );
 
-        const updatedSubscription: NotifyClientTypes.PushSubscription = {
+        const updatedSubscription: NotifyClientTypes.NotifySubscription = {
           ...existingSubscription,
           scope: updatedScope,
           expiry: calcExpiry(NOTIFY_SUBSCRIPTION_EXPIRY),
@@ -861,29 +861,31 @@ export class NotifyEngine extends INotifyEngine {
     });
   };
 
-  private resolvePushConfig = async (
+  private resolveNotifyConfig = async (
     dappUrl: string
-  ): Promise<NotifyClientTypes.PushConfigDocument> => {
+  ): Promise<NotifyClientTypes.NotifyConfigDocument> => {
     try {
-      // Fetch dapp's Push config from its hosted wc-notify-config.
-      const pushConfigResp = await axios.get(
+      // Fetch dapp's Notify config from its hosted wc-notify-config.
+      const notifyConfigResp = await axios.get(
         `${dappUrl}/.well-known/wc-notify-config.json`
       );
-      const pushConfig = pushConfigResp.data;
+      const notifyConfig = notifyConfigResp.data;
 
       this.client.logger.info(
-        `[Notify] subscribe > got push config: ${JSON.stringify(pushConfig)}`
+        `[Notify] subscribe > got notify config: ${JSON.stringify(
+          notifyConfig
+        )}`
       );
-      return pushConfig;
+      return notifyConfig;
     } catch (error: any) {
       throw new Error(
-        `Failed to fetch dapp's Push config from ${dappUrl}/.well-known/wc-notify-config.json. Error: ${error.message}`
+        `Failed to fetch dapp's Notify config from ${dappUrl}/.well-known/wc-notify-config.json. Error: ${error.message}`
       );
     }
   };
 
   private generateScopeMapFromConfig = (
-    typesConfig: NotifyClientTypes.PushConfigDocument["types"],
+    typesConfig: NotifyClientTypes.NotifyConfigDocument["types"],
     selected?: string[]
   ): NotifyClientTypes.ScopeMap => {
     return typesConfig.reduce((map, type) => {

@@ -47,16 +47,16 @@ export abstract class INotifyEngine {
     scope: string[];
   }): Promise<boolean>;
 
-  // decrypt push subscription message
+  // decrypt notify subscription message
   public abstract decryptMessage(params: {
     topic: string;
     encryptedMessage: string;
-  }): Promise<NotifyClientTypes.PushMessage>;
+  }): Promise<NotifyClientTypes.NotifyMessage>;
 
   // get all messages for a subscription
   public abstract getMessageHistory(params: {
     topic: string;
-  }): Record<number, NotifyClientTypes.PushMessageRecord>;
+  }): Record<number, NotifyClientTypes.NotifyMessageRecord>;
 
   // delete active subscription
   public abstract deleteSubscription(params: { topic: string }): Promise<void>;
@@ -68,7 +68,7 @@ export abstract class INotifyEngine {
   // query all active subscriptions
   public abstract getActiveSubscriptions(params?: {
     account: string;
-  }): Record<string, NotifyClientTypes.PushSubscription>;
+  }): Record<string, NotifyClientTypes.NotifySubscription>;
 
   // ---------- Protected Helpers --------------------------------------- //
 
