@@ -346,7 +346,7 @@ export class PushEngine extends IPushEngine {
     );
   };
 
-  public deletePushMessage: IPushEngine["deletePushMessage"] = ({ id }) => {
+  public deleteNotifyMessage: IPushEngine["deleteNotifyMessage"] = ({ id }) => {
     this.isInitialized();
 
     const targetRecord = (this.client as IWalletClient).messages

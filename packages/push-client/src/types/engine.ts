@@ -61,7 +61,7 @@ export abstract class IPushEngine {
   // delete active subscription
   public abstract deleteSubscription(params: { topic: string }): Promise<void>;
 
-  public abstract deletePushMessage(params: { id: number }): void;
+  public abstract deleteNotifyMessage(params: { id: number }): void;
 
   // ---------- Public Methods ------------------------------------------ //
 

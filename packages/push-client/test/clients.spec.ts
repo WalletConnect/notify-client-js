@@ -18,7 +18,7 @@ if (!process.env.TEST_PROJECT_ID) {
 
 const projectId = process.env.TEST_PROJECT_ID;
 
-describe("Push", () => {
+describe("Notify", () => {
   let wallet: IWalletClient;
   let syncClient: ISyncClient;
   let ethersWallet: EthersWallet;
@@ -262,7 +262,7 @@ describe("Push", () => {
     //   });
     // });
 
-    describe("deletePushMessage", async () => {
+    describe("deleteNotifyMessage", async () => {
       it("deletes the push message associated with the provided `id`", async () => {
         await createPushSubscription(wallet, account, onSign);
         const [subscription] = wallet.subscriptions.getAll();
@@ -292,7 +292,7 @@ describe("Push", () => {
         expect(messages.length).toBe(1);
 
         const targetMessageId = messages[0].id;
-        wallet.deletePushMessage({ id: targetMessageId });
+        wallet.deleteNotifyMessage({ id: targetMessageId });
 
         expect(Object.values(wallet.messages.get(topic).messages).length).toBe(
           0
@@ -302,7 +302,7 @@ describe("Push", () => {
   });
 
   describe("Sync Functionality", () => {
-    describe("Push Subscriptions", () => {
+    describe("Notify Subscriptions", () => {
       const hasGmSecret =
         typeof process.env.NOTIFY_GM_PROJECT_SECRET !== "undefined";
       if (!hasGmSecret) {

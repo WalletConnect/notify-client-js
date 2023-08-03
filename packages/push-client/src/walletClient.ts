@@ -139,9 +139,11 @@ export class WalletClient extends IWalletClient {
     }
   };
 
-  public deletePushMessage: IWalletClient["deletePushMessage"] = (params) => {
+  public deleteNotifyMessage: IWalletClient["deleteNotifyMessage"] = (
+    params
+  ) => {
     try {
-      return this.engine.deletePushMessage(params);
+      return this.engine.deleteNotifyMessage(params);
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;

@@ -46,7 +46,7 @@ export abstract class IWalletClient extends IBaseClient {
   public abstract update: IPushEngine["update"];
   public abstract decryptMessage: IPushEngine["decryptMessage"];
   public abstract getMessageHistory: IPushEngine["getMessageHistory"];
-  public abstract deletePushMessage: IPushEngine["deletePushMessage"];
+  public abstract deleteNotifyMessage: IPushEngine["deleteNotifyMessage"];
 
   // ---------- Helpers  ------------------------------------------------------------ //
   public abstract initSyncStores: (params: {
