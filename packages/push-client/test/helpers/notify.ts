@@ -1,22 +1,22 @@
 import { IWalletClient } from "../../src";
-import { waitForEvent } from "../helpers/async";
+import { waitForEvent } from "./async";
 import axios from "axios";
 import { gmDappMetadata } from "./mocks";
 
 const NOTIFY_SERVER_URL =
   process.env.NOTIFY_SERVER_URL || "https://notify.walletconnect.com";
 
-export const createPushSubscription = async (
+export const createNotifySubscription = async (
   wallet: IWalletClient,
   account: string,
   onSign: (message: string) => Promise<string>
 ) => {
-  let gotPushSubscriptionResponse = false;
-  let pushSubscriptionEvent: any;
+  let gotNotifySubscriptionResponse = false;
+  let notifySubscriptionEvent: any;
 
   wallet.once("notify_subscription", (event) => {
-    gotPushSubscriptionResponse = true;
-    pushSubscriptionEvent = event;
+    gotNotifySubscriptionResponse = true;
+    notifySubscriptionEvent = event;
   });
 
   await wallet.subscribe({
@@ -25,19 +25,19 @@ export const createPushSubscription = async (
     onSign,
   });
 
-  await waitForEvent(() => gotPushSubscriptionResponse);
+  await waitForEvent(() => gotNotifySubscriptionResponse);
 
-  return { pushSubscriptionEvent };
+  return { notifySubscriptionEvent };
 };
 
-export const sendPushMessage = async (
+export const sendNotifyMessage = async (
   projectId: string,
   account: string,
   messageBody: string
 ) => {
   if (!process.env.GM_PROJECT_ID) {
     throw new ReferenceError(
-      "Cannot send push message. GM_PROJECT_ID env variable not set"
+      "Cannot send notify message. GM_PROJECT_ID env variable not set"
     );
   }
   if (!process.env.NOTIFY_GM_PROJECT_SECRET) {

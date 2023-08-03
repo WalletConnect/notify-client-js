@@ -4,7 +4,7 @@ import cloneDeep from "lodash.clonedeep";
 import { WalletClient, IWalletClient, NotifyClientTypes } from "../src/";
 import { disconnectSocket } from "./helpers/ws";
 import { gmDappMetadata } from "./helpers/mocks";
-import { createPushSubscription, sendPushMessage } from "./helpers/push";
+import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
 import { waitForEvent } from "./helpers/async";
 import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
 import { ISyncClient, SyncClient, SyncStore } from "@walletconnect/sync-client";
@@ -71,12 +71,12 @@ describe("Notify", () => {
 
     describe("subscribe", () => {
       it("can issue a `notify_subscription` request and handle the response", async () => {
-        let gotPushSubscriptionResponse = false;
-        let pushSubscriptionEvent: any;
+        let gotNotifySubscriptionResponse = false;
+        let notifySubscriptionEvent: any;
 
         wallet.once("notify_subscription", (event) => {
-          gotPushSubscriptionResponse = true;
-          pushSubscriptionEvent = event;
+          gotNotifySubscriptionResponse = true;
+          notifySubscriptionEvent = event;
         });
 
         await wallet.subscribe({
@@ -85,22 +85,22 @@ describe("Notify", () => {
           metadata: gmDappMetadata,
         });
 
-        await waitForEvent(() => gotPushSubscriptionResponse);
+        await waitForEvent(() => gotNotifySubscriptionResponse);
 
         expect(
-          pushSubscriptionEvent.params.subscription.metadata
+          notifySubscriptionEvent.params.subscription.metadata
         ).to.deep.equal(gmDappMetadata);
-        expect(pushSubscriptionEvent.params.subscription.topic).toBeDefined();
+        expect(notifySubscriptionEvent.params.subscription.topic).toBeDefined();
 
         // Check that wallet is in expected state.
         expect(
           wallet.subscriptions.keys.includes(
-            pushSubscriptionEvent.params.subscription.topic
+            notifySubscriptionEvent.params.subscription.topic
           )
         ).toBe(true);
         expect(
           wallet.messages.keys.includes(
-            pushSubscriptionEvent.params.subscription.topic
+            notifySubscriptionEvent.params.subscription.topic
           )
         ).toBe(true);
         expect(wallet.requests.length).toBe(0);
@@ -109,33 +109,33 @@ describe("Notify", () => {
 
     describe.skipIf(!hasGmSecret)("handling incoming notifyMessage", () => {
       it("emits a `notify_message` event when a notifyMessage is received", async () => {
-        await createPushSubscription(wallet, account, onSign);
+        await createNotifySubscription(wallet, account, onSign);
 
-        let gotPushMessageResponse = false;
-        let pushMessageEvent: any;
+        let gotNotifyMessageResponse = false;
+        let notifyMessageEvent: any;
 
         wallet.once("notify_message", (event) => {
-          gotPushMessageResponse = true;
-          pushMessageEvent = event;
+          gotNotifyMessageResponse = true;
+          notifyMessageEvent = event;
         });
 
-        await sendPushMessage(projectId, account, "Test");
+        await sendNotifyMessage(projectId, account, "Test");
 
-        await waitForEvent(() => gotPushMessageResponse);
+        await waitForEvent(() => gotNotifyMessageResponse);
 
-        expect(pushMessageEvent.params.message.body).toBe("Test");
+        expect(notifyMessageEvent.params.message.body).toBe("Test");
       });
     });
 
     describe("update", () => {
-      it("can update an existing push subscription with a new scope", async () => {
-        let gotPushSubscriptionResponse = false;
-        let initialPushSubscription =
+      it("can update an existing notify subscription with a new scope", async () => {
+        let gotNotifySubscriptionResponse = false;
+        let initialNotifySubscription =
           {} as NotifyClientTypes.NotifySubscription;
 
         wallet.once("notify_subscription", (event) => {
-          gotPushSubscriptionResponse = true;
-          initialPushSubscription = cloneDeep(event.params.subscription!);
+          gotNotifySubscriptionResponse = true;
+          initialNotifySubscription = cloneDeep(event.params.subscription!);
         });
 
         await wallet.subscribe({
@@ -144,41 +144,43 @@ describe("Notify", () => {
           onSign,
         });
 
-        await waitForEvent(() => gotPushSubscriptionResponse);
+        await waitForEvent(() => gotNotifySubscriptionResponse);
 
-        expect(initialPushSubscription.metadata).to.deep.equal(gmDappMetadata);
-        expect(initialPushSubscription.topic).toBeDefined();
+        expect(initialNotifySubscription.metadata).to.deep.equal(
+          gmDappMetadata
+        );
+        expect(initialNotifySubscription.topic).toBeDefined();
 
-        let gotPushUpdateResponse = false;
-        let pushUpdateEvent: any;
+        let gotNotifyUpdateResponse = false;
+        let notifyUpdateEvent: any;
 
         wallet.once("notify_update", (event) => {
-          gotPushUpdateResponse = true;
-          pushUpdateEvent = { ...event };
+          gotNotifyUpdateResponse = true;
+          notifyUpdateEvent = { ...event };
         });
 
         await wallet.update({
-          topic: initialPushSubscription.topic,
+          topic: initialNotifySubscription.topic,
           scope: [""],
         });
 
-        await waitForEvent(() => gotPushUpdateResponse);
+        await waitForEvent(() => gotNotifyUpdateResponse);
 
-        expect(pushUpdateEvent.params.subscription.topic).toBe(
-          initialPushSubscription.topic
+        expect(notifyUpdateEvent.params.subscription.topic).toBe(
+          initialNotifySubscription.topic
         );
-        expect(pushUpdateEvent.params.subscription.metadata).to.deep.equal(
-          initialPushSubscription.metadata
+        expect(notifyUpdateEvent.params.subscription.metadata).to.deep.equal(
+          initialNotifySubscription.metadata
         );
-        expect(pushUpdateEvent.params.subscription.scope).not.to.deep.equal(
-          initialPushSubscription.scope
+        expect(notifyUpdateEvent.params.subscription.scope).not.to.deep.equal(
+          initialNotifySubscription.scope
         );
       });
     });
 
     describe("decryptMessage", () => {
-      it("can decrypt an encrypted message for a known push topic", async () => {
-        await createPushSubscription(wallet, account, onSign);
+      it("can decrypt an encrypted message for a known notify topic", async () => {
+        await createNotifySubscription(wallet, account, onSign);
 
         const messageClaims = {
           iat: 1691064656,
@@ -218,19 +220,19 @@ describe("Notify", () => {
     });
 
     describe("getMessageHistory", async () => {
-      it("can get message history for a known push topic", async () => {
-        await createPushSubscription(wallet, account, onSign);
+      it("can get message history for a known notify topic", async () => {
+        await createNotifySubscription(wallet, account, onSign);
         const [subscription] = wallet.subscriptions.getAll();
         const { topic } = subscription;
         const message1 = {
-          title: "Test Push 1",
-          body: "This is a test push notification",
+          title: "Test Notify 1",
+          body: "This is a test notify notification",
           icon: "xyz.png",
           url: "https://walletconnect.com",
         };
         const message2 = {
-          title: "Test Push 2",
-          body: "This is a test push notification",
+          title: "Test Notify 2",
+          body: "This is a test notify notification",
           icon: "xyz.png",
           url: "https://walletconnect.com",
         };
@@ -272,10 +274,10 @@ describe("Notify", () => {
     });
 
     // describe.skip("deleteSubscription", () => {
-    //   it("can delete a currently active push subscription", async () => {
-    //     const { responseEvent } = await createPushSubscription(wallet);
-    //     let gotPushDeleteEvent = false;
-    //     let pushDeleteEvent: any;
+    //   it("can delete a currently active notify subscription", async () => {
+    //     const { responseEvent } = await createNotifySubscription(wallet);
+    //     let gotNotifyDeleteEvent = false;
+    //     let notifyDeleteEvent: any;
 
     //     expect(responseEvent.params.subscription.topic).toBeDefined();
 
@@ -286,14 +288,14 @@ describe("Notify", () => {
     //     )[0];
 
     //     dapp.once("notify_delete", (event) => {
-    //       gotPushDeleteEvent = true;
-    //       pushDeleteEvent = event;
+    //       gotNotifyDeleteEvent = true;
+    //       notifyDeleteEvent = event;
     //     });
 
     //     await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
-    //     await waitForEvent(() => gotPushDeleteEvent);
+    //     await waitForEvent(() => gotNotifyDeleteEvent);
 
-    //     expect(pushDeleteEvent.topic).toBe(walletSubscriptionTopic);
+    //     expect(notifyDeleteEvent.topic).toBe(walletSubscriptionTopic);
     //     // Check that wallet is in expected state.
     //     expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
     //     expect(wallet.messages.keys.length).toBe(0);
@@ -303,13 +305,13 @@ describe("Notify", () => {
     // });
 
     describe("deleteNotifyMessage", async () => {
-      it("deletes the push message associated with the provided `id`", async () => {
-        await createPushSubscription(wallet, account, onSign);
+      it("deletes the notify message associated with the provided `id`", async () => {
+        await createNotifySubscription(wallet, account, onSign);
         const [subscription] = wallet.subscriptions.getAll();
         const { topic } = subscription;
         const message = {
-          title: "Test Push",
-          body: "This is a test push notification",
+          title: "Test Notify",
+          body: "This is a test notify notification",
           icon: "xyz.png",
           url: "https://walletconnect.com",
         };
@@ -345,10 +347,10 @@ describe("Notify", () => {
     describe("Notify Subscriptions", () => {
       if (!hasGmSecret) {
         console.warn(
-          "Skipping sync push subscription test. NOTIFY_GM_PROJECT_SECRET env variable not set."
+          "Skipping sync notify subscription test. NOTIFY_GM_PROJECT_SECRET env variable not set."
         );
       }
-      it.skipIf(!hasGmSecret)("Syncs push subscriptions", async () => {
+      it.skipIf(!hasGmSecret)("Syncs notify subscriptions", async () => {
         let gotSyncUpdate = false;
         const core1 = new Core({ projectId });
         const sync1 = await SyncClient.init({
@@ -392,16 +394,16 @@ describe("Notify", () => {
           gotSyncUpdate = true;
         });
 
-        let gotPushSubscriptionResponse = false;
+        let gotNotifySubscriptionResponse = false;
         wallet1.once("notify_subscription", () => {
-          gotPushSubscriptionResponse = true;
+          gotNotifySubscriptionResponse = true;
         });
         await wallet1.subscribe({
           account: `eip155:1:${ethersWallet.address}`,
           onSign: (m) => ethersWallet.signMessage(m),
           metadata: gmDappMetadata,
         });
-        await waitForEvent(() => gotPushSubscriptionResponse);
+        await waitForEvent(() => gotNotifySubscriptionResponse);
 
         await waitForEvent(() => gotSyncUpdate);
 
@@ -419,7 +421,7 @@ describe("Notify", () => {
           walletPeerMessage = m.params.message.body;
         });
 
-        await sendPushMessage(
+        await sendNotifyMessage(
           projectId,
           `eip155:1:${ethersWallet.address}`,
           "Test"
@@ -436,21 +438,21 @@ describe("Notify", () => {
 
   describe("Common (BaseClient)", () => {
     describe("getActiveSubscriptions", () => {
-      it("can query currently active push subscriptions", async () => {
-        const { pushSubscriptionEvent } = await createPushSubscription(
+      it("can query currently active notify subscriptions", async () => {
+        const { notifySubscriptionEvent } = await createNotifySubscription(
           wallet,
           account,
           onSign
         );
 
-        expect(pushSubscriptionEvent.params.subscription.topic).toBeDefined();
+        expect(notifySubscriptionEvent.params.subscription.topic).toBeDefined();
 
         const walletSubscriptions = wallet.getActiveSubscriptions();
 
         // Check that wallet is in expected state.
         expect(Object.keys(walletSubscriptions).length).toBe(1);
       });
-      it("can filter currently active push subscriptions", async () => {
+      it("can filter currently active notify subscriptions", async () => {
         [1, 2].forEach((num) => {
           wallet.subscriptions.set(`topic${num}`, {
             account: `account${num}`,
