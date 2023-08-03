@@ -1,7 +1,7 @@
-# WalletConnect Push Client
+# WalletConnect Notify Client
 
-> Push Client is currently under active development. Please be aware that until v1.0 (stable) is reached,  `0.x.x` releases of the package may include breaking changes on the minor semver version increment. This means updates could modify the API, remove deprecated features, or change default behavior. 
-> 
+> Notify Client is currently under active development. Please be aware that until v1.0 (stable) is reached, `0.x.x` releases of the package may include breaking changes on the minor semver version increment. This means updates could modify the API, remove deprecated features, or change default behavior.
+>
 > Please check the [release summaries](https://github.com/WalletConnect/push-client-js/releases) for any notes on important changes between versions.
 
 ## Installation
@@ -29,7 +29,7 @@ npm install
 1. Bump the version for the specific package and create the equivalent tag, e.g. for a patch:
 
 ```sh
-cd packages/push-client
+cd packages/notify-client
 npm version patch # will update package.json and package-lock.json
 git commit -m "chore(release): 2.x.x"
 git tag 2.x.x
