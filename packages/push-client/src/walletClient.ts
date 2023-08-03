@@ -10,10 +10,10 @@ import pino from "pino";
 import { IdentityKeys } from "@walletconnect/identity-keys";
 import {
   DEFAULT_KEYSERVER_URL,
-  PUSH_CLIENT_PROTOCOL,
-  PUSH_CLIENT_STORAGE_PREFIX,
-  PUSH_CLIENT_VERSION,
-  PUSH_WALLET_CLIENT_DEFAULT_NAME,
+  NOTIFY_CLIENT_PROTOCOL,
+  NOTIFY_CLIENT_STORAGE_PREFIX,
+  NOTIFY_CLIENT_VERSION,
+  NOTIFY_WALLET_CLIENT_DEFAULT_NAME,
 } from "./constants";
 import { PushEngine } from "./controllers";
 import { IWalletClient, PushClientTypes } from "./types";
@@ -21,9 +21,10 @@ import { HistoryClient } from "@walletconnect/history";
 import { fetchAndInjectHistory } from "./utils/history";
 
 export class WalletClient extends IWalletClient {
-  public readonly protocol = PUSH_CLIENT_PROTOCOL;
-  public readonly version = PUSH_CLIENT_VERSION;
-  public readonly name: IWalletClient["name"] = PUSH_WALLET_CLIENT_DEFAULT_NAME;
+  public readonly protocol = NOTIFY_CLIENT_PROTOCOL;
+  public readonly version = NOTIFY_CLIENT_VERSION;
+  public readonly name: IWalletClient["name"] =
+    NOTIFY_WALLET_CLIENT_DEFAULT_NAME;
   public readonly keyserverUrl: IWalletClient["keyserverUrl"];
 
   public core: IWalletClient["core"];
@@ -50,7 +51,7 @@ export class WalletClient extends IWalletClient {
   constructor(opts: PushClientTypes.WalletClientOptions) {
     super(opts);
 
-    this.name = opts.name || PUSH_WALLET_CLIENT_DEFAULT_NAME;
+    this.name = opts.name || NOTIFY_WALLET_CLIENT_DEFAULT_NAME;
 
     const logger =
       typeof opts.logger !== "undefined" && typeof opts.logger !== "string"
@@ -74,19 +75,19 @@ export class WalletClient extends IWalletClient {
       this.core,
       this.logger,
       "requests",
-      PUSH_CLIENT_STORAGE_PREFIX
+      NOTIFY_CLIENT_STORAGE_PREFIX
     );
     this.subscriptions = new Store(
       this.core,
       this.logger,
       "subscriptions",
-      PUSH_CLIENT_STORAGE_PREFIX
+      NOTIFY_CLIENT_STORAGE_PREFIX
     );
     this.messages = new Store(
       this.core,
       this.logger,
       "messages",
-      PUSH_CLIENT_STORAGE_PREFIX
+      NOTIFY_CLIENT_STORAGE_PREFIX
     );
     this.identityKeys = new IdentityKeys(this.core);
     this.engine = new PushEngine(this);

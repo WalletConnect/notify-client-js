@@ -12,7 +12,7 @@ export const decryptMessage = async (params: {
   const crypto = new Crypto(core, core.logger);
   await crypto.init();
 
-  // Set symkey to decode push_message
+  // Set symkey to decode notify_message
   await crypto.setSymKey(symkey, topic);
 
   return crypto.decode(topic, encoded);

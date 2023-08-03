@@ -68,7 +68,7 @@ describe("Push", () => {
     });
 
     describe("subscribe", () => {
-      it("can issue a `push_subscription` request and handle the response", async () => {
+      it("can issue a `notify_subscription` request and handle the response", async () => {
         let gotPushSubscriptionResponse = false;
         let pushSubscriptionEvent: any;
 
@@ -129,7 +129,7 @@ describe("Push", () => {
         let gotPushUpdateResponse = false;
         let pushUpdateEvent: any;
 
-        wallet.once("push_update", (event) => {
+        wallet.once("notify_update", (event) => {
           gotPushUpdateResponse = true;
           pushUpdateEvent = { ...event };
         });
@@ -160,7 +160,7 @@ describe("Push", () => {
         const plaintextMessage = "this is a test for decryptMessage";
         const topic = wallet.subscriptions.keys[0];
         const payload = formatJsonRpcRequest(
-          "wc_pushMessage",
+          "wc_notifyMessage",
           plaintextMessage
         );
         const encryptedMessage = await wallet.core.crypto.encode(
@@ -245,7 +245,7 @@ describe("Push", () => {
     //       wallet.getActiveSubscriptions()
     //     )[0];
 
-    //     dapp.once("push_delete", (event) => {
+    //     dapp.once("notify_delete", (event) => {
     //       gotPushDeleteEvent = true;
     //       pushDeleteEvent = event;
     //     });
@@ -372,11 +372,11 @@ describe("Push", () => {
 
         let walletMessage: string = "";
         let walletPeerMessage: string = "";
-        wallet1.on("push_message", (m) => {
+        wallet1.on("notify_message", (m) => {
           walletMessage = m.params.message.body;
         });
 
-        wallet2.on("push_message", (m) => {
+        wallet2.on("notify_message", (m) => {
           walletPeerMessage = m.params.message.body;
         });
 

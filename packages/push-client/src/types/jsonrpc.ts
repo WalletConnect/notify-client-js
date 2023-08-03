@@ -1,38 +1,38 @@
 export declare namespace JsonRpcTypes {
   export type WcMethod =
-    | "wc_pushSubscribe"
-    | "wc_pushMessage"
-    | "wc_pushDelete"
-    | "wc_pushUpdate";
+    | "wc_notifySubscribe"
+    | "wc_notifyMessage"
+    | "wc_notifyDelete"
+    | "wc_notifyUpdate";
 
   // ---- JSON-RPC Requests -----------------------------
   export interface RequestParams {
-    wc_pushSubscribe: {
+    wc_notifySubscribe: {
       subscriptionAuth: string;
     };
-    wc_pushMessage: {
+    wc_notifyMessage: {
       title: string;
       body: string;
       icon: string;
       url: string;
       type?: string;
     };
-    wc_pushDelete: {
+    wc_notifyDelete: {
       code: number;
       message: string;
     };
-    wc_pushUpdate: {
+    wc_notifyUpdate: {
       subscriptionAuth: string;
     };
   }
 
   // ---- JSON-RPC Responses -----------------------------
   export interface Results {
-    wc_pushSubscribe: {
+    wc_notifySubscribe: {
       publicKey: string;
     };
-    wc_pushMessage: true;
-    wc_pushDelete: true;
-    wc_pushUpdate: true;
+    wc_notifyMessage: true;
+    wc_notifyDelete: true;
+    wc_notifyUpdate: true;
   }
 }

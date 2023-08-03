@@ -110,30 +110,32 @@ export abstract class IPushEngine {
   protected abstract onPushSubscribeResponse(
     topic: string,
     payload:
-      | JsonRpcResult<JsonRpcTypes.Results["wc_pushSubscribe"]>
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifySubscribe"]>
       | JsonRpcError
   ): Promise<void>;
 
   protected abstract onPushMessageRequest(
     topic: string,
-    payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_pushMessage"]>,
+    payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_notifyMessage"]>,
     publishedAt: number
   ): Promise<void>;
 
   protected abstract onPushMessageResponse(
     topic: string,
     payload:
-      | JsonRpcResult<JsonRpcTypes.Results["wc_pushMessage"]>
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyMessage"]>
       | JsonRpcError
   ): void;
 
   protected abstract onPushDeleteRequest(
     topic: string,
-    payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_pushDelete"]>
+    payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_notifyDelete"]>
   ): Promise<void>;
 
   protected abstract onPushUpdateResponse(
     topic: string,
-    payload: JsonRpcResult<JsonRpcTypes.Results["wc_pushUpdate"]> | JsonRpcError
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyUpdate"]>
+      | JsonRpcError
   ): Promise<void>;
 }

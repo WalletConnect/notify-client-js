@@ -32,8 +32,8 @@ import axios from "axios";
 import {
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
-  PUSH_REQUEST_EXPIRY,
-  PUSH_SUBSCRIPTION_EXPIRY,
+  NOTIFY_REQUEST_EXPIRY,
+  NOTIFY_SUBSCRIPTION_EXPIRY,
   SDK_ERRORS,
 } from "../constants";
 import {
@@ -107,7 +107,7 @@ export class PushEngine extends IPushEngine {
     const dappPublicKey = Buffer.from(base64Jwk, "base64").toString("hex");
 
     this.client.logger.info(
-      `[Push] subscribe > publicKey for ${metadata.url} is: ${dappPublicKey}`
+      `[Notify] subscribe > publicKey for ${metadata.url} is: ${dappPublicKey}`
     );
 
     // SPEC: Wallet derives subscribe topic, which is the sha256 hash of public key X
@@ -146,7 +146,7 @@ export class PushEngine extends IPushEngine {
     };
 
     this.client.logger.info(
-      `[Push] subscribe > generating subscriptionAuth JWT for payload: ${JSON.stringify(
+      `[Notify] subscribe > generating subscriptionAuth JWT for payload: ${JSON.stringify(
         payload
       )}`
     );
@@ -157,24 +157,24 @@ export class PushEngine extends IPushEngine {
     );
 
     this.client.logger.info(
-      `[Push] subscribe > generated subscriptionAuth JWT: ${subscriptionAuth}`
+      `[Notify] subscribe > generated subscriptionAuth JWT: ${subscriptionAuth}`
     );
 
     // SPEC: Wallet subscribes to response topic
     await this.client.core.relayer.subscribe(responseTopic);
 
     this.client.logger.info(
-      `[Push] subscribe > subscribed to responseTopic ${responseTopic}`
+      `[Notify] subscribe > subscribed to responseTopic ${responseTopic}`
     );
 
     this.client.logger.info(
-      `[Push] subscribe > sending wc_pushSubscribe request on topic ${subscribeTopic}...`
+      `[Notify] subscribe > sending wc_notifySubscribe request on topic ${subscribeTopic}...`
     );
 
-    // SPEC: Wallet sends wc_pushSubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
-    const id = await this.sendRequest<"wc_pushSubscribe">(
+    // SPEC: Wallet sends wc_notifySubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
+    const id = await this.sendRequest<"wc_notifySubscribe">(
       subscribeTopic,
-      "wc_pushSubscribe",
+      "wc_notifySubscribe",
       {
         subscriptionAuth,
       },
@@ -187,7 +187,7 @@ export class PushEngine extends IPushEngine {
 
     this.client.logger.info({
       action: "sendRequest",
-      method: "wc_pushSubscribe",
+      method: "wc_notifySubscribe",
       id,
       topic: subscribeTopic,
       subscriptionAuth,
@@ -212,7 +212,7 @@ export class PushEngine extends IPushEngine {
     });
 
     // Set the expiry for the push subscription request.
-    this.client.core.expirer.set(id, calcExpiry(PUSH_REQUEST_EXPIRY));
+    this.client.core.expirer.set(id, calcExpiry(NOTIFY_REQUEST_EXPIRY));
 
     return { id, subscriptionAuth };
   };
@@ -221,7 +221,7 @@ export class PushEngine extends IPushEngine {
     this.isInitialized();
 
     this.client.logger.info(
-      `[Push] update > updating push subscription for topic ${topic} with new scope: ${JSON.stringify(
+      `[Notify] update > updating push subscription for topic ${topic} with new scope: ${JSON.stringify(
         scope
       )}`
     );
@@ -255,7 +255,7 @@ export class PushEngine extends IPushEngine {
     };
 
     this.client.logger.info(
-      `[Push] update > generating subscriptionAuth JWT for payload: ${JSON.stringify(
+      `[Notify] update > generating subscriptionAuth JWT for payload: ${JSON.stringify(
         payload
       )}`
     );
@@ -266,16 +266,16 @@ export class PushEngine extends IPushEngine {
     );
 
     this.client.logger.info(
-      `[Push] update > generated subscriptionAuth JWT: ${subscriptionAuth}`
+      `[Notify] update > generated subscriptionAuth JWT: ${subscriptionAuth}`
     );
 
-    const id = await this.sendRequest(topic, "wc_pushUpdate", {
+    const id = await this.sendRequest(topic, "wc_notifyUpdate", {
       subscriptionAuth,
     });
 
     this.client.logger.info({
       action: "sendRequest",
-      method: "wc_pushUpdate",
+      method: "wc_notifyUpdate",
       id,
       topic,
       subscriptionAuth,
@@ -303,7 +303,7 @@ export class PushEngine extends IPushEngine {
 
     try {
       const payload: JsonRpcPayload<
-        JsonRpcTypes.RequestParams["wc_pushMessage"]
+        JsonRpcTypes.RequestParams["wc_notifyMessage"]
       > = await this.client.core.crypto.decode(topic, encryptedMessage);
 
       if (!("params" in payload)) {
@@ -336,13 +336,13 @@ export class PushEngine extends IPushEngine {
 
     await this.sendRequest(
       topic,
-      "wc_pushDelete",
+      "wc_notifyDelete",
       SDK_ERRORS["USER_UNSUBSCRIBED"]
     );
     await this.cleanupSubscription(topic);
 
     this.client.logger.info(
-      `[Push] Engine.delete > deleted push subscription on topic ${topic}`
+      `[Notify] Engine.delete > deleted push subscription on topic ${topic}`
     );
   };
 
@@ -485,17 +485,17 @@ export class PushEngine extends IPushEngine {
     const reqMethod = payload.method as JsonRpcTypes.WcMethod;
 
     switch (reqMethod) {
-      case "wc_pushMessage":
-        // `wc_pushMessage` requests being broadcast to all subscribers
+      case "wc_notifyMessage":
+        // `wc_notifyMessage` requests being broadcast to all subscribers
         // by Cast server should only be handled by the wallet client.
         return this.client instanceof IWalletClient
           ? this.onPushMessageRequest(topic, payload, publishedAt)
           : null;
-      case "wc_pushDelete":
+      case "wc_notifyDelete":
         return this.onPushDeleteRequest(topic, payload);
       default:
         return this.client.logger.info(
-          `[Push] Unsupported request method ${reqMethod}`
+          `[Notify] Unsupported request method ${reqMethod}`
         );
     }
   };
@@ -508,17 +508,17 @@ export class PushEngine extends IPushEngine {
     const resMethod = record.request.method as JsonRpcTypes.WcMethod;
 
     switch (resMethod) {
-      case "wc_pushSubscribe":
+      case "wc_notifySubscribe":
         return this.onPushSubscribeResponse(topic, payload);
-      case "wc_pushMessage":
+      case "wc_notifyMessage":
         return this.onPushMessageResponse(topic, payload);
-      case "wc_pushDelete":
+      case "wc_notifyDelete":
         return;
-      case "wc_pushUpdate":
+      case "wc_notifyUpdate":
         return this.onPushUpdateResponse(topic, payload);
       default:
         return this.client.logger.info(
-          `[Push] Unsupported response method ${resMethod}`
+          `[Notify] Unsupported response method ${resMethod}`
         );
     }
   };
@@ -560,7 +560,7 @@ export class PushEngine extends IPushEngine {
           relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
           metadata: request.metadata,
           scope: request.scope,
-          expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
+          expiry: calcExpiry(NOTIFY_SUBSCRIPTION_EXPIRY),
           symKey: this.client.core.crypto.keychain.get(pushTopic),
         };
 
@@ -608,7 +608,7 @@ export class PushEngine extends IPushEngine {
     publishedAt
   ) => {
     this.client.logger.info(
-      "[Push] Engine.onPushMessageRequest",
+      "[Notify] Engine.onPushMessageRequest",
       topic,
       payload
     );
@@ -627,8 +627,8 @@ export class PushEngine extends IPushEngine {
         },
       },
     });
-    await this.sendResult<"wc_pushMessage">(payload.id, topic, true);
-    this.client.emit("push_message", {
+    await this.sendResult<"wc_notifyMessage">(payload.id, topic, true);
+    this.client.emit("notify_message", {
       id: payload.id,
       topic,
       params: { message: payload.params },
@@ -639,13 +639,13 @@ export class PushEngine extends IPushEngine {
     async (topic, payload) => {
       if (isJsonRpcResult(payload)) {
         this.client.logger.info(
-          "[Push] Engine.onPushMessageResponse > result:",
+          "[Notify] Engine.onPushMessageResponse > result:",
           topic,
           payload
         );
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error(
-          "[Push] Engine.onPushMessageResponse > error:",
+          "[Notify] Engine.onPushMessageResponse > error:",
           topic,
           payload.error
         );
@@ -658,14 +658,14 @@ export class PushEngine extends IPushEngine {
   ) => {
     const { id } = payload;
     this.client.logger.info(
-      "[Push] Engine.onPushDeleteRequest",
+      "[Notify] Engine.onPushDeleteRequest",
       topic,
       payload
     );
     try {
-      await this.sendResult<"wc_pushDelete">(id, topic, true);
+      await this.sendResult<"wc_notifyDelete">(id, topic, true);
       await this.cleanupSubscription(topic);
-      this.client.events.emit("push_delete", { id, topic });
+      this.client.events.emit("notify_delete", { id, topic });
     } catch (err: any) {
       this.client.logger.error(err);
       await this.sendError(id, topic, err);
@@ -712,12 +712,12 @@ export class PushEngine extends IPushEngine {
       const updatedSubscription: PushClientTypes.PushSubscription = {
         ...existingSubscription,
         scope: updatedScope,
-        expiry: calcExpiry(PUSH_SUBSCRIPTION_EXPIRY),
+        expiry: calcExpiry(NOTIFY_SUBSCRIPTION_EXPIRY),
       };
 
       await this.client.subscriptions.set(topic, updatedSubscription);
 
-      this.client.events.emit("push_update", {
+      this.client.events.emit("notify_update", {
         id,
         topic,
         params: {
@@ -730,7 +730,7 @@ export class PushEngine extends IPushEngine {
         topic,
         error: payload.error,
       });
-      this.client.emit("push_update", {
+      this.client.emit("notify_update", {
         id: payload.id,
         topic,
         params: {
@@ -747,7 +747,7 @@ export class PushEngine extends IPushEngine {
       EXPIRER_EVENTS.expired,
       async (event: ExpirerTypes.Expiration) => {
         this.client.logger.info(
-          `[Push] EXPIRER_EVENTS.expired > target: ${event.target}, expiry: ${event.expiry}`
+          `[Notify] EXPIRER_EVENTS.expired > target: ${event.target}, expiry: ${event.expiry}`
         );
 
         const { id } = parseExpirerTarget(event.target);
@@ -828,7 +828,7 @@ export class PushEngine extends IPushEngine {
       const pushConfig = pushConfigResp.data;
 
       this.client.logger.info(
-        `[Push] subscribe > got push config: ${JSON.stringify(pushConfig)}`
+        `[Notify] subscribe > got push config: ${JSON.stringify(pushConfig)}`
       );
       return pushConfig;
     } catch (error: any) {

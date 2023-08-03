@@ -9,9 +9,9 @@ import { ISyncClient, SyncStore } from "@walletconnect/sync-client";
 export declare namespace PushClientTypes {
   type Event =
     | "notify_subscription"
-    | "push_message"
-    | "push_delete"
-    | "push_update";
+    | "notify_message"
+    | "notify_delete"
+    | "notify_update";
 
   type PushResponseEventArgs = {
     error?: ErrorResponse;
@@ -30,9 +30,9 @@ export declare namespace PushClientTypes {
 
   interface EventArguments {
     notify_subscription: BaseEventArgs<PushResponseEventArgs>;
-    push_message: BaseEventArgs<PushMessageRequestEventArgs>;
-    push_delete: BaseEventArgs<PushDeleteRequestEventArgs>;
-    push_update: BaseEventArgs<PushResponseEventArgs>;
+    notify_message: BaseEventArgs<PushMessageRequestEventArgs>;
+    notify_delete: BaseEventArgs<PushDeleteRequestEventArgs>;
+    notify_update: BaseEventArgs<PushResponseEventArgs>;
   }
 
   interface WalletClientOptions extends CoreTypes.Options {
