@@ -37,21 +37,21 @@ import {
   SDK_ERRORS,
 } from "../constants";
 import {
-  IPushEngine,
+  INotifyEngine,
   IWalletClient,
   JsonRpcTypes,
-  PushClientTypes,
+  NotifyClientTypes,
 } from "../types";
 
-export class PushEngine extends IPushEngine {
-  public name = "pushEngine";
+export class NotifyEngine extends INotifyEngine {
+  public name = "notifyEngine";
   private initialized = false;
 
-  constructor(client: IPushEngine["client"]) {
+  constructor(client: INotifyEngine["client"]) {
     super(client);
   }
 
-  public init: IPushEngine["init"] = () => {
+  public init: INotifyEngine["init"] = () => {
     if (!this.initialized) {
       this.registerRelayerEvents();
       this.registerExpirerEvents();
@@ -65,7 +65,7 @@ export class PushEngine extends IPushEngine {
 
   // ---------- Public --------------------------------------- //
 
-  public enableSync: IPushEngine["enableSync"] = async ({
+  public enableSync: INotifyEngine["enableSync"] = async ({
     account,
     onSign,
   }) => {
@@ -76,14 +76,14 @@ export class PushEngine extends IPushEngine {
     await (this.client as IWalletClient).initSyncStores({ account, signature });
   };
 
-  public subscribe: IPushEngine["subscribe"] = async ({
+  public subscribe: INotifyEngine["subscribe"] = async ({
     metadata,
     account,
     onSign,
   }) => {
     this.isInitialized();
 
-    let didDoc: PushClientTypes.PushDidDocument;
+    let didDoc: NotifyClientTypes.PushDidDocument;
 
     try {
       // Fetch dapp's public key from its hosted DID doc.
@@ -217,7 +217,7 @@ export class PushEngine extends IPushEngine {
     return { id, subscriptionAuth };
   };
 
-  public update: IPushEngine["update"] = async ({ topic, scope }) => {
+  public update: INotifyEngine["update"] = async ({ topic, scope }) => {
     this.isInitialized();
 
     this.client.logger.info(
@@ -226,7 +226,7 @@ export class PushEngine extends IPushEngine {
       )}`
     );
 
-    let subscription: PushClientTypes.PushSubscription;
+    let subscription: NotifyClientTypes.PushSubscription;
 
     // Retrieves the known subscription for the given topic or throws if no subscription is found.
     try {
@@ -295,7 +295,7 @@ export class PushEngine extends IPushEngine {
     return true;
   };
 
-  public decryptMessage: IPushEngine["decryptMessage"] = async ({
+  public decryptMessage: INotifyEngine["decryptMessage"] = async ({
     topic,
     encryptedMessage,
   }) => {
@@ -323,13 +323,15 @@ export class PushEngine extends IPushEngine {
     }
   };
 
-  public getMessageHistory: IPushEngine["getMessageHistory"] = ({ topic }) => {
+  public getMessageHistory: INotifyEngine["getMessageHistory"] = ({
+    topic,
+  }) => {
     this.isInitialized();
 
     return (this.client as IWalletClient).messages.get(topic).messages;
   };
 
-  public deleteSubscription: IPushEngine["deleteSubscription"] = async ({
+  public deleteSubscription: INotifyEngine["deleteSubscription"] = async ({
     topic,
   }) => {
     this.isInitialized();
@@ -346,7 +348,9 @@ export class PushEngine extends IPushEngine {
     );
   };
 
-  public deleteNotifyMessage: IPushEngine["deleteNotifyMessage"] = ({ id }) => {
+  public deleteNotifyMessage: INotifyEngine["deleteNotifyMessage"] = ({
+    id,
+  }) => {
     this.isInitialized();
 
     const targetRecord = (this.client as IWalletClient).messages
@@ -367,7 +371,7 @@ export class PushEngine extends IPushEngine {
     );
   };
 
-  public getActiveSubscriptions: IPushEngine["getActiveSubscriptions"] = (
+  public getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"] = (
     params
   ) => {
     this.isInitialized();
@@ -381,14 +385,14 @@ export class PushEngine extends IPushEngine {
 
   // ---------- Protected Helpers --------------------------------------- //
 
-  protected setExpiry: IPushEngine["setExpiry"] = async (topic, expiry) => {
+  protected setExpiry: INotifyEngine["setExpiry"] = async (topic, expiry) => {
     if (this.client.core.pairing.pairings.keys.includes(topic)) {
       await this.client.core.pairing.updateExpiry({ topic, expiry });
     }
     this.client.core.expirer.set(topic, expiry);
   };
 
-  protected sendRequest: IPushEngine["sendRequest"] = async (
+  protected sendRequest: INotifyEngine["sendRequest"] = async (
     topic,
     method,
     params,
@@ -407,7 +411,7 @@ export class PushEngine extends IPushEngine {
     return payload.id;
   };
 
-  protected sendResult: IPushEngine["sendResult"] = async (
+  protected sendResult: INotifyEngine["sendResult"] = async (
     id,
     topic,
     result,
@@ -428,7 +432,7 @@ export class PushEngine extends IPushEngine {
     return payload.id;
   };
 
-  protected sendError: IPushEngine["sendError"] = async (
+  protected sendError: INotifyEngine["sendError"] = async (
     id,
     topic,
     params,
@@ -478,7 +482,7 @@ export class PushEngine extends IPushEngine {
     );
   }
 
-  protected onRelayEventRequest: IPushEngine["onRelayEventRequest"] = (
+  protected onRelayEventRequest: INotifyEngine["onRelayEventRequest"] = (
     event
   ) => {
     const { topic, payload, publishedAt } = event;
@@ -500,32 +504,31 @@ export class PushEngine extends IPushEngine {
     }
   };
 
-  protected onRelayEventResponse: IPushEngine["onRelayEventResponse"] = async (
-    event
-  ) => {
-    const { topic, payload } = event;
-    const record = await this.client.core.history.get(topic, payload.id);
-    const resMethod = record.request.method as JsonRpcTypes.WcMethod;
+  protected onRelayEventResponse: INotifyEngine["onRelayEventResponse"] =
+    async (event) => {
+      const { topic, payload } = event;
+      const record = await this.client.core.history.get(topic, payload.id);
+      const resMethod = record.request.method as JsonRpcTypes.WcMethod;
 
-    switch (resMethod) {
-      case "wc_notifySubscribe":
-        return this.onPushSubscribeResponse(topic, payload);
-      case "wc_notifyMessage":
-        return this.onPushMessageResponse(topic, payload);
-      case "wc_notifyDelete":
-        return;
-      case "wc_notifyUpdate":
-        return this.onPushUpdateResponse(topic, payload);
-      default:
-        return this.client.logger.info(
-          `[Notify] Unsupported response method ${resMethod}`
-        );
-    }
-  };
+      switch (resMethod) {
+        case "wc_notifySubscribe":
+          return this.onPushSubscribeResponse(topic, payload);
+        case "wc_notifyMessage":
+          return this.onPushMessageResponse(topic, payload);
+        case "wc_notifyDelete":
+          return;
+        case "wc_notifyUpdate":
+          return this.onPushUpdateResponse(topic, payload);
+        default:
+          return this.client.logger.info(
+            `[Notify] Unsupported response method ${resMethod}`
+          );
+      }
+    };
 
   // ---------- Relay Event Handlers --------------------------------- //
 
-  protected onPushSubscribeResponse: IPushEngine["onPushSubscribeResponse"] =
+  protected onPushSubscribeResponse: INotifyEngine["onPushSubscribeResponse"] =
     async (responseTopic, response) => {
       this.client.logger.info(
         `onPushSubscribeResponse on response topic ${responseTopic}`
@@ -602,40 +605,37 @@ export class PushEngine extends IPushEngine {
       this.cleanupRequest(response.id);
     };
 
-  protected onPushMessageRequest: IPushEngine["onPushMessageRequest"] = async (
-    topic,
-    payload,
-    publishedAt
-  ) => {
-    this.client.logger.info(
-      "[Notify] Engine.onPushMessageRequest",
-      topic,
-      payload
-    );
+  protected onPushMessageRequest: INotifyEngine["onPushMessageRequest"] =
+    async (topic, payload, publishedAt) => {
+      this.client.logger.info(
+        "[Notify] Engine.onPushMessageRequest",
+        topic,
+        payload
+      );
 
-    const currentMessages = (this.client as IWalletClient).messages.get(
-      topic
-    ).messages;
-    await (this.client as IWalletClient).messages.update(topic, {
-      messages: {
-        ...currentMessages,
-        [payload.id]: {
-          id: payload.id,
-          topic,
-          message: payload.params,
-          publishedAt,
+      const currentMessages = (this.client as IWalletClient).messages.get(
+        topic
+      ).messages;
+      await (this.client as IWalletClient).messages.update(topic, {
+        messages: {
+          ...currentMessages,
+          [payload.id]: {
+            id: payload.id,
+            topic,
+            message: payload.params,
+            publishedAt,
+          },
         },
-      },
-    });
-    await this.sendResult<"wc_notifyMessage">(payload.id, topic, true);
-    this.client.emit("notify_message", {
-      id: payload.id,
-      topic,
-      params: { message: payload.params },
-    });
-  };
+      });
+      await this.sendResult<"wc_notifyMessage">(payload.id, topic, true);
+      this.client.emit("notify_message", {
+        id: payload.id,
+        topic,
+        params: { message: payload.params },
+      });
+    };
 
-  protected onPushMessageResponse: IPushEngine["onPushMessageResponse"] =
+  protected onPushMessageResponse: INotifyEngine["onPushMessageResponse"] =
     async (topic, payload) => {
       if (isJsonRpcResult(payload)) {
         this.client.logger.info(
@@ -652,7 +652,7 @@ export class PushEngine extends IPushEngine {
       }
     };
 
-  protected onPushDeleteRequest: IPushEngine["onPushDeleteRequest"] = async (
+  protected onPushDeleteRequest: INotifyEngine["onPushDeleteRequest"] = async (
     topic,
     payload
   ) => {
@@ -672,73 +672,71 @@ export class PushEngine extends IPushEngine {
     }
   };
 
-  protected onPushUpdateResponse: IPushEngine["onPushUpdateResponse"] = async (
-    topic,
-    payload
-  ) => {
-    if (isJsonRpcResult(payload)) {
-      this.client.logger.info({
-        event: "onPushUpdateResponse",
-        topic,
-        result: payload,
-      });
+  protected onPushUpdateResponse: INotifyEngine["onPushUpdateResponse"] =
+    async (topic, payload) => {
+      if (isJsonRpcResult(payload)) {
+        this.client.logger.info({
+          event: "onPushUpdateResponse",
+          topic,
+          result: payload,
+        });
 
-      const { id } = payload;
+        const { id } = payload;
 
-      const { request } = (this.client as IWalletClient).requests.get(id);
-      const existingSubscription = this.client.subscriptions.get(topic);
+        const { request } = (this.client as IWalletClient).requests.get(id);
+        const existingSubscription = this.client.subscriptions.get(topic);
 
-      if (!request.scopeUpdate) {
-        throw new Error(
-          `No scope update found in request for push update: ${JSON.stringify(
-            request
-          )}`
+        if (!request.scopeUpdate) {
+          throw new Error(
+            `No scope update found in request for push update: ${JSON.stringify(
+              request
+            )}`
+          );
+        }
+
+        const updatedScope = Object.entries(existingSubscription.scope).reduce(
+          (map, [scope, setting]) => {
+            map[scope] = setting;
+            if (request.scopeUpdate?.includes(scope)) {
+              map[scope].enabled = true;
+            } else {
+              map[scope].enabled = false;
+            }
+            return map;
+          },
+          {} as NotifyClientTypes.PushSubscription["scope"]
         );
-      }
 
-      const updatedScope = Object.entries(existingSubscription.scope).reduce(
-        (map, [scope, setting]) => {
-          map[scope] = setting;
-          if (request.scopeUpdate?.includes(scope)) {
-            map[scope].enabled = true;
-          } else {
-            map[scope].enabled = false;
-          }
-          return map;
-        },
-        {} as PushClientTypes.PushSubscription["scope"]
-      );
+        const updatedSubscription: NotifyClientTypes.PushSubscription = {
+          ...existingSubscription,
+          scope: updatedScope,
+          expiry: calcExpiry(NOTIFY_SUBSCRIPTION_EXPIRY),
+        };
 
-      const updatedSubscription: PushClientTypes.PushSubscription = {
-        ...existingSubscription,
-        scope: updatedScope,
-        expiry: calcExpiry(NOTIFY_SUBSCRIPTION_EXPIRY),
-      };
+        await this.client.subscriptions.set(topic, updatedSubscription);
 
-      await this.client.subscriptions.set(topic, updatedSubscription);
-
-      this.client.events.emit("notify_update", {
-        id,
-        topic,
-        params: {
-          subscription: updatedSubscription,
-        },
-      });
-    } else if (isJsonRpcError(payload)) {
-      this.client.logger.error({
-        event: "onPushUpdateResponse",
-        topic,
-        error: payload.error,
-      });
-      this.client.emit("notify_update", {
-        id: payload.id,
-        topic,
-        params: {
+        this.client.events.emit("notify_update", {
+          id,
+          topic,
+          params: {
+            subscription: updatedSubscription,
+          },
+        });
+      } else if (isJsonRpcError(payload)) {
+        this.client.logger.error({
+          event: "onPushUpdateResponse",
+          topic,
           error: payload.error,
-        },
-      });
-    }
-  };
+        });
+        this.client.emit("notify_update", {
+          id: payload.id,
+          topic,
+          params: {
+            error: payload.error,
+          },
+        });
+      }
+    };
 
   // ---------- Expirer Events ---------------------------------------- //
 
@@ -819,7 +817,7 @@ export class PushEngine extends IPushEngine {
 
   private resolvePushConfig = async (
     dappUrl: string
-  ): Promise<PushClientTypes.PushConfigDocument> => {
+  ): Promise<NotifyClientTypes.PushConfigDocument> => {
     try {
       // Fetch dapp's Push config from its hosted wc-notify-config.
       const pushConfigResp = await axios.get(
@@ -839,9 +837,9 @@ export class PushEngine extends IPushEngine {
   };
 
   private generateScopeMapFromConfig = (
-    typesConfig: PushClientTypes.PushConfigDocument["types"],
+    typesConfig: NotifyClientTypes.PushConfigDocument["types"],
     selected?: string[]
-  ): PushClientTypes.ScopeMap => {
+  ): NotifyClientTypes.ScopeMap => {
     return typesConfig.reduce((map, type) => {
       map[type.name] = {
         description: type.description,

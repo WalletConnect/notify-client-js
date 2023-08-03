@@ -1,7 +1,7 @@
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import { expect, describe, it, beforeEach, afterEach } from "vitest";
 import cloneDeep from "lodash.clonedeep";
-import { WalletClient, IWalletClient, PushClientTypes } from "../src/";
+import { WalletClient, IWalletClient, NotifyClientTypes } from "../src/";
 import { disconnectSocket } from "./helpers/ws";
 import { gmDappMetadata } from "./helpers/mocks";
 import { createPushSubscription, sendPushMessage } from "./helpers/push";
@@ -108,7 +108,7 @@ describe("Notify", () => {
     describe("update", () => {
       it("can update an existing push subscription with a new scope", async () => {
         let gotPushSubscriptionResponse = false;
-        let initialPushSubscription = {} as PushClientTypes.PushSubscription;
+        let initialPushSubscription = {} as NotifyClientTypes.PushSubscription;
 
         wallet.once("notify_subscription", (event) => {
           gotPushSubscriptionResponse = true;

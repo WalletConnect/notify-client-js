@@ -15,8 +15,8 @@ import {
   NOTIFY_CLIENT_VERSION,
   NOTIFY_WALLET_CLIENT_DEFAULT_NAME,
 } from "./constants";
-import { PushEngine } from "./controllers";
-import { IWalletClient, PushClientTypes } from "./types";
+import { NotifyEngine } from "./controllers";
+import { IWalletClient, NotifyClientTypes } from "./types";
 import { HistoryClient } from "@walletconnect/history";
 import { fetchAndInjectHistory } from "./utils/history";
 
@@ -41,14 +41,14 @@ export class WalletClient extends IWalletClient {
   public syncClient: IWalletClient["syncClient"];
   public SyncStoreController: IWalletClient["SyncStoreController"];
 
-  static async init(opts: PushClientTypes.WalletClientOptions) {
+  static async init(opts: NotifyClientTypes.WalletClientOptions) {
     const client = new WalletClient(opts);
     await client.initialize();
 
     return client;
   }
 
-  constructor(opts: PushClientTypes.WalletClientOptions) {
+  constructor(opts: NotifyClientTypes.WalletClientOptions) {
     super(opts);
 
     this.name = opts.name || NOTIFY_WALLET_CLIENT_DEFAULT_NAME;
@@ -90,7 +90,7 @@ export class WalletClient extends IWalletClient {
       NOTIFY_CLIENT_STORAGE_PREFIX
     );
     this.identityKeys = new IdentityKeys(this.core);
-    this.engine = new PushEngine(this);
+    this.engine = new NotifyEngine(this);
   }
 
   get context() {

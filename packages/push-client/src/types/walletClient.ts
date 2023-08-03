@@ -1,7 +1,7 @@
 import { IdentityKeys } from "@walletconnect/identity-keys";
 import { IStore } from "@walletconnect/types";
-import { IBaseClient, PushClientTypes } from "./baseClient";
-import { IPushEngine } from "./engine";
+import { IBaseClient, NotifyClientTypes } from "./baseClient";
+import { INotifyEngine } from "./engine";
 import { ISyncClient, SyncStore } from "@walletconnect/sync-client";
 import { HistoryClient } from "@walletconnect/history";
 
@@ -23,30 +23,30 @@ export abstract class IWalletClient extends IBaseClient {
     number,
     {
       topic: string;
-      request: PushClientTypes.PushSubscriptionRequest;
+      request: NotifyClientTypes.PushSubscriptionRequest;
     }
   >;
   public abstract messages: IStore<
     string,
     {
       topic: string;
-      messages: Record<number, PushClientTypes.PushMessageRecord>;
+      messages: Record<number, NotifyClientTypes.PushMessageRecord>;
     }
   >;
   public abstract identityKeys: IdentityKeys;
 
-  constructor(public opts: PushClientTypes.WalletClientOptions) {
+  constructor(public opts: NotifyClientTypes.WalletClientOptions) {
     super();
   }
 
   // ---------- Public Methods (wallet) ----------------------------------------------- //
 
-  public abstract enableSync: IPushEngine["enableSync"];
-  public abstract subscribe: IPushEngine["subscribe"];
-  public abstract update: IPushEngine["update"];
-  public abstract decryptMessage: IPushEngine["decryptMessage"];
-  public abstract getMessageHistory: IPushEngine["getMessageHistory"];
-  public abstract deleteNotifyMessage: IPushEngine["deleteNotifyMessage"];
+  public abstract enableSync: INotifyEngine["enableSync"];
+  public abstract subscribe: INotifyEngine["subscribe"];
+  public abstract update: INotifyEngine["update"];
+  public abstract decryptMessage: INotifyEngine["decryptMessage"];
+  public abstract getMessageHistory: INotifyEngine["getMessageHistory"];
+  public abstract deleteNotifyMessage: INotifyEngine["deleteNotifyMessage"];
 
   // ---------- Helpers  ------------------------------------------------------------ //
   public abstract initSyncStores: (params: {

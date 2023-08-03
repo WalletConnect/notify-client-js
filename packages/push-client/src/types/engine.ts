@@ -8,7 +8,7 @@ import {
   JsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
 import { JsonRpcTypes } from "./jsonrpc";
-import { PushClientTypes } from "./baseClient";
+import { NotifyClientTypes } from "./baseClient";
 import { IWalletClient } from "./walletClient";
 
 export interface RpcOpts {
@@ -16,7 +16,7 @@ export interface RpcOpts {
   res: RelayerTypes.PublishOptions;
 }
 
-export declare namespace PushEngineTypes {
+export declare namespace NotifyEngineTypes {
   interface EventCallback<T extends JsonRpcRequest | JsonRpcResponse> {
     topic: string;
     payload: T;
@@ -24,7 +24,7 @@ export declare namespace PushEngineTypes {
   }
 }
 
-export abstract class IPushEngine {
+export abstract class INotifyEngine {
   constructor(public client: IWalletClient) {}
 
   public abstract init(): void;
@@ -37,7 +37,7 @@ export abstract class IPushEngine {
   }): Promise<void>;
 
   public abstract subscribe(params: {
-    metadata: PushClientTypes.Metadata;
+    metadata: NotifyClientTypes.Metadata;
     account: string;
     onSign: (message: string) => Promise<string>;
   }): Promise<{ id: number; subscriptionAuth: string }>;
@@ -51,12 +51,12 @@ export abstract class IPushEngine {
   public abstract decryptMessage(params: {
     topic: string;
     encryptedMessage: string;
-  }): Promise<PushClientTypes.PushMessage>;
+  }): Promise<NotifyClientTypes.PushMessage>;
 
   // get all messages for a subscription
   public abstract getMessageHistory(params: {
     topic: string;
-  }): Record<number, PushClientTypes.PushMessageRecord>;
+  }): Record<number, NotifyClientTypes.PushMessageRecord>;
 
   // delete active subscription
   public abstract deleteSubscription(params: { topic: string }): Promise<void>;
@@ -68,7 +68,7 @@ export abstract class IPushEngine {
   // query all active subscriptions
   public abstract getActiveSubscriptions(params?: {
     account: string;
-  }): Record<string, PushClientTypes.PushSubscription>;
+  }): Record<string, NotifyClientTypes.PushSubscription>;
 
   // ---------- Protected Helpers --------------------------------------- //
 
@@ -98,11 +98,11 @@ export abstract class IPushEngine {
   // ---------- Protected Relay Event Methods ----------------------------------- //
 
   protected abstract onRelayEventRequest(
-    event: PushEngineTypes.EventCallback<JsonRpcRequest>
+    event: NotifyEngineTypes.EventCallback<JsonRpcRequest>
   ): void;
 
   protected abstract onRelayEventResponse(
-    event: PushEngineTypes.EventCallback<JsonRpcResponse>
+    event: NotifyEngineTypes.EventCallback<JsonRpcResponse>
   ): Promise<void>;
 
   // ---------- Protected Relay Event Handlers --------------------------------- //

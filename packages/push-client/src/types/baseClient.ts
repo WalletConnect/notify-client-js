@@ -3,10 +3,10 @@ import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
 import EventEmitter from "events";
 import { Logger } from "pino";
 
-import { IPushEngine } from "./engine";
+import { INotifyEngine } from "./engine";
 import { ISyncClient, SyncStore } from "@walletconnect/sync-client";
 
-export declare namespace PushClientTypes {
+export declare namespace NotifyClientTypes {
   type Event =
     | "notify_subscription"
     | "notify_message"
@@ -15,10 +15,10 @@ export declare namespace PushClientTypes {
 
   type PushResponseEventArgs = {
     error?: ErrorResponse;
-    subscription?: PushClientTypes.PushSubscription;
+    subscription?: NotifyClientTypes.PushSubscription;
   };
 
-  type PushMessageRequestEventArgs = { message: PushClientTypes.PushMessage };
+  type PushMessageRequestEventArgs = { message: NotifyClientTypes.PushMessage };
 
   type PushDeleteRequestEventArgs = { id: number; topic: string };
 
@@ -122,43 +122,43 @@ export abstract class IBaseClient {
   public abstract core: ICore;
   public abstract events: EventEmitter;
   public abstract logger: Logger;
-  public abstract engine: IPushEngine;
+  public abstract engine: INotifyEngine;
 
   public abstract subscriptions: IStore<
     string,
-    PushClientTypes.PushSubscription
+    NotifyClientTypes.PushSubscription
   >;
 
   // ---------- Public Methods (common) ----------------------------------------------- //
 
-  public abstract getActiveSubscriptions: IPushEngine["getActiveSubscriptions"];
+  public abstract getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"];
 
-  public abstract deleteSubscription: IPushEngine["deleteSubscription"];
+  public abstract deleteSubscription: INotifyEngine["deleteSubscription"];
 
   // ---------- Event Handlers ------------------------------------------------------- //
 
-  public abstract emit: <E extends PushClientTypes.Event>(
+  public abstract emit: <E extends NotifyClientTypes.Event>(
     event: E,
-    args: PushClientTypes.EventArguments[E]
+    args: NotifyClientTypes.EventArguments[E]
   ) => boolean;
 
-  public abstract on: <E extends PushClientTypes.Event>(
+  public abstract on: <E extends NotifyClientTypes.Event>(
     event: E,
-    listener: (args: PushClientTypes.EventArguments[E]) => void
+    listener: (args: NotifyClientTypes.EventArguments[E]) => void
   ) => EventEmitter;
 
-  public abstract once: <E extends PushClientTypes.Event>(
+  public abstract once: <E extends NotifyClientTypes.Event>(
     event: E,
-    listener: (args: PushClientTypes.EventArguments[E]) => void
+    listener: (args: NotifyClientTypes.EventArguments[E]) => void
   ) => EventEmitter;
 
-  public abstract off: <E extends PushClientTypes.Event>(
+  public abstract off: <E extends NotifyClientTypes.Event>(
     event: E,
-    listener: (args: PushClientTypes.EventArguments[E]) => void
+    listener: (args: NotifyClientTypes.EventArguments[E]) => void
   ) => EventEmitter;
 
-  public abstract removeListener: <E extends PushClientTypes.Event>(
+  public abstract removeListener: <E extends NotifyClientTypes.Event>(
     event: E,
-    listener: (args: PushClientTypes.EventArguments[E]) => void
+    listener: (args: NotifyClientTypes.EventArguments[E]) => void
   ) => EventEmitter;
 }
