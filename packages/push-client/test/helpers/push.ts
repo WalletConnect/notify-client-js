@@ -3,6 +3,9 @@ import { waitForEvent } from "../helpers/async";
 import axios from "axios";
 import { gmDappMetadata } from "./mocks";
 
+const NOTIFY_SERVER_URL =
+  process.env.NOTIFY_SERVER_URL || "https://notify.walletconnect.com";
+
 export const createPushSubscription = async (
   wallet: IWalletClient,
   account: string,
@@ -11,7 +14,7 @@ export const createPushSubscription = async (
   let gotPushSubscriptionResponse = false;
   let pushSubscriptionEvent: any;
 
-  wallet.once("push_subscription", (event) => {
+  wallet.once("notify_subscription", (event) => {
     gotPushSubscriptionResponse = true;
     pushSubscriptionEvent = event;
   });
@@ -42,7 +45,7 @@ export const sendPushMessage = async (
       "Cannot send push message. GM_PROJECT_SECRET env variable not set"
     );
   }
-  const url = ` https://cast.walletconnect.com/${process.env.GM_PROJECT_ID}/notify`;
+  const url = `${NOTIFY_SERVER_URL}/${process.env.GM_PROJECT_ID}/notify`;
 
   const body = {
     notification: {

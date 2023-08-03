@@ -8,7 +8,7 @@ import { ISyncClient, SyncStore } from "@walletconnect/sync-client";
 
 export declare namespace PushClientTypes {
   type Event =
-    | "push_subscription"
+    | "notify_subscription"
     | "push_message"
     | "push_delete"
     | "push_update";
@@ -29,7 +29,7 @@ export declare namespace PushClientTypes {
   }
 
   interface EventArguments {
-    push_subscription: BaseEventArgs<PushResponseEventArgs>;
+    notify_subscription: BaseEventArgs<PushResponseEventArgs>;
     push_message: BaseEventArgs<PushMessageRequestEventArgs>;
     push_delete: BaseEventArgs<PushDeleteRequestEventArgs>;
     push_update: BaseEventArgs<PushResponseEventArgs>;

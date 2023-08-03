@@ -142,7 +142,7 @@ export class PushEngine extends IPushEngine {
       aud: dappUrl,
       ksu: (this.client as IWalletClient).keyserverUrl,
       scp,
-      act: "push_subscription",
+      act: "notify_subscription",
     };
 
     this.client.logger.info(
@@ -251,7 +251,7 @@ export class PushEngine extends IPushEngine {
       aud: subscription.metadata.url,
       ksu: (this.client as IWalletClient).keyserverUrl,
       scp: scope.join(JWT_SCP_SEPARATOR),
-      act: "push_subscription",
+      act: "notify_subscription",
     };
 
     this.client.logger.info(
@@ -580,7 +580,7 @@ export class PushEngine extends IPushEngine {
         await this.client.core.relayer.unsubscribe(responseTopic);
 
         // Emit the PushSubscription at client level.
-        this.client.emit("push_subscription", {
+        this.client.emit("notify_subscription", {
           id: response.id,
           topic: pushTopic,
           params: {
@@ -589,7 +589,7 @@ export class PushEngine extends IPushEngine {
         });
       } else if (isJsonRpcError(response)) {
         // Emit the error response at client level.
-        this.client.emit("push_subscription", {
+        this.client.emit("notify_subscription", {
           id: response.id,
           topic: responseTopic,
           params: {

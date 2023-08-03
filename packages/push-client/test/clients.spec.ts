@@ -11,7 +11,6 @@ import { ISyncClient, SyncClient, SyncStore } from "@walletconnect/sync-client";
 import { Wallet as EthersWallet } from "@ethersproject/wallet";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
-const DEFAULT_CAST_URL = "https://cast.walletconnect.com";
 
 if (!process.env.TEST_PROJECT_ID) {
   throw new ReferenceError("TEST_PROJECT_ID env variable not set");
@@ -73,7 +72,7 @@ describe("Push", () => {
         let gotPushSubscriptionResponse = false;
         let pushSubscriptionEvent: any;
 
-        wallet.once("push_subscription", (event) => {
+        wallet.once("notify_subscription", (event) => {
           gotPushSubscriptionResponse = true;
           pushSubscriptionEvent = event;
         });
@@ -111,7 +110,7 @@ describe("Push", () => {
         let gotPushSubscriptionResponse = false;
         let initialPushSubscription = {} as PushClientTypes.PushSubscription;
 
-        wallet.once("push_subscription", (event) => {
+        wallet.once("notify_subscription", (event) => {
           gotPushSubscriptionResponse = true;
           initialPushSubscription = cloneDeep(event.params.subscription!);
         });
@@ -355,7 +354,7 @@ describe("Push", () => {
         });
 
         let gotPushSubscriptionResponse = false;
-        wallet1.once("push_subscription", () => {
+        wallet1.once("notify_subscription", () => {
           gotPushSubscriptionResponse = true;
         });
         await wallet1.subscribe({
