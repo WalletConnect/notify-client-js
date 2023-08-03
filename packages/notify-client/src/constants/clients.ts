@@ -1,7 +1,7 @@
 export const NOTIFY_CLIENT_PROTOCOL = "wc";
 export const NOTIFY_CLIENT_VERSION = 1;
 export const NOTIFY_CLIENT_CONTEXT = "notify";
-export const NOTIFY_WALLET_CLIENT_DEFAULT_NAME = "notifyWalletClient";
+export const NOTIFY_WALLET_CLIENT_DEFAULT_NAME = "notifyClient";
 
 export const NOTIFY_CLIENT_STORAGE_PREFIX = `${NOTIFY_CLIENT_PROTOCOL}@${NOTIFY_CLIENT_VERSION}:${NOTIFY_CLIENT_CONTEXT}:`;
 

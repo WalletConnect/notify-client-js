@@ -1,4 +1,4 @@
-import { IWalletClient } from "../../src";
+import { INotifyClient } from "../../src";
 import { waitForEvent } from "./async";
 import axios from "axios";
 import { gmDappMetadata } from "./mocks";
@@ -7,7 +7,7 @@ const NOTIFY_SERVER_URL =
   process.env.NOTIFY_SERVER_URL || "https://notify.walletconnect.com";
 
 export const createNotifySubscription = async (
-  wallet: IWalletClient,
+  wallet: INotifyClient,
   account: string,
   onSign: (message: string) => Promise<string>
 ) => {

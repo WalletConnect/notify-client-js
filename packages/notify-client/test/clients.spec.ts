@@ -1,7 +1,7 @@
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import { expect, describe, it, beforeEach, afterEach } from "vitest";
 import cloneDeep from "lodash.clonedeep";
-import { WalletClient, IWalletClient, NotifyClientTypes } from "../src/";
+import { NotifyClient, INotifyClient, NotifyClientTypes } from "../src/";
 import { disconnectSocket } from "./helpers/ws";
 import { gmDappMetadata } from "./helpers/mocks";
 import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
@@ -21,7 +21,7 @@ const hasGmSecret = typeof process.env.NOTIFY_GM_PROJECT_SECRET !== "undefined";
 const projectId = process.env.TEST_PROJECT_ID;
 
 describe("Notify", () => {
-  let wallet: IWalletClient;
+  let wallet: INotifyClient;
   let syncClient: ISyncClient;
   let ethersWallet: EthersWallet;
   let account: string;
@@ -37,8 +37,8 @@ describe("Notify", () => {
       projectId,
     });
 
-    wallet = await WalletClient.init({
-      name: "testWalletClient",
+    wallet = await NotifyClient.init({
+      name: "testNotifyClient",
       logger: "error",
       relayUrl: process.env.TEST_RELAY_URL || DEFAULT_RELAY_URL,
       core,
@@ -56,9 +56,9 @@ describe("Notify", () => {
     await disconnectSocket(wallet.core);
   });
 
-  describe("WalletClient", () => {
+  describe("NotifyClient", () => {
     it("can be instantiated", () => {
-      expect(wallet instanceof WalletClient).toBe(true);
+      expect(wallet instanceof NotifyClient).toBe(true);
       expect(wallet.core).toBeDefined();
       expect(wallet.events).toBeDefined();
       expect(wallet.logger).toBeDefined();
@@ -363,13 +363,13 @@ describe("Notify", () => {
           projectId,
         });
 
-        const wallet1 = await WalletClient.init({
+        const wallet1 = await NotifyClient.init({
           SyncStoreController: SyncStore,
           syncClient: sync1,
           core: core1,
           projectId,
         });
-        const wallet2 = await WalletClient.init({
+        const wallet2 = await NotifyClient.init({
           SyncStoreController: SyncStore,
           syncClient: sync2,
           core: core2,

@@ -2,9 +2,11 @@ import { ICore, CoreTypes, IStore, RelayerTypes } from "@walletconnect/types";
 import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
 import EventEmitter from "events";
 import { Logger } from "pino";
+import { HistoryClient } from "@walletconnect/history";
+import { IdentityKeys } from "@walletconnect/identity-keys";
+import { ISyncClient, SyncStore } from "@walletconnect/sync-client";
 
 import { INotifyEngine } from "./engine";
-import { ISyncClient, SyncStore } from "@walletconnect/sync-client";
 
 export declare namespace NotifyClientTypes {
   type Event =
@@ -37,7 +39,7 @@ export declare namespace NotifyClientTypes {
     notify_update: BaseEventArgs<NotifyResponseEventArgs>;
   }
 
-  interface WalletClientOptions extends CoreTypes.Options {
+  interface ClientOptions extends CoreTypes.Options {
     core?: ICore;
     keyserverUrl?: string;
     syncClient: ISyncClient;
@@ -128,26 +130,68 @@ export declare namespace NotifyClientTypes {
   }
 }
 
-export abstract class IBaseClient {
+export interface IdentityKeychain {
+  accountId: string;
+  identityKeyPub: string;
+  identityKeyPriv: string;
+}
+
+export abstract class INotifyClient {
   public abstract readonly protocol: string;
   public abstract readonly version: number;
   public abstract readonly name: string;
+  public abstract readonly keyserverUrl: string;
 
   public abstract core: ICore;
   public abstract events: EventEmitter;
   public abstract logger: Logger;
   public abstract engine: INotifyEngine;
 
+  public abstract historyClient: HistoryClient;
+
+  public abstract readonly syncClient: ISyncClient;
+  public abstract readonly SyncStoreController: typeof SyncStore;
+
+  public abstract requests: IStore<
+    number,
+    {
+      topic: string;
+      request: NotifyClientTypes.NotifySubscriptionRequest;
+    }
+  >;
+  public abstract messages: IStore<
+    string,
+    {
+      topic: string;
+      messages: Record<number, NotifyClientTypes.NotifyMessageRecord>;
+    }
+  >;
+  public abstract identityKeys: IdentityKeys;
+
   public abstract subscriptions: IStore<
     string,
     NotifyClientTypes.NotifySubscription
   >;
 
-  // ---------- Public Methods (common) ----------------------------------------------- //
+  constructor(public opts: NotifyClientTypes.ClientOptions) {}
 
+  // ---------- Public Methods ------------------------------------------------------- //
+
+  public abstract enableSync: INotifyEngine["enableSync"];
+  public abstract subscribe: INotifyEngine["subscribe"];
+  public abstract update: INotifyEngine["update"];
+  public abstract decryptMessage: INotifyEngine["decryptMessage"];
+  public abstract getMessageHistory: INotifyEngine["getMessageHistory"];
+  public abstract deleteNotifyMessage: INotifyEngine["deleteNotifyMessage"];
   public abstract getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"];
-
   public abstract deleteSubscription: INotifyEngine["deleteSubscription"];
+
+  // ---------- Helpers  ------------------------------------------------------------- //
+
+  public abstract initSyncStores: (params: {
+    account: string;
+    signature: string;
+  }) => Promise<void>;
 
   // ---------- Event Handlers ------------------------------------------------------- //
 

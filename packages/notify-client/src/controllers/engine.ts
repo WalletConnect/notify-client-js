@@ -37,12 +37,7 @@ import {
   NOTIFY_SUBSCRIPTION_EXPIRY,
   SDK_ERRORS,
 } from "../constants";
-import {
-  INotifyEngine,
-  IWalletClient,
-  JsonRpcTypes,
-  NotifyClientTypes,
-} from "../types";
+import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
 
 export class NotifyEngine extends INotifyEngine {
   public name = "notifyEngine";
@@ -70,11 +65,12 @@ export class NotifyEngine extends INotifyEngine {
     account,
     onSign,
   }) => {
-    const client = (this.client as IWalletClient).syncClient;
-    const signature = await onSign(await client.getMessage({ account }));
-    await client.register({ account, signature });
+    const signature = await onSign(
+      await this.client.syncClient.getMessage({ account })
+    );
+    await this.client.syncClient.register({ account, signature });
 
-    await (this.client as IWalletClient).initSyncStores({ account, signature });
+    await this.client.initSyncStores({ account, signature });
   };
 
   public subscribe: INotifyEngine["subscribe"] = async ({
@@ -124,9 +120,7 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     // SPEC: Generate a subscriptionAuth JWT
-    const identityKeyPub = await (
-      this.client as IWalletClient
-    ).identityKeys.getIdentity({
+    const identityKeyPub = await this.client.identityKeys.getIdentity({
       account,
     });
     const dappUrl = metadata.url;
@@ -141,7 +135,7 @@ export class NotifyEngine extends INotifyEngine {
       iss: encodeEd25519Key(identityKeyPub),
       sub: composeDidPkh(account),
       aud: dappUrl,
-      ksu: (this.client as IWalletClient).keyserverUrl,
+      ksu: this.client.keyserverUrl,
       scp,
       act: "notify_subscription",
     };
@@ -202,7 +196,7 @@ export class NotifyEngine extends INotifyEngine {
     const scopeMap = this.generateScopeMapFromConfig(notifyConfig.types);
 
     // Store the pending subscription request.
-    (this.client as IWalletClient).requests.set(id, {
+    this.client.requests.set(id, {
       topic: responseTopic,
       request: {
         account,
@@ -238,9 +232,7 @@ export class NotifyEngine extends INotifyEngine {
       );
     }
 
-    const identityKeyPub = await (
-      this.client as IWalletClient
-    ).identityKeys.getIdentity({
+    const identityKeyPub = await this.client.identityKeys.getIdentity({
       account: subscription.account,
     });
     const issuedAt = Math.round(Date.now() / 1000);
@@ -250,7 +242,7 @@ export class NotifyEngine extends INotifyEngine {
       iss: encodeEd25519Key(identityKeyPub),
       sub: composeDidPkh(subscription.account),
       aud: subscription.metadata.url,
-      ksu: (this.client as IWalletClient).keyserverUrl,
+      ksu: this.client.keyserverUrl,
       scp: scope.join(JWT_SCP_SEPARATOR),
       act: "notify_subscription",
     };
@@ -282,7 +274,7 @@ export class NotifyEngine extends INotifyEngine {
       subscriptionAuth,
     });
 
-    await (this.client as IWalletClient).requests.set(id, {
+    await this.client.requests.set(id, {
       topic,
       request: {
         account: subscription.account,
@@ -338,7 +330,7 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    return (this.client as IWalletClient).messages.get(topic).messages;
+    return this.client.messages.get(topic).messages;
   };
 
   public deleteSubscription: INotifyEngine["deleteSubscription"] = async ({
@@ -363,7 +355,7 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    const targetRecord = (this.client as IWalletClient).messages
+    const targetRecord = this.client.messages
       .getAll()
       .find((record) => record.messages[id]);
 
@@ -375,10 +367,7 @@ export class NotifyEngine extends INotifyEngine {
 
     delete targetRecord.messages[id];
 
-    (this.client as IWalletClient).messages.update(
-      targetRecord.topic,
-      targetRecord
-    );
+    this.client.messages.update(targetRecord.topic, targetRecord);
   };
 
   public getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"] = (
@@ -500,11 +489,7 @@ export class NotifyEngine extends INotifyEngine {
 
     switch (reqMethod) {
       case "wc_notifyMessage":
-        // `wc_notifyMessage` requests being broadcast to all subscribers
-        // by Cast server should only be handled by the wallet client.
-        return this.client instanceof IWalletClient
-          ? this.onNotifyMessageRequest(topic, payload, publishedAt)
-          : null;
+        return this.onNotifyMessageRequest(topic, payload, publishedAt);
       case "wc_notifyDelete":
         return this.onNotifyDeleteRequest(topic, payload);
       default:
@@ -554,7 +539,7 @@ export class NotifyEngine extends INotifyEngine {
           response,
         });
 
-        const { request } = (this.client as IWalletClient).requests.get(id);
+        const { request } = this.client.requests.get(id);
 
         // SPEC: Wallet derives symmetric key P with keys Y and Z.
         // SPEC: Notify topic is derived from the sha256 hash of the symmetric key P
@@ -581,7 +566,7 @@ export class NotifyEngine extends INotifyEngine {
         await this.client.subscriptions.set(notifyTopic, notifySubscription);
 
         // Set up a store for messages sent to this notify topic.
-        await (this.client as IWalletClient).messages.set(notifyTopic, {
+        await this.client.messages.set(notifyTopic, {
           topic: notifyTopic,
           messages: {},
         });
@@ -637,10 +622,8 @@ export class NotifyEngine extends INotifyEngine {
         return;
       }
 
-      const currentMessages = (this.client as IWalletClient).messages.get(
-        topic
-      ).messages;
-      await (this.client as IWalletClient).messages.update(topic, {
+      const currentMessages = this.client.messages.get(topic).messages;
+      await this.client.messages.update(topic, {
         messages: {
           ...currentMessages,
           [payload.id]: {
@@ -705,7 +688,7 @@ export class NotifyEngine extends INotifyEngine {
 
         const { id } = payload;
 
-        const { request } = (this.client as IWalletClient).requests.get(id);
+        const { request } = this.client.requests.get(id);
         const existingSubscription = this.client.subscriptions.get(topic);
 
         if (!request.scopeUpdate) {
@@ -791,7 +774,7 @@ export class NotifyEngine extends INotifyEngine {
 
   private cleanupRequest = async (id: number, expirerHasDeleted?: boolean) => {
     await Promise.all([
-      (this.client as IWalletClient).requests.delete(id, {
+      this.client.requests.delete(id, {
         code: -1,
         message: "Request deleted.",
       }),
@@ -807,12 +790,10 @@ export class NotifyEngine extends INotifyEngine {
         code: -1,
         message: "Deleted subscription.",
       }),
-      this.client instanceof IWalletClient
-        ? this.client.messages.delete(topic, {
-            code: -1,
-            message: "Deleted subscription.",
-          })
-        : Promise.resolve(),
+      this.client.messages.delete(topic, {
+        code: -1,
+        message: "Deleted subscription.",
+      }),
       this.client.core.crypto.deleteSymKey(topic),
     ]);
   };
@@ -821,10 +802,7 @@ export class NotifyEngine extends INotifyEngine {
     accountId: string,
     payload: JwtPayload
   ) => {
-    return (this.client as IWalletClient).identityKeys.generateIdAuth(
-      accountId,
-      payload
-    );
+    return this.client.identityKeys.generateIdAuth(accountId, payload);
   };
 
   private decodeAndValidateMessageAuth = (messageAuthJWT: string) => {
@@ -855,7 +833,7 @@ export class NotifyEngine extends INotifyEngine {
     accountId: string,
     onSign: (message: string) => Promise<string>
   ): Promise<string> => {
-    return (this.client as IWalletClient).identityKeys.registerIdentity({
+    return this.client.identityKeys.registerIdentity({
       accountId,
       onSign,
     });

@@ -1,5 +1,4 @@
 import { RelayerTypes, CryptoTypes } from "@walletconnect/types";
-
 import {
   ErrorResponse,
   JsonRpcError,
@@ -8,8 +7,8 @@ import {
   JsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
 import { JsonRpcTypes } from "./jsonrpc";
-import { NotifyClientTypes } from "./baseClient";
-import { IWalletClient } from "./walletClient";
+import { NotifyClientTypes } from "./client";
+import { INotifyClient } from "./client";
 
 export interface RpcOpts {
   req: RelayerTypes.PublishOptions;
@@ -25,7 +24,7 @@ export declare namespace NotifyEngineTypes {
 }
 
 export abstract class INotifyEngine {
-  constructor(public client: IWalletClient) {}
+  constructor(public client: INotifyClient) {}
 
   public abstract init(): void;
 
