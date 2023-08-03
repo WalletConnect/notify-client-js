@@ -493,10 +493,10 @@ export class NotifyEngine extends INotifyEngine {
         // `wc_notifyMessage` requests being broadcast to all subscribers
         // by Cast server should only be handled by the wallet client.
         return this.client instanceof IWalletClient
-          ? this.onPushMessageRequest(topic, payload, publishedAt)
+          ? this.onNotifyMessageRequest(topic, payload, publishedAt)
           : null;
       case "wc_notifyDelete":
-        return this.onPushDeleteRequest(topic, payload);
+        return this.onNotifyDeleteRequest(topic, payload);
       default:
         return this.client.logger.info(
           `[Notify] Unsupported request method ${reqMethod}`
@@ -512,13 +512,13 @@ export class NotifyEngine extends INotifyEngine {
 
       switch (resMethod) {
         case "wc_notifySubscribe":
-          return this.onPushSubscribeResponse(topic, payload);
+          return this.onNotifySubscribeResponse(topic, payload);
         case "wc_notifyMessage":
-          return this.onPushMessageResponse(topic, payload);
+          return this.onNotifyMessageResponse(topic, payload);
         case "wc_notifyDelete":
           return;
         case "wc_notifyUpdate":
-          return this.onPushUpdateResponse(topic, payload);
+          return this.onNotifyUpdateResponse(topic, payload);
         default:
           return this.client.logger.info(
             `[Notify] Unsupported response method ${resMethod}`
@@ -528,17 +528,17 @@ export class NotifyEngine extends INotifyEngine {
 
   // ---------- Relay Event Handlers --------------------------------- //
 
-  protected onPushSubscribeResponse: INotifyEngine["onPushSubscribeResponse"] =
+  protected onNotifySubscribeResponse: INotifyEngine["onNotifySubscribeResponse"] =
     async (responseTopic, response) => {
       this.client.logger.info(
-        `onPushSubscribeResponse on response topic ${responseTopic}`
+        `onNotifySubscribeResponse on response topic ${responseTopic}`
       );
 
       if (isJsonRpcResult(response)) {
         const { id } = response;
 
         this.client.logger.info({
-          event: "onPushSubscribeResponse",
+          event: "onNotifySubscribeResponse",
           id,
           topic: responseTopic,
           response,
@@ -554,7 +554,7 @@ export class NotifyEngine extends INotifyEngine {
         );
 
         this.client.logger.info(
-          `onPushSubscribeResponse > derived pushTopic ${pushTopic} from selfPublicKey ${request.publicKey} and Cast publicKey ${response.result.publicKey}`
+          `onNotifySubscribeResponse > derived pushTopic ${pushTopic} from selfPublicKey ${request.publicKey} and Cast publicKey ${response.result.publicKey}`
         );
 
         const pushSubscription = {
@@ -605,10 +605,10 @@ export class NotifyEngine extends INotifyEngine {
       this.cleanupRequest(response.id);
     };
 
-  protected onPushMessageRequest: INotifyEngine["onPushMessageRequest"] =
+  protected onNotifyMessageRequest: INotifyEngine["onNotifyMessageRequest"] =
     async (topic, payload, publishedAt) => {
       this.client.logger.info(
-        "[Notify] Engine.onPushMessageRequest",
+        "[Notify] Engine.onNotifyMessageRequest",
         topic,
         payload
       );
@@ -635,48 +635,46 @@ export class NotifyEngine extends INotifyEngine {
       });
     };
 
-  protected onPushMessageResponse: INotifyEngine["onPushMessageResponse"] =
+  protected onNotifyMessageResponse: INotifyEngine["onNotifyMessageResponse"] =
     async (topic, payload) => {
       if (isJsonRpcResult(payload)) {
         this.client.logger.info(
-          "[Notify] Engine.onPushMessageResponse > result:",
+          "[Notify] Engine.onNotifyMessageResponse > result:",
           topic,
           payload
         );
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error(
-          "[Notify] Engine.onPushMessageResponse > error:",
+          "[Notify] Engine.onNotifyMessageResponse > error:",
           topic,
           payload.error
         );
       }
     };
 
-  protected onPushDeleteRequest: INotifyEngine["onPushDeleteRequest"] = async (
-    topic,
-    payload
-  ) => {
-    const { id } = payload;
-    this.client.logger.info(
-      "[Notify] Engine.onPushDeleteRequest",
-      topic,
-      payload
-    );
-    try {
-      await this.sendResult<"wc_notifyDelete">(id, topic, true);
-      await this.cleanupSubscription(topic);
-      this.client.events.emit("notify_delete", { id, topic });
-    } catch (err: any) {
-      this.client.logger.error(err);
-      await this.sendError(id, topic, err);
-    }
-  };
+  protected onNotifyDeleteRequest: INotifyEngine["onNotifyDeleteRequest"] =
+    async (topic, payload) => {
+      const { id } = payload;
+      this.client.logger.info(
+        "[Notify] Engine.onNotifyDeleteRequest",
+        topic,
+        payload
+      );
+      try {
+        await this.sendResult<"wc_notifyDelete">(id, topic, true);
+        await this.cleanupSubscription(topic);
+        this.client.events.emit("notify_delete", { id, topic });
+      } catch (err: any) {
+        this.client.logger.error(err);
+        await this.sendError(id, topic, err);
+      }
+    };
 
-  protected onPushUpdateResponse: INotifyEngine["onPushUpdateResponse"] =
+  protected onNotifyUpdateResponse: INotifyEngine["onNotifyUpdateResponse"] =
     async (topic, payload) => {
       if (isJsonRpcResult(payload)) {
         this.client.logger.info({
-          event: "onPushUpdateResponse",
+          event: "onNotifyUpdateResponse",
           topic,
           result: payload,
         });
@@ -724,7 +722,7 @@ export class NotifyEngine extends INotifyEngine {
         });
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error({
-          event: "onPushUpdateResponse",
+          event: "onNotifyUpdateResponse",
           topic,
           error: payload.error,
         });

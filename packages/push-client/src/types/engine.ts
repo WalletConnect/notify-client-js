@@ -107,32 +107,32 @@ export abstract class INotifyEngine {
 
   // ---------- Protected Relay Event Handlers --------------------------------- //
 
-  protected abstract onPushSubscribeResponse(
+  protected abstract onNotifySubscribeResponse(
     topic: string,
     payload:
       | JsonRpcResult<JsonRpcTypes.Results["wc_notifySubscribe"]>
       | JsonRpcError
   ): Promise<void>;
 
-  protected abstract onPushMessageRequest(
+  protected abstract onNotifyMessageRequest(
     topic: string,
     payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_notifyMessage"]>,
     publishedAt: number
   ): Promise<void>;
 
-  protected abstract onPushMessageResponse(
+  protected abstract onNotifyMessageResponse(
     topic: string,
     payload:
       | JsonRpcResult<JsonRpcTypes.Results["wc_notifyMessage"]>
       | JsonRpcError
   ): void;
 
-  protected abstract onPushDeleteRequest(
+  protected abstract onNotifyDeleteRequest(
     topic: string,
     payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_notifyDelete"]>
   ): Promise<void>;
 
-  protected abstract onPushUpdateResponse(
+  protected abstract onNotifyUpdateResponse(
     topic: string,
     payload:
       | JsonRpcResult<JsonRpcTypes.Results["wc_notifyUpdate"]>
