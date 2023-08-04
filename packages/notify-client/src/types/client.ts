@@ -83,7 +83,7 @@ export declare namespace NotifyClientTypes {
     iss: string; // public key of cast server (did:key)
     ksu: string; // key server url
     aud: string; // blockchain account (did:pkh)
-    act: string; // action intent (must be "notify_message")
+    act: "notify_message"; // action intent (must be "notify_message")
     sub: string; // subscriptionId (sha256 hash of subscriptionAuth)
     app: string; // dapp domain url,
     msg: NotifyMessage;
