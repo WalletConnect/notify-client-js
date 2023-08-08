@@ -116,6 +116,15 @@ export declare namespace NotifyClientTypes {
     app: string; // dapp's domain url
   }
 
+  interface UpdateJWTClaims extends BaseJwtClaims {
+    act: "notify_update"; // description of action intent. Must be equal to "notify_update"
+    iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
+    aud: string; // did:key of an identity key. Enables to resolve associated Dapp domain used.
+    sub: string; // blockchain account that this notify subscription is associated with (did:pkh)
+    scp: string; // scope of notification types authorized by the user
+    app: string; // dapp's domain url
+  }
+
   interface DeleteJWTClaims extends BaseJwtClaims {
     act: "notify_delete"; // description of action intent. Must be equal to "notify_delete"
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.

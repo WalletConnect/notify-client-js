@@ -219,35 +219,15 @@ export class NotifyEngine extends INotifyEngine {
     const identityKeyPub = await this.client.identityKeys.getIdentity({
       account: subscription.account,
     });
-    const issuedAt = Math.round(Date.now() / 1000);
-    const payload: JwtPayload = {
-      iat: issuedAt,
-      exp: jwtExp(issuedAt),
-      iss: encodeEd25519Key(identityKeyPub),
-      sub: composeDidPkh(subscription.account),
-      aud: subscription.metadata.url,
-      ksu: this.client.keyserverUrl,
-      scp: scope.join(JWT_SCP_SEPARATOR),
-      act: "notify_subscription",
-    };
+
+    const updateAuth = await this.generateUpdateAuth({ subscription, scope });
 
     this.client.logger.info(
-      `[Notify] update > generating subscriptionAuth JWT for payload: ${JSON.stringify(
-        payload
-      )}`
-    );
-
-    const subscriptionAuth = await this.generateSubscriptionAuth(
-      subscription.account,
-      payload
-    );
-
-    this.client.logger.info(
-      `[Notify] update > generated subscriptionAuth JWT: ${subscriptionAuth}`
+      `[Notify] update > generated updateAuth JWT: ${updateAuth}`
     );
 
     const id = await this.sendRequest(topic, "wc_notifyUpdate", {
-      subscriptionAuth,
+      updateAuth,
     });
 
     this.client.logger.info({
@@ -255,7 +235,7 @@ export class NotifyEngine extends INotifyEngine {
       method: "wc_notifyUpdate",
       id,
       topic,
-      subscriptionAuth,
+      updateAuth,
     });
 
     await this.client.requests.set(id, {
@@ -892,6 +872,48 @@ export class NotifyEngine extends INotifyEngine {
     } catch (error: any) {
       throw new Error(
         `generateDeleteAuth failed for topic ${topic}: ${
+          error.message || error
+        }`
+      );
+    }
+  };
+
+  private generateUpdateAuth = async ({
+    subscription,
+    scope,
+  }: {
+    subscription: NotifyClientTypes.NotifySubscription;
+    scope: string[];
+  }) => {
+    try {
+      const identityKeyPub = await this.client.identityKeys.getIdentity({
+        account: subscription.account,
+      });
+      const dappPublicKey = await this.resolveDappPublicKey(
+        subscription.metadata.url
+      );
+      const issuedAt = Math.round(Date.now() / 1000);
+      const payload: NotifyClientTypes.UpdateJWTClaims = {
+        act: "notify_update",
+        iat: issuedAt,
+        exp: jwtExp(issuedAt),
+        iss: encodeEd25519Key(identityKeyPub),
+        aud: encodeEd25519Key(dappPublicKey),
+        sub: composeDidPkh(subscription.account),
+        app: subscription.metadata.url,
+        ksu: this.client.keyserverUrl,
+        scp: scope.join(JWT_SCP_SEPARATOR),
+      };
+
+      const updateAuth = await this.client.identityKeys.generateIdAuth(
+        this.client.keyserverUrl,
+        payload
+      );
+
+      return updateAuth;
+    } catch (error: any) {
+      throw new Error(
+        `generateUpdateAuth failed for topic ${subscription.topic}: ${
           error.message || error
         }`
       );
