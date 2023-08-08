@@ -39,7 +39,5 @@ export const decryptMessage = async (params: {
 
   const payload: any = await crypto.decode(topic, encoded);
 
-  console.log(decodeAndValidateMessageAuth(payload.params.messageAuth));
-
   return decodeAndValidateMessageAuth(payload.params.messageAuth).msg;
 };

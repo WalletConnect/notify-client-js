@@ -25,6 +25,7 @@ import {
   calcExpiry,
   getInternalError,
   hashKey,
+  hashMessage,
   parseExpirerTarget,
 } from "@walletconnect/utils";
 import axios from "axios";
@@ -80,28 +81,11 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    let didDoc: NotifyClientTypes.NotifyDidDocument;
-
-    try {
-      // Fetch dapp's public key from its hosted DID doc.
-      const didDocResp = await axios.get(
-        `${metadata.url}/.well-known/did.json`
-      );
-      didDoc = didDocResp.data;
-    } catch (error: any) {
-      throw new Error(
-        `Failed to fetch dapp's DID doc from ${metadata.url}/.well-known/did.json. Error: ${error.message}`
-      );
-    }
-
+    const dappPublicKey = await this.resolveDappPublicKey(metadata.url);
     const notifyConfig = await this.resolveNotifyConfig(metadata.url);
 
     // Retrieve existing identity or register a new one for this account on this device.
     await this.registerIdentity(account, onSign);
-
-    const { publicKeyJwk } = didDoc.verificationMethod[0];
-    const base64Jwk = publicKeyJwk.x.replace(/-/g, "+").replace(/_/g, "/");
-    const dappPublicKey = Buffer.from(base64Jwk, "base64").toString("hex");
 
     this.client.logger.info(
       `[Notify] subscribe > publicKey for ${metadata.url} is: ${dappPublicKey}`
@@ -602,13 +586,13 @@ export class NotifyEngine extends INotifyEngine {
 
   protected onNotifyMessageRequest: INotifyEngine["onNotifyMessageRequest"] =
     async (topic, payload, publishedAt) => {
-      this.client.logger.info(
-        "[Notify] Engine.onNotifyMessageRequest",
+      this.client.logger.info({
+        event: "Engine.onNotifyMessageRequest",
         topic,
-        payload
-      );
+        payload,
+      });
 
-      let messageClaims: NotifyClientTypes.NotifyMessageJWTClaims;
+      let messageClaims: NotifyClientTypes.MessageJWTClaims;
 
       try {
         messageClaims = this.decodeAndValidateMessageAuth(
@@ -634,7 +618,29 @@ export class NotifyEngine extends INotifyEngine {
           },
         },
       });
-      await this.sendResult<"wc_notifyMessage">(payload.id, topic, true);
+
+      try {
+        const receiptAuth = await this.generateMessageReceiptAuth({
+          topic,
+          message: messageClaims.msg,
+        });
+
+        this.client.logger.info(
+          `[Notify] Engine.onNotifyMessageRequest > generated receiptAuth JWT: ${receiptAuth}`
+        );
+
+        await this.sendResult<"wc_notifyMessage">(payload.id, topic, {
+          receiptAuth,
+        });
+      } catch (error: any) {
+        this.client.logger.error(
+          `[Notify] Engine.onNotifyMessageRequest > generating receiptAuth failed: ${error.message}`
+        );
+        await this.sendError(payload.id, topic, {
+          code: -1,
+          message: error.message || error,
+        });
+      }
       this.client.emit("notify_message", {
         id: payload.id,
         topic,
@@ -805,13 +811,55 @@ export class NotifyEngine extends INotifyEngine {
     return this.client.identityKeys.generateIdAuth(accountId, payload);
   };
 
+  private generateMessageReceiptAuth = async ({
+    topic,
+    message,
+  }: {
+    topic: string;
+    message: NotifyClientTypes.NotifyMessage;
+  }) => {
+    try {
+      const subscription = this.client.subscriptions.get(topic);
+      const identityKeyPub = await this.client.identityKeys.getIdentity({
+        account: subscription.account,
+      });
+      const dappPublicKey = await this.resolveDappPublicKey(
+        subscription.metadata.url
+      );
+      const issuedAt = Math.round(Date.now() / 1000);
+      const payload: NotifyClientTypes.MessageReceiptJWTClaims = {
+        act: "notify_receipt",
+        iat: issuedAt,
+        exp: jwtExp(issuedAt),
+        iss: encodeEd25519Key(identityKeyPub),
+        aud: encodeEd25519Key(dappPublicKey),
+        sub: hashMessage(JSON.stringify(message)),
+        app: subscription.metadata.url,
+        ksu: this.client.keyserverUrl,
+      };
+
+      const receiptAuth = await this.client.identityKeys.generateIdAuth(
+        subscription.account,
+        payload
+      );
+
+      return receiptAuth;
+    } catch (error: any) {
+      throw new Error(
+        `generateMessageReceiptJWT failed for message on topic ${topic}: ${
+          error.message || error
+        }`
+      );
+    }
+  };
+
   private decodeAndValidateMessageAuth = (messageAuthJWT: string) => {
-    let messageClaims: NotifyClientTypes.NotifyMessageJWTClaims;
+    let messageClaims: NotifyClientTypes.MessageJWTClaims;
 
     // Attempt to decode the messageAuth JWT. Will throw `InvalidTokenError` if invalid.
     try {
       messageClaims =
-        jwtDecode<NotifyClientTypes.NotifyMessageJWTClaims>(messageAuthJWT);
+        jwtDecode<NotifyClientTypes.MessageJWTClaims>(messageAuthJWT);
     } catch (error: unknown) {
       this.client.logger.error(
         `[Notify] Engine.onNotifyMessageRequest > Failed to decode messageAuth JWT: ${messageAuthJWT}`
@@ -837,6 +885,30 @@ export class NotifyEngine extends INotifyEngine {
       accountId,
       onSign,
     });
+  };
+
+  private resolveDappPublicKey = async (dappUrl: string): Promise<string> => {
+    let didDoc: NotifyClientTypes.NotifyDidDocument;
+
+    try {
+      // Fetch dapp's public key from its hosted DID doc.
+      const didDocResp = await axios.get(`${dappUrl}/.well-known/did.json`);
+      didDoc = didDocResp.data;
+    } catch (error: any) {
+      throw new Error(
+        `Failed to fetch dapp's DID doc from ${dappUrl}/.well-known/did.json. Error: ${error.message}`
+      );
+    }
+
+    const { publicKeyJwk } = didDoc.verificationMethod[0];
+    const base64Jwk = publicKeyJwk.x.replace(/-/g, "+").replace(/_/g, "/");
+    const dappPublicKey = Buffer.from(base64Jwk, "base64").toString("hex");
+
+    this.client.logger.info(
+      `[Notify] subscribe > publicKey for ${dappUrl} is: ${dappPublicKey}`
+    );
+
+    return dappPublicKey;
   };
 
   private resolveNotifyConfig = async (

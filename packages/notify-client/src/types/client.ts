@@ -39,6 +39,13 @@ export declare namespace NotifyClientTypes {
     notify_update: BaseEventArgs<NotifyResponseEventArgs>;
   }
 
+  interface BaseJwtClaims {
+    act: string; // action intent
+    iat: number; // issued at
+    exp: number; // expiry
+    ksu: string; // key server url
+  }
+
   interface ClientOptions extends CoreTypes.Options {
     core?: ICore;
     keyserverUrl?: string;
@@ -77,18 +84,6 @@ export declare namespace NotifyClientTypes {
     symKey: string;
   }
 
-  interface NotifyMessageJWTClaims {
-    iat: number; // issued at
-    exp: number; // expiry
-    iss: string; // public key of cast server (did:key)
-    ksu: string; // key server url
-    aud: string; // blockchain account (did:pkh)
-    act: "notify_message"; // action intent (must be "notify_message")
-    sub: string; // subscriptionId (sha256 hash of subscriptionAuth)
-    app: string; // dapp domain url,
-    msg: NotifyMessage;
-  }
-
   interface NotifyMessage {
     title: string;
     body: string;
@@ -102,6 +97,23 @@ export declare namespace NotifyClientTypes {
     topic: string;
     message: NotifyMessage;
     publishedAt: number;
+  }
+
+  interface MessageJWTClaims extends BaseJwtClaims {
+    act: "notify_message"; // action intent (must be "notify_message")
+    iss: string; // public key of cast server (did:key)
+    aud: string; // blockchain account (did:pkh)
+    sub: string; // subscriptionId (sha256 hash of subscriptionAuth)
+    app: string; // dapp domain url,
+    msg: NotifyMessage;
+  }
+
+  interface MessageReceiptJWTClaims extends BaseJwtClaims {
+    act: "notify_receipt"; // description of action intent. Must be equal to "notify_receipt"
+    iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
+    aud: string; // did:key of an identity key. Enables to resolve associated Dapp domain used.
+    sub: string; // hash of the stringified notify message object received
+    app: string; // dapp's domain url
   }
 
   interface NotifyDidDocument {
