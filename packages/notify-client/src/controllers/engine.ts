@@ -322,11 +322,14 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    await this.sendRequest(
+    const deleteAuth = await this.generateDeleteAuth({
       topic,
-      "wc_notifyDelete",
-      SDK_ERRORS["USER_UNSUBSCRIBED"]
-    );
+      reason: SDK_ERRORS["USER_UNSUBSCRIBED"].message,
+    });
+
+    console.log("deleteAuth", deleteAuth);
+
+    await this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
     await this.cleanupSubscription(topic);
 
     this.client.logger.info(
@@ -846,7 +849,49 @@ export class NotifyEngine extends INotifyEngine {
       return receiptAuth;
     } catch (error: any) {
       throw new Error(
-        `generateMessageReceiptJWT failed for message on topic ${topic}: ${
+        `generateMessageReceiptAuth failed for message on topic ${topic}: ${
+          error.message || error
+        }`
+      );
+    }
+  };
+
+  private generateDeleteAuth = async ({
+    topic,
+    reason,
+  }: {
+    topic: string;
+    reason: string;
+  }) => {
+    try {
+      const subscription = this.client.subscriptions.get(topic);
+      const identityKeyPub = await this.client.identityKeys.getIdentity({
+        account: subscription.account,
+      });
+      const dappPublicKey = await this.resolveDappPublicKey(
+        subscription.metadata.url
+      );
+      const issuedAt = Math.round(Date.now() / 1000);
+      const payload: NotifyClientTypes.DeleteJWTClaims = {
+        act: "notify_delete",
+        iat: issuedAt,
+        exp: jwtExp(issuedAt),
+        iss: encodeEd25519Key(identityKeyPub),
+        aud: encodeEd25519Key(dappPublicKey),
+        sub: reason,
+        ksu: this.client.keyserverUrl,
+        app: subscription.metadata.url,
+      };
+
+      const deleteAuth = await this.client.identityKeys.generateIdAuth(
+        this.client.keyserverUrl,
+        payload
+      );
+
+      return deleteAuth;
+    } catch (error: any) {
+      throw new Error(
+        `generateDeleteAuth failed for topic ${topic}: ${
           error.message || error
         }`
       );

@@ -14,8 +14,7 @@ export declare namespace JsonRpcTypes {
       messageAuth: string;
     };
     wc_notifyDelete: {
-      code: number;
-      message: string;
+      deleteAuth: string;
     };
     wc_notifyUpdate: {
       subscriptionAuth: string;

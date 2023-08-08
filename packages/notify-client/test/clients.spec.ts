@@ -273,36 +273,23 @@ describe("Notify", () => {
       });
     });
 
-    // describe.skip("deleteSubscription", () => {
-    //   it("can delete a currently active notify subscription", async () => {
-    //     const { responseEvent } = await createNotifySubscription(wallet);
-    //     let gotNotifyDeleteEvent = false;
-    //     let notifyDeleteEvent: any;
+    describe("deleteSubscription", () => {
+      it("can delete a currently active notify subscription", async () => {
+        await createNotifySubscription(wallet, account, onSign);
 
-    //     expect(responseEvent.params.subscription.topic).toBeDefined();
+        expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(1);
 
-    //     expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(1);
+        const walletSubscriptionTopic = Object.keys(
+          wallet.getActiveSubscriptions()
+        )[0];
 
-    //     const walletSubscriptionTopic = Object.keys(
-    //       wallet.getActiveSubscriptions()
-    //     )[0];
+        await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
 
-    //     dapp.once("notify_delete", (event) => {
-    //       gotNotifyDeleteEvent = true;
-    //       notifyDeleteEvent = event;
-    //     });
-
-    //     await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
-    //     await waitForEvent(() => gotNotifyDeleteEvent);
-
-    //     expect(notifyDeleteEvent.topic).toBe(walletSubscriptionTopic);
-    //     // Check that wallet is in expected state.
-    //     expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
-    //     expect(wallet.messages.keys.length).toBe(0);
-    //     // Check that dapp is in expected state.
-    //     expect(Object.keys(dapp.getActiveSubscriptions()).length).toBe(0);
-    //   });
-    // });
+        // Check that wallet is in expected state.
+        expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
+        expect(wallet.messages.keys.length).toBe(0);
+      });
+    });
 
     describe("deleteNotifyMessage", async () => {
       it("deletes the notify message associated with the provided `id`", async () => {
