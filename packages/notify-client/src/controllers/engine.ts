@@ -480,7 +480,7 @@ export class NotifyEngine extends INotifyEngine {
         case "wc_notifyMessage":
           return this.onNotifyMessageResponse(topic, payload);
         case "wc_notifyDelete":
-          return;
+          return this.onNotifyDeleteResponse(topic, payload);
         case "wc_notifyUpdate":
           return this.onNotifyUpdateResponse(topic, payload);
         default:
@@ -672,12 +672,37 @@ export class NotifyEngine extends INotifyEngine {
         payload
       );
       try {
-        await this.sendResult<"wc_notifyDelete">(id, topic, true);
+        // TODO: Using a placeholder responseAuth for now since this handler may be removed from the engine.
+        await this.sendResult<"wc_notifyDelete">(id, topic, {
+          responseAuth: "",
+        });
         await this.cleanupSubscription(topic);
         this.client.events.emit("notify_delete", { id, topic });
       } catch (err: any) {
         this.client.logger.error(err);
         await this.sendError(id, topic, err);
+      }
+    };
+
+  protected onNotifyDeleteResponse: INotifyEngine["onNotifyDeleteResponse"] =
+    async (topic, payload) => {
+      if (isJsonRpcResult(payload)) {
+        this.client.logger.info(
+          "[Notify] Engine.onNotifyDeleteResponse > result:",
+          topic,
+          payload
+        );
+
+        this.decodeAndValidateJwtAuth<NotifyClientTypes.DeleteResponseJWTClaims>(
+          payload.result.responseAuth,
+          "notify_delete_response"
+        );
+      } else if (isJsonRpcError(payload)) {
+        this.client.logger.error(
+          "[Notify] Engine.onNotifyDeleteResponse > error:",
+          topic,
+          payload.error
+        );
       }
     };
 

@@ -27,7 +27,9 @@ export declare namespace JsonRpcTypes {
       responseAuth: string;
     };
     wc_notifyMessage: { receiptAuth: string };
-    wc_notifyDelete: true;
+    wc_notifyDelete: {
+      responseAuth: string;
+    };
     wc_notifyUpdate: {
       responseAuth: string;
     };

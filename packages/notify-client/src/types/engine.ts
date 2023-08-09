@@ -131,6 +131,13 @@ export abstract class INotifyEngine {
     payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_notifyDelete"]>
   ): Promise<void>;
 
+  protected abstract onNotifyDeleteResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyDelete"]>
+      | JsonRpcError
+  ): void;
+
   protected abstract onNotifyUpdateResponse(
     topic: string,
     payload:
