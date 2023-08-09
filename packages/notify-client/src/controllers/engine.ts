@@ -151,16 +151,6 @@ export class NotifyEngine extends INotifyEngine {
       `[Notify] subscribe > sending wc_notifySubscribe request on topic ${subscribeTopic}...`
     );
 
-    console.log({
-      subscribeTopic,
-      responseTopic,
-      method: "wc_notifySubscribe",
-      claims: payload,
-      payload: {
-        subscriptionAuth,
-      },
-    });
-
     // SPEC: Wallet sends wc_notifySubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
     const id = await this.sendRequest<"wc_notifySubscribe">(
       subscribeTopic,
@@ -318,8 +308,6 @@ export class NotifyEngine extends INotifyEngine {
       reason: SDK_ERRORS["USER_UNSUBSCRIBED"].message,
     });
 
-    console.log("deleteAuth", deleteAuth);
-
     await this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
     await this.cleanupSubscription(topic);
 
@@ -438,11 +426,7 @@ export class NotifyEngine extends INotifyEngine {
       async (event: RelayerTypes.MessageEvent) => {
         const { topic, message, publishedAt } = event;
 
-        console.log("RELAYER_EVENTS.message", event);
-
         const payload = await this.client.core.crypto.decode(topic, message);
-
-        console.log("RELAYER_EVENTS.message > decoded payload", payload);
 
         if (isJsonRpcRequest(payload)) {
           this.client.core.history.set(topic, payload);
