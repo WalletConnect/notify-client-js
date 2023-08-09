@@ -7,6 +7,7 @@ import {
   JwtPayload,
   composeDidPkh,
   encodeEd25519Key,
+  decodeEd25519Key,
   jwtExp,
 } from "@walletconnect/did-jwt";
 import {
@@ -280,7 +281,7 @@ export class NotifyEngine extends INotifyEngine {
         this.decodeAndValidateJwtAuth<NotifyClientTypes.MessageJWTClaims>(
           payload.params.messageAuth,
           "notify_message"
-      );
+        );
 
       return messageClaims.msg;
     } catch (error: any) {
@@ -509,15 +510,26 @@ export class NotifyEngine extends INotifyEngine {
 
         const { request } = this.client.requests.get(id);
 
+        const subscriptionResponseClaims =
+          this.decodeAndValidateJwtAuth<NotifyClientTypes.SubscriptionResponseJWTClaims>(
+            response.result.responseAuth,
+            "notify_subscription_response"
+          );
+
+        // SPEC: `sub` is a did:key of the public key used for key agreement on the Notify topic
+        const resultPublicKey = new TextDecoder().decode(
+          decodeEd25519Key(subscriptionResponseClaims.sub)
+        );
+
         // SPEC: Wallet derives symmetric key P with keys Y and Z.
         // SPEC: Notify topic is derived from the sha256 hash of the symmetric key P
         const notifyTopic = await this.client.core.crypto.generateSharedKey(
           request.publicKey,
-          response.result.publicKey
+          resultPublicKey
         );
 
         this.client.logger.info(
-          `onNotifySubscribeResponse > derived notifyTopic ${notifyTopic} from selfPublicKey ${request.publicKey} and Cast publicKey ${response.result.publicKey}`
+          `onNotifySubscribeResponse > derived notifyTopic ${notifyTopic} from selfPublicKey ${request.publicKey} and Cast publicKey ${resultPublicKey}`
         );
 
         const notifySubscription = {
@@ -583,7 +595,7 @@ export class NotifyEngine extends INotifyEngine {
           this.decodeAndValidateJwtAuth<NotifyClientTypes.MessageJWTClaims>(
             payload.params.messageAuth,
             "notify_message"
-        );
+          );
       } catch (error: any) {
         this.client.logger.error(
           `[Notify] Engine.onNotifyMessageRequest > decoding/validating messageAuth failed > ${error.message}`
