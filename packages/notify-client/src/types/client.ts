@@ -99,6 +99,15 @@ export declare namespace NotifyClientTypes {
     publishedAt: number;
   }
 
+  interface SubscriptionJWTClaims extends BaseJwtClaims {
+    act: "notify_subscription"; // action intent (must be "notify_subscription")
+    iss: string;
+    sub: string;
+    aud: string;
+    scp: string;
+    app: string;
+  }
+
   interface MessageJWTClaims extends BaseJwtClaims {
     act: "notify_message"; // action intent (must be "notify_message")
     iss: string; // public key of cast server (did:key)

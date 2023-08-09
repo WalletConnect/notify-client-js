@@ -113,7 +113,7 @@ export class NotifyEngine extends INotifyEngine {
     const scp = notifyConfig.types
       .map((type) => type.name)
       .join(JWT_SCP_SEPARATOR);
-    const payload: JwtPayload = {
+    const payload: NotifyClientTypes.SubscriptionJWTClaims = {
       iat: issuedAt,
       exp: jwtExp(issuedAt),
       iss: encodeEd25519Key(identityKeyPub),
@@ -122,6 +122,7 @@ export class NotifyEngine extends INotifyEngine {
       ksu: this.client.keyserverUrl,
       scp,
       act: "notify_subscription",
+      app: metadata.url,
     };
 
     this.client.logger.info(
@@ -149,6 +150,16 @@ export class NotifyEngine extends INotifyEngine {
     this.client.logger.info(
       `[Notify] subscribe > sending wc_notifySubscribe request on topic ${subscribeTopic}...`
     );
+
+    console.log({
+      subscribeTopic,
+      responseTopic,
+      method: "wc_notifySubscribe",
+      claims: payload,
+      payload: {
+        subscriptionAuth,
+      },
+    });
 
     // SPEC: Wallet sends wc_notifySubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
     const id = await this.sendRequest<"wc_notifySubscribe">(
@@ -427,7 +438,11 @@ export class NotifyEngine extends INotifyEngine {
       async (event: RelayerTypes.MessageEvent) => {
         const { topic, message, publishedAt } = event;
 
+        console.log("RELAYER_EVENTS.message", event);
+
         const payload = await this.client.core.crypto.decode(topic, message);
+
+        console.log("RELAYER_EVENTS.message > decoded payload", payload);
 
         if (isJsonRpcRequest(payload)) {
           this.client.core.history.set(topic, payload);
