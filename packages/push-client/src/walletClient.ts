@@ -273,11 +273,11 @@ export class WalletClient extends IWalletClient {
 
     const historyFetchedStores = ["com.walletconnect.notify.pushSubscription"];
 
-    const stores = this.syncClient.storeMap
-      .getAll({ account })
-      .filter((store) => {
-        return historyFetchedStores.includes(store.key);
-      });
+    const stores = this.syncClient.storeMap.getAll().filter((store) => {
+      return (
+        historyFetchedStores.includes(store.key) && store.account === account
+      );
+    });
 
     stores.forEach((store) => {
       fetchAndInjectHistory(
@@ -316,7 +316,16 @@ export class WalletClient extends IWalletClient {
       await this.subscriptions.init();
       await this.messages.init();
       await this.identityKeys.init();
-      await this.engine.init();
+      this.engine.init();
+
+      // Sync all accounts
+      for (const {
+        account,
+        signature,
+      } of this.syncClient.signatures.getAll()) {
+        this.initSyncStores({ account, signature });
+      }
+
       this.logger.info(`PushWalletClient Initialization Success`);
     } catch (error: any) {
       this.logger.info(`PushWalletClient Initialization Failure`);
