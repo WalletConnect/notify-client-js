@@ -690,7 +690,13 @@ export class NotifyEngine extends INotifyEngine {
           result: payload,
         });
 
-        const { id } = payload;
+        const { id, result } = payload;
+
+        // TODO: Perform further validations on the updateResponse JWT claims.
+        this.decodeAndValidateJwtAuth<NotifyClientTypes.UpdateResponseJWTClaims>(
+          result.responseAuth,
+          "notify_update_response"
+        );
 
         const { request } = this.client.requests.get(id);
         const existingSubscription = this.client.subscriptions.get(topic);
