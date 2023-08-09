@@ -33,11 +33,11 @@ export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
   wc_notifySubscribe: {
     req: {
       ttl: ONE_DAY,
-      tag: 4006,
+      tag: 4000,
     },
     res: {
       ttl: ONE_DAY,
-      tag: 4007,
+      tag: 4001,
     },
   },
   wc_notifyUpdate: {
