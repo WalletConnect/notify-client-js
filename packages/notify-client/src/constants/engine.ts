@@ -10,6 +10,16 @@ export const JWT_SCP_SEPARATOR = " ";
 
 // RPC Options
 export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
+  wc_notifySubscribe: {
+    req: {
+      ttl: ONE_DAY,
+      tag: 4000,
+    },
+    res: {
+      ttl: ONE_DAY,
+      tag: 4001,
+    },
+  },
   wc_notifyMessage: {
     req: {
       ttl: THIRTY_DAYS,
@@ -28,16 +38,6 @@ export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
     res: {
       ttl: ONE_DAY,
       tag: 4005,
-    },
-  },
-  wc_notifySubscribe: {
-    req: {
-      ttl: ONE_DAY,
-      tag: 4000,
-    },
-    res: {
-      ttl: ONE_DAY,
-      tag: 4001,
     },
   },
   wc_notifyUpdate: {
