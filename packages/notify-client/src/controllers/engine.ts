@@ -276,8 +276,10 @@ export class NotifyEngine extends INotifyEngine {
         );
       }
 
-      const messageClaims = this.decodeAndValidateMessageAuth(
-        payload.params.messageAuth
+      const messageClaims =
+        this.decodeAndValidateJwtAuth<NotifyClientTypes.MessageJWTClaims>(
+          payload.params.messageAuth,
+          "notify_message"
       );
 
       return messageClaims.msg;
@@ -577,8 +579,10 @@ export class NotifyEngine extends INotifyEngine {
       let messageClaims: NotifyClientTypes.MessageJWTClaims;
 
       try {
-        messageClaims = this.decodeAndValidateMessageAuth(
-          payload.params.messageAuth
+        messageClaims =
+          this.decodeAndValidateJwtAuth<NotifyClientTypes.MessageJWTClaims>(
+            payload.params.messageAuth,
+            "notify_message"
         );
       } catch (error: any) {
         this.client.logger.error(
@@ -919,24 +923,28 @@ export class NotifyEngine extends INotifyEngine {
     }
   };
 
-  private decodeAndValidateMessageAuth = (messageAuthJWT: string) => {
-    let messageClaims: NotifyClientTypes.MessageJWTClaims;
+  private decodeAndValidateJwtAuth = <
+    T extends NotifyClientTypes.BaseJwtClaims
+  >(
+    jwtAuth: string,
+    expectedAct: T["act"]
+  ) => {
+    let messageClaims: T;
 
-    // Attempt to decode the messageAuth JWT. Will throw `InvalidTokenError` if invalid.
+    // Attempt to decode the JWT string. Will throw `InvalidTokenError` if invalid.
     try {
-      messageClaims =
-        jwtDecode<NotifyClientTypes.MessageJWTClaims>(messageAuthJWT);
+      messageClaims = jwtDecode<T>(jwtAuth);
     } catch (error: unknown) {
       this.client.logger.error(
-        `[Notify] Engine.onNotifyMessageRequest > Failed to decode messageAuth JWT: ${messageAuthJWT}`
+        `[Notify] Engine.onNotifyMessageRequest > Failed to decode messageAuth JWT: ${jwtAuth}`
       );
       throw new Error((error as InvalidTokenError).message);
     }
 
     // Validate `act` claim is as expected.
-    if (messageClaims.act !== "notify_message") {
+    if (messageClaims.act !== expectedAct) {
       throw new Error(
-        `Invalid messageAuth JWT act claim: ${messageClaims.act}. Expected "notify_message"`
+        `Invalid messageAuth JWT act claim: ${messageClaims.act}. Expected "${expectedAct}"`
       );
     }
 
