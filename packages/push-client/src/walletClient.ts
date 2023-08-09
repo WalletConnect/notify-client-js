@@ -323,7 +323,6 @@ export class WalletClient extends IWalletClient {
         account,
         signature,
       } of this.syncClient.signatures.getAll()) {
-        console.log("1te Initting for", account);
         this.initSyncStores({ account, signature });
       }
 
