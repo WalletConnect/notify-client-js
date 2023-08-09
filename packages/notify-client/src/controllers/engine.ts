@@ -879,7 +879,7 @@ export class NotifyEngine extends INotifyEngine {
       };
 
       const deleteAuth = await this.client.identityKeys.generateIdAuth(
-        this.client.keyserverUrl,
+        subscription.account,
         payload
       );
 
@@ -921,7 +921,7 @@ export class NotifyEngine extends INotifyEngine {
       };
 
       const updateAuth = await this.client.identityKeys.generateIdAuth(
-        this.client.keyserverUrl,
+        subscription.account,
         payload
       );
 
