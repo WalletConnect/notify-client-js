@@ -234,6 +234,7 @@ export class WalletClient extends IWalletClient {
     account,
     signature,
   }) => {
+    console.log("1TE Init sync stores");
     this.subscriptions = new this.SyncStoreController(
       "com.walletconnect.notify.pushSubscription",
       this.syncClient,
@@ -273,11 +274,17 @@ export class WalletClient extends IWalletClient {
 
     const historyFetchedStores = ["com.walletconnect.notify.pushSubscription"];
 
-    const stores = this.syncClient.storeMap
-      .getAll({ account })
-      .filter((store) => {
-        return historyFetchedStores.includes(store.key);
-      });
+    const stores = this.syncClient.storeMap.getAll().filter((store) => {
+      return (
+        historyFetchedStores.includes(store.key) && store.account === account
+      );
+    });
+
+    console.log(
+      "1TE fetching history",
+      account,
+      stores.map((store) => store.account)
+    );
 
     stores.forEach((store) => {
       fetchAndInjectHistory(
@@ -316,7 +323,17 @@ export class WalletClient extends IWalletClient {
       await this.subscriptions.init();
       await this.messages.init();
       await this.identityKeys.init();
-      await this.engine.init();
+      this.engine.init();
+
+      // Sync all accounts
+      for (const {
+        account,
+        signature,
+      } of this.syncClient.signatures.getAll()) {
+        console.log("1te Initting for", account);
+        this.initSyncStores({ account, signature });
+      }
+
       this.logger.info(`PushWalletClient Initialization Success`);
     } catch (error: any) {
       this.logger.info(`PushWalletClient Initialization Failure`);
