@@ -234,7 +234,6 @@ export class WalletClient extends IWalletClient {
     account,
     signature,
   }) => {
-    console.log("1TE Init sync stores");
     this.subscriptions = new this.SyncStoreController(
       "com.walletconnect.notify.pushSubscription",
       this.syncClient,
@@ -279,12 +278,6 @@ export class WalletClient extends IWalletClient {
         historyFetchedStores.includes(store.key) && store.account === account
       );
     });
-
-    console.log(
-      "1TE fetching history",
-      account,
-      stores.map((store) => store.account)
-    );
 
     stores.forEach((store) => {
       fetchAndInjectHistory(

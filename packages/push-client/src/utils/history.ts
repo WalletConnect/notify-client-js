@@ -69,13 +69,11 @@ export const fetchAndInjectHistory = async (
   historyClient: HistoryClient
 ) => {
   try {
-    console.log("1te getting messages");
     const messages = await historyClient.getMessages({
       topic,
       direction: "backward",
       messageCount: 200,
     });
-    console.log("1te got messages", messages);
 
     core.logger.info(
       `Fetched ${messages.messageResponse.messages.length} messages from history`
