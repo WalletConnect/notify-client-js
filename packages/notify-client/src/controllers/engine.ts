@@ -280,7 +280,7 @@ export class NotifyEngine extends INotifyEngine {
         this.decodeAndValidateJwtAuth<NotifyClientTypes.MessageJWTClaims>(
           payload.params.messageAuth,
           "notify_message"
-      );
+        );
 
       return messageClaims.msg;
     } catch (error: any) {
@@ -583,7 +583,7 @@ export class NotifyEngine extends INotifyEngine {
           this.decodeAndValidateJwtAuth<NotifyClientTypes.MessageJWTClaims>(
             payload.params.messageAuth,
             "notify_message"
-        );
+          );
       } catch (error: any) {
         this.client.logger.error(
           `[Notify] Engine.onNotifyMessageRequest > decoding/validating messageAuth failed > ${error.message}`
