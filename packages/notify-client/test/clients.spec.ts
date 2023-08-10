@@ -127,7 +127,8 @@ describe("Notify", () => {
       });
     });
 
-    describe("update", () => {
+    // TODO: re-enable once notify-server supports handling the `updateAuth` payload.
+    describe.skip("update", () => {
       it("can update an existing notify subscription with a new scope", async () => {
         let gotNotifySubscriptionResponse = false;
         let initialNotifySubscription =
