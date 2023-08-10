@@ -40,6 +40,7 @@ import {
   SDK_ERRORS,
 } from "../constants";
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
+import { convertUint8ArrayToHex } from "../utils/formats";
 
 export class NotifyEngine extends INotifyEngine {
   public name = "notifyEngine";
@@ -517,7 +518,9 @@ export class NotifyEngine extends INotifyEngine {
           );
 
         // SPEC: `sub` is a did:key of the public key used for key agreement on the Notify topic
-        const resultPublicKey = new TextDecoder().decode(
+        // TODO: this conversion should be done automatically by the did-jwt package's
+        // `decodeEd25519Key` fn, which currently returns a plain Uint8Array.
+        const resultPublicKey = convertUint8ArrayToHex(
           decodeEd25519Key(subscriptionResponseClaims.sub)
         );
 
