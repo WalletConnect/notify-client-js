@@ -24,10 +24,14 @@ export declare namespace JsonRpcTypes {
   // ---- JSON-RPC Responses -----------------------------
   export interface Results {
     wc_notifySubscribe: {
-      publicKey: string;
+      responseAuth: string;
     };
     wc_notifyMessage: { receiptAuth: string };
-    wc_notifyDelete: true;
-    wc_notifyUpdate: true;
+    wc_notifyDelete: {
+      responseAuth: string;
+    };
+    wc_notifyUpdate: {
+      responseAuth: string;
+    };
   }
 }

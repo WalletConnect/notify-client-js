@@ -7,6 +7,7 @@ import {
   JwtPayload,
   composeDidPkh,
   encodeEd25519Key,
+  decodeEd25519Key,
   jwtExp,
 } from "@walletconnect/did-jwt";
 import {
@@ -39,6 +40,7 @@ import {
   SDK_ERRORS,
 } from "../constants";
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
+import { convertUint8ArrayToHex } from "../utils/formats";
 
 export class NotifyEngine extends INotifyEngine {
   public name = "notifyEngine";
@@ -479,7 +481,7 @@ export class NotifyEngine extends INotifyEngine {
         case "wc_notifyMessage":
           return this.onNotifyMessageResponse(topic, payload);
         case "wc_notifyDelete":
-          return;
+          return this.onNotifyDeleteResponse(topic, payload);
         case "wc_notifyUpdate":
           return this.onNotifyUpdateResponse(topic, payload);
         default:
@@ -509,15 +511,28 @@ export class NotifyEngine extends INotifyEngine {
 
         const { request } = this.client.requests.get(id);
 
+        const subscriptionResponseClaims =
+          this.decodeAndValidateJwtAuth<NotifyClientTypes.SubscriptionResponseJWTClaims>(
+            response.result.responseAuth,
+            "notify_subscription_response"
+          );
+
+        // SPEC: `sub` is a did:key of the public key used for key agreement on the Notify topic
+        // TODO: this conversion should be done automatically by the did-jwt package's
+        // `decodeEd25519Key` fn, which currently returns a plain Uint8Array.
+        const resultPublicKey = convertUint8ArrayToHex(
+          decodeEd25519Key(subscriptionResponseClaims.sub)
+        );
+
         // SPEC: Wallet derives symmetric key P with keys Y and Z.
         // SPEC: Notify topic is derived from the sha256 hash of the symmetric key P
         const notifyTopic = await this.client.core.crypto.generateSharedKey(
           request.publicKey,
-          response.result.publicKey
+          resultPublicKey
         );
 
         this.client.logger.info(
-          `onNotifySubscribeResponse > derived notifyTopic ${notifyTopic} from selfPublicKey ${request.publicKey} and Cast publicKey ${response.result.publicKey}`
+          `onNotifySubscribeResponse > derived notifyTopic ${notifyTopic} from selfPublicKey ${request.publicKey} and Cast publicKey ${resultPublicKey}`
         );
 
         const notifySubscription = {
@@ -660,12 +675,37 @@ export class NotifyEngine extends INotifyEngine {
         payload
       );
       try {
-        await this.sendResult<"wc_notifyDelete">(id, topic, true);
+        // TODO: Using a placeholder responseAuth for now since this handler may be removed from the engine.
+        await this.sendResult<"wc_notifyDelete">(id, topic, {
+          responseAuth: "",
+        });
         await this.cleanupSubscription(topic);
         this.client.events.emit("notify_delete", { id, topic });
       } catch (err: any) {
         this.client.logger.error(err);
         await this.sendError(id, topic, err);
+      }
+    };
+
+  protected onNotifyDeleteResponse: INotifyEngine["onNotifyDeleteResponse"] =
+    async (topic, payload) => {
+      if (isJsonRpcResult(payload)) {
+        this.client.logger.info(
+          "[Notify] Engine.onNotifyDeleteResponse > result:",
+          topic,
+          payload
+        );
+
+        this.decodeAndValidateJwtAuth<NotifyClientTypes.DeleteResponseJWTClaims>(
+          payload.result.responseAuth,
+          "notify_delete_response"
+        );
+      } else if (isJsonRpcError(payload)) {
+        this.client.logger.error(
+          "[Notify] Engine.onNotifyDeleteResponse > error:",
+          topic,
+          payload.error
+        );
       }
     };
 
@@ -678,7 +718,13 @@ export class NotifyEngine extends INotifyEngine {
           result: payload,
         });
 
-        const { id } = payload;
+        const { id, result } = payload;
+
+        // TODO: Perform further validations on the updateResponse JWT claims.
+        this.decodeAndValidateJwtAuth<NotifyClientTypes.UpdateResponseJWTClaims>(
+          result.responseAuth,
+          "notify_update_response"
+        );
 
         const { request } = this.client.requests.get(id);
         const existingSubscription = this.client.subscriptions.get(topic);
