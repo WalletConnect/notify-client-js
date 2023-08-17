@@ -50,6 +50,7 @@ export declare namespace NotifyClientTypes {
     core?: ICore;
     keyserverUrl?: string;
     syncClient: ISyncClient;
+    identityKeys?: IdentityKeys;
     SyncStoreController: typeof SyncStore;
   }
 
