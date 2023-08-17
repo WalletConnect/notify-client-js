@@ -1,4 +1,3 @@
-import { RelayerTypes, CryptoTypes } from "@walletconnect/types";
 import {
   ErrorResponse,
   JsonRpcError,
@@ -6,9 +5,9 @@ import {
   JsonRpcResponse,
   JsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
+import { CryptoTypes, RelayerTypes } from "@walletconnect/types";
+import { INotifyClient, NotifyClientTypes } from "./client";
 import { JsonRpcTypes } from "./jsonrpc";
-import { NotifyClientTypes } from "./client";
-import { INotifyClient } from "./client";
 
 export interface RpcOpts {
   req: RelayerTypes.PublishOptions;
@@ -30,15 +29,14 @@ export abstract class INotifyEngine {
 
   // ---------- Public Methods ------------------------------------------ //
 
-  public abstract enableSync(params: {
+  public abstract register(params: {
     account: string;
     onSign: (message: string) => Promise<string>;
-  }): Promise<void>;
+  }): Promise<string>;
 
   public abstract subscribe(params: {
     metadata: NotifyClientTypes.Metadata;
     account: string;
-    onSign: (message: string) => Promise<string>;
   }): Promise<{ id: number; subscriptionAuth: string }>;
 
   public abstract update(params: {

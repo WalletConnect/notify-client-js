@@ -6,8 +6,8 @@ import {
 import {
   JwtPayload,
   composeDidPkh,
-  encodeEd25519Key,
   decodeEd25519Key,
+  encodeEd25519Key,
   jwtExp,
 } from "@walletconnect/did-jwt";
 import {
@@ -64,30 +64,28 @@ export class NotifyEngine extends INotifyEngine {
 
   // ---------- Public --------------------------------------- //
 
-  public enableSync: INotifyEngine["enableSync"] = async ({
-    account,
-    onSign,
-  }) => {
+  public register: INotifyEngine["register"] = async ({ account, onSign }) => {
+    // Retrieve existing identity or register a new one for this account on this device.
+    const identity = await this.registerIdentity(account, onSign);
+
     const signature = await onSign(
       await this.client.syncClient.getMessage({ account })
     );
     await this.client.syncClient.register({ account, signature });
 
     await this.client.initSyncStores({ account, signature });
+
+    return identity;
   };
 
   public subscribe: INotifyEngine["subscribe"] = async ({
     metadata,
     account,
-    onSign,
   }) => {
     this.isInitialized();
 
     const dappPublicKey = await this.resolveDappPublicKey(metadata.url);
     const notifyConfig = await this.resolveNotifyConfig(metadata.url);
-
-    // Retrieve existing identity or register a new one for this account on this device.
-    await this.registerIdentity(account, onSign);
 
     this.client.logger.info(
       `[Notify] subscribe > publicKey for ${metadata.url} is: ${dappPublicKey}`

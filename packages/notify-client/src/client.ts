@@ -7,6 +7,7 @@ import {
 import { EventEmitter } from "events";
 import pino from "pino";
 
+import { HistoryClient } from "@walletconnect/history";
 import { IdentityKeys } from "@walletconnect/identity-keys";
 import {
   DEFAULT_KEYSERVER_URL,
@@ -17,7 +18,6 @@ import {
 } from "./constants";
 import { NotifyEngine } from "./controllers";
 import { INotifyClient, NotifyClientTypes } from "./types";
-import { HistoryClient } from "@walletconnect/history";
 import { fetchAndInjectHistory } from "./utils/history";
 
 export class NotifyClient extends INotifyClient {
@@ -172,12 +172,9 @@ export class NotifyClient extends INotifyClient {
     }
   };
 
-  public enableSync: INotifyClient["enableSync"] = async ({
-    account,
-    onSign,
-  }) => {
+  public register: INotifyClient["register"] = async ({ account, onSign }) => {
     try {
-      return await this.engine.enableSync({ account, onSign });
+      return await this.engine.register({ account, onSign });
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;

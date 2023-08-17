@@ -1,6 +1,6 @@
+import axios from "axios";
 import { INotifyClient } from "../../src";
 import { waitForEvent } from "./async";
-import axios from "axios";
 import { gmDappMetadata } from "./mocks";
 
 const NOTIFY_SERVER_URL =
@@ -19,10 +19,14 @@ export const createNotifySubscription = async (
     notifySubscriptionEvent = event;
   });
 
+  await wallet.register({
+    account,
+    onSign,
+  });
+
   await wallet.subscribe({
     metadata: gmDappMetadata,
     account,
-    onSign,
   });
 
   await waitForEvent(() => gotNotifySubscriptionResponse);

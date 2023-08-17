@@ -1,10 +1,10 @@
-import { ICore, CoreTypes, IStore, RelayerTypes } from "@walletconnect/types";
-import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
-import EventEmitter from "events";
-import { Logger } from "pino";
 import { HistoryClient } from "@walletconnect/history";
 import { IdentityKeys } from "@walletconnect/identity-keys";
+import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
 import { ISyncClient, SyncStore } from "@walletconnect/sync-client";
+import { CoreTypes, ICore, IStore, RelayerTypes } from "@walletconnect/types";
+import EventEmitter from "events";
+import { Logger } from "pino";
 
 import { INotifyEngine } from "./engine";
 
@@ -231,7 +231,7 @@ export abstract class INotifyClient {
 
   // ---------- Public Methods ------------------------------------------------------- //
 
-  public abstract enableSync: INotifyEngine["enableSync"];
+  public abstract register: INotifyEngine["register"];
   public abstract subscribe: INotifyEngine["subscribe"];
   public abstract update: INotifyEngine["update"];
   public abstract decryptMessage: INotifyEngine["decryptMessage"];

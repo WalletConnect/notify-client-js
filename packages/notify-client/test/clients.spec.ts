@@ -1,14 +1,14 @@
+import { Wallet as EthersWallet } from "@ethersproject/wallet";
+import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
-import { expect, describe, it, beforeEach, afterEach } from "vitest";
+import { ISyncClient, SyncClient, SyncStore } from "@walletconnect/sync-client";
 import cloneDeep from "lodash.clonedeep";
-import { NotifyClient, INotifyClient, NotifyClientTypes } from "../src/";
-import { disconnectSocket } from "./helpers/ws";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { INotifyClient, NotifyClient, NotifyClientTypes } from "../src/";
+import { waitForEvent } from "./helpers/async";
 import { gmDappMetadata } from "./helpers/mocks";
 import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
-import { waitForEvent } from "./helpers/async";
-import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
-import { ISyncClient, SyncClient, SyncStore } from "@walletconnect/sync-client";
-import { Wallet as EthersWallet } from "@ethersproject/wallet";
+import { disconnectSocket } from "./helpers/ws";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
@@ -79,9 +79,13 @@ describe("Notify", () => {
           notifySubscriptionEvent = event;
         });
 
-        await wallet.subscribe({
+        await wallet.register({
           account,
           onSign,
+        });
+
+        await wallet.subscribe({
+          account,
           metadata: gmDappMetadata,
         });
 
@@ -139,10 +143,14 @@ describe("Notify", () => {
           initialNotifySubscription = cloneDeep(event.params.subscription!);
         });
 
+        await wallet.register({
+          account,
+          onSign,
+        });
+
         await wallet.subscribe({
           metadata: gmDappMetadata,
           account,
-          onSign,
         });
 
         await waitForEvent(() => gotNotifySubscriptionResponse);
@@ -365,13 +373,13 @@ describe("Notify", () => {
         });
 
         const ethersWallet = EthersWallet.createRandom();
-        await wallet1.enableSync({
+        await wallet1.register({
           account: `eip155:1:${ethersWallet.address}`,
           onSign: (message) => {
             return ethersWallet.signMessage(message);
           },
         });
-        await wallet2.enableSync({
+        await wallet2.register({
           account: `eip155:1:${ethersWallet.address}`,
           onSign: (message) => {
             return ethersWallet.signMessage(message);
@@ -388,7 +396,6 @@ describe("Notify", () => {
         });
         await wallet1.subscribe({
           account: `eip155:1:${ethersWallet.address}`,
-          onSign: (m) => ethersWallet.signMessage(m),
           metadata: gmDappMetadata,
         });
         await waitForEvent(() => gotNotifySubscriptionResponse);
