@@ -131,7 +131,6 @@ describe("Notify", () => {
       });
     });
 
-    // TODO: re-enable once notify-server supports handling the `updateAuth` payload.
     describe("update", () => {
       it("can update an existing notify subscription with a new scope", async () => {
         let gotNotifySubscriptionResponse = false;
