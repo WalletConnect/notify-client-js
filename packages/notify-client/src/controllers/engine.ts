@@ -109,7 +109,6 @@ export class NotifyEngine extends INotifyEngine {
     });
     const dappUrl = metadata.url;
     const issuedAt = Math.round(Date.now() / 1000);
-    this.client;
     const scp = notifyConfig.types
       .map((type) => type.name)
       .join(JWT_SCP_SEPARATOR);
