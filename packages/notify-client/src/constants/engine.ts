@@ -1,8 +1,7 @@
-import { ONE_DAY, THIRTY_DAYS } from "@walletconnect/time";
+import { THIRTY_DAYS, THIRTY_SECONDS } from "@walletconnect/time";
 import { JsonRpcTypes, RpcOpts } from "../types";
 
 // Expiries
-export const NOTIFY_REQUEST_EXPIRY = ONE_DAY;
 export const NOTIFY_SUBSCRIPTION_EXPIRY = THIRTY_DAYS;
 
 // JWT-related constants
@@ -12,11 +11,11 @@ export const JWT_SCP_SEPARATOR = " ";
 export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
   wc_notifySubscribe: {
     req: {
-      ttl: ONE_DAY,
+      ttl: THIRTY_SECONDS,
       tag: 4000,
     },
     res: {
-      ttl: ONE_DAY,
+      ttl: THIRTY_DAYS,
       tag: 4001,
     },
   },
@@ -26,27 +25,27 @@ export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
       tag: 4002,
     },
     res: {
-      ttl: ONE_DAY,
+      ttl: THIRTY_DAYS,
       tag: 4003,
     },
   },
   wc_notifyDelete: {
     req: {
-      ttl: ONE_DAY,
+      ttl: THIRTY_DAYS,
       tag: 4004,
     },
     res: {
-      ttl: ONE_DAY,
+      ttl: THIRTY_DAYS,
       tag: 4005,
     },
   },
   wc_notifyUpdate: {
     req: {
-      ttl: ONE_DAY,
+      ttl: THIRTY_SECONDS,
       tag: 4008,
     },
     res: {
-      ttl: ONE_DAY,
+      ttl: THIRTY_DAYS,
       tag: 4009,
     },
   },

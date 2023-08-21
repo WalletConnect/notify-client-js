@@ -5,13 +5,13 @@ import {
   JsonRpcResponse,
   JsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
-import { CryptoTypes, RelayerTypes } from "@walletconnect/types";
+import { CryptoTypes } from "@walletconnect/types";
 import { INotifyClient, NotifyClientTypes } from "./client";
 import { JsonRpcTypes } from "./jsonrpc";
 
 export interface RpcOpts {
-  req: RelayerTypes.PublishOptions;
-  res: RelayerTypes.PublishOptions;
+  req: { ttl: number; tag: number };
+  res: { ttl: number; tag: number };
 }
 
 export declare namespace NotifyEngineTypes {

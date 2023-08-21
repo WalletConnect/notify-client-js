@@ -8,7 +8,6 @@ import {
   composeDidPkh,
   decodeEd25519Key,
   encodeEd25519Key,
-  jwtExp,
 } from "@walletconnect/did-jwt";
 import {
   JsonRpcPayload,
@@ -35,7 +34,6 @@ import jwtDecode, { InvalidTokenError } from "jwt-decode";
 import {
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
-  NOTIFY_REQUEST_EXPIRY,
   NOTIFY_SUBSCRIPTION_EXPIRY,
   SDK_ERRORS,
 } from "../constants";
@@ -109,12 +107,13 @@ export class NotifyEngine extends INotifyEngine {
     });
     const dappUrl = metadata.url;
     const issuedAt = Math.round(Date.now() / 1000);
+    const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifySubscribe"].req.ttl;
     const scp = notifyConfig.types
       .map((type) => type.name)
       .join(JWT_SCP_SEPARATOR);
     const payload: NotifyClientTypes.SubscriptionJWTClaims = {
       iat: issuedAt,
-      exp: jwtExp(issuedAt),
+      exp: expiry,
       iss: encodeEd25519Key(identityKeyPub),
       sub: composeDidPkh(account),
       aud: dappUrl,
@@ -191,7 +190,10 @@ export class NotifyEngine extends INotifyEngine {
     });
 
     // Set the expiry for the notify subscription request.
-    this.client.core.expirer.set(id, calcExpiry(NOTIFY_REQUEST_EXPIRY));
+    this.client.core.expirer.set(
+      id,
+      calcExpiry(ENGINE_RPC_OPTS["wc_notifySubscribe"].req.ttl)
+    );
 
     return { id, subscriptionAuth };
   };
@@ -856,10 +858,11 @@ export class NotifyEngine extends INotifyEngine {
         subscription.metadata.url
       );
       const issuedAt = Math.round(Date.now() / 1000);
+      const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyMessage"].res.ttl;
       const payload: NotifyClientTypes.MessageReceiptJWTClaims = {
         act: "notify_receipt",
         iat: issuedAt,
-        exp: jwtExp(issuedAt),
+        exp: expiry,
         iss: encodeEd25519Key(identityKeyPub),
         aud: encodeEd25519Key(dappPublicKey),
         sub: hashMessage(JSON.stringify(message)),
@@ -898,10 +901,11 @@ export class NotifyEngine extends INotifyEngine {
         subscription.metadata.url
       );
       const issuedAt = Math.round(Date.now() / 1000);
+      const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyDelete"].req.ttl;
       const payload: NotifyClientTypes.DeleteJWTClaims = {
         act: "notify_delete",
         iat: issuedAt,
-        exp: jwtExp(issuedAt),
+        exp: expiry,
         iss: encodeEd25519Key(identityKeyPub),
         aud: encodeEd25519Key(dappPublicKey),
         sub: reason,
@@ -939,10 +943,11 @@ export class NotifyEngine extends INotifyEngine {
         subscription.metadata.url
       );
       const issuedAt = Math.round(Date.now() / 1000);
+      const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyUpdate"].req.ttl;
       const payload: NotifyClientTypes.UpdateJWTClaims = {
         act: "notify_update",
         iat: issuedAt,
-        exp: jwtExp(issuedAt),
+        exp: expiry,
         iss: encodeEd25519Key(identityKeyPub),
         aud: encodeEd25519Key(dappPublicKey),
         sub: composeDidPkh(subscription.account),
