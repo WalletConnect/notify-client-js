@@ -232,18 +232,16 @@ export class NotifyClient extends INotifyClient {
           return;
         }
 
-        if (subscription) {
-          const existingSubExists =
-            this.messages.getAll({ topic: subTopic }).length > 0;
-          if (existingSubExists) return;
+        const existingSubExists =
+          this.messages.getAll({ topic: subTopic }).length > 0;
+        if (existingSubExists) return;
 
-          this.messages.set(subTopic, { topic: subTopic, messages: [] });
-          this.core.crypto.setSymKey(subscription.symKey, subTopic).then(() => {
-            if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
-              this.core.relayer.subscriber.subscribe(subTopic);
-            }
-          });
-        }
+        this.messages.set(subTopic, { topic: subTopic, messages: [] });
+        this.core.crypto.setSymKey(subscription.symKey, subTopic).then(() => {
+          if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
+            this.core.relayer.subscriber.subscribe(subTopic);
+          }
+        });
       }
     );
     await this.subscriptions.init();
