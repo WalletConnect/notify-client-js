@@ -215,22 +215,22 @@ export class NotifyClient extends INotifyClient {
       account,
       signature,
       (subTopic, subscription) => {
-        // if (!subscription) {
-        //   // Unsubscribe only if currently subscribed
-        //   if (this.core.relayer.subscriber.topics.includes(subTopic)) {
-        //     this.core.relayer.subscriber.unsubscribe(subTopic);
-        //   }
-        //   // Delete messages since subscription was removed
-        //   this.messages.delete(subTopic, {
-        //     code: -1,
-        //     message: "Deleted parent subscription",
-        //   });
+        if (!subscription) {
+          // Unsubscribe only if currently subscribed
+          if (this.core.relayer.subscriber.topics.includes(subTopic)) {
+            this.core.relayer.subscriber.unsubscribe(subTopic);
+          }
+          // Delete messages since subscription was removed
+          this.messages.delete(subTopic, {
+            code: -1,
+            message: "Deleted parent subscription",
+          });
 
-        //   // Delete symkey since subscription was removed
-        //   this.core.crypto.deleteSymKey(subTopic);
+          // Delete symkey since subscription was removed
+          this.core.crypto.deleteSymKey(subTopic);
 
-        //   return;
-        // }
+          return;
+        }
 
         if (subscription) {
           const existingSubExists =
