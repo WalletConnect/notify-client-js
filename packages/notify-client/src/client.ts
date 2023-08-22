@@ -215,33 +215,35 @@ export class NotifyClient extends INotifyClient {
       account,
       signature,
       (subTopic, subscription) => {
-        if (!subscription) {
-          // Unsubscribe only if currently subscribed
-          if (this.core.relayer.subscriber.topics.includes(subTopic)) {
-            this.core.relayer.subscriber.unsubscribe(subTopic);
-          }
-          // Delete messages since subscription was removed
-          this.messages.delete(subTopic, {
-            code: -1,
-            message: "Deleted parent subscription",
+        // if (!subscription) {
+        //   // Unsubscribe only if currently subscribed
+        //   if (this.core.relayer.subscriber.topics.includes(subTopic)) {
+        //     this.core.relayer.subscriber.unsubscribe(subTopic);
+        //   }
+        //   // Delete messages since subscription was removed
+        //   this.messages.delete(subTopic, {
+        //     code: -1,
+        //     message: "Deleted parent subscription",
+        //   });
+
+        //   // Delete symkey since subscription was removed
+        //   this.core.crypto.deleteSymKey(subTopic);
+
+        //   return;
+        // }
+
+        if (subscription) {
+          const existingSubExists =
+            this.messages.getAll({ topic: subTopic }).length > 0;
+          if (existingSubExists) return;
+
+          this.messages.set(subTopic, { topic: subTopic, messages: [] });
+          this.core.crypto.setSymKey(subscription.symKey, subTopic).then(() => {
+            if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
+              this.core.relayer.subscriber.subscribe(subTopic);
+            }
           });
-
-          // Delete symkey since subscription was removed
-          this.core.crypto.deleteSymKey(subTopic);
-
-          return;
         }
-
-        const existingSubExists =
-          this.messages.getAll({ topic: subTopic }).length > 0;
-        if (existingSubExists) return;
-
-        this.messages.set(subTopic, { topic: subTopic, messages: [] });
-        this.core.crypto.setSymKey(subscription.symKey).then(() => {
-          if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
-            this.core.relayer.subscriber.subscribe(subTopic);
-          }
-        });
       }
     );
     await this.subscriptions.init();
