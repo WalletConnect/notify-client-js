@@ -82,7 +82,9 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    const dappPublicKey = await this.resolveDappPublicKey(metadata.url);
+    const { dappPublicKey, dappIdentityKey } = await this.resolveDappPublicKey(
+      metadata.url
+    );
     const notifyConfig = await this.resolveNotifyConfig(metadata.url);
 
     this.client.logger.info(
@@ -105,7 +107,6 @@ export class NotifyEngine extends INotifyEngine {
     const identityKeyPub = await this.client.identityKeys.getIdentity({
       account,
     });
-    const dappUrl = metadata.url;
     const issuedAt = Math.round(Date.now() / 1000);
     const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifySubscribe"].req.ttl;
     const scp = notifyConfig.types
@@ -116,12 +117,19 @@ export class NotifyEngine extends INotifyEngine {
       exp: expiry,
       iss: encodeEd25519Key(identityKeyPub),
       sub: composeDidPkh(account),
-      aud: dappUrl,
+      aud: encodeEd25519Key(dappIdentityKey),
       ksu: this.client.keyserverUrl,
       scp,
       act: "notify_subscription",
       app: metadata.url,
     };
+
+    console.log(
+      "DECODED JWT",
+      payload,
+      "Decoded ed25519 identity key:",
+      identityKeyPub
+    );
 
     this.client.logger.info(
       `[Notify] subscribe > generating subscriptionAuth JWT for payload: ${JSON.stringify(
@@ -429,7 +437,18 @@ export class NotifyEngine extends INotifyEngine {
       async (event: RelayerTypes.MessageEvent) => {
         const { topic, message, publishedAt } = event;
 
+        console.log(
+          "Got message: ",
+          message,
+          "Topic: ",
+          topic,
+          "Published at:",
+          publishedAt
+        );
+
         const payload = await this.client.core.crypto.decode(topic, message);
+
+        console.log("Decoded: ", payload);
 
         if (isJsonRpcRequest(payload)) {
           this.client.core.history.set(topic, payload);
@@ -854,7 +873,7 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const dappPublicKey = await this.resolveDappPublicKey(
+      const { dappIdentityKey } = await this.resolveDappPublicKey(
         subscription.metadata.url
       );
       const issuedAt = Math.round(Date.now() / 1000);
@@ -864,7 +883,7 @@ export class NotifyEngine extends INotifyEngine {
         iat: issuedAt,
         exp: expiry,
         iss: encodeEd25519Key(identityKeyPub),
-        aud: encodeEd25519Key(dappPublicKey),
+        aud: encodeEd25519Key(dappIdentityKey),
         sub: hashMessage(JSON.stringify(message)),
         app: subscription.metadata.url,
         ksu: this.client.keyserverUrl,
@@ -897,7 +916,7 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const dappPublicKey = await this.resolveDappPublicKey(
+      const { dappIdentityKey } = await this.resolveDappPublicKey(
         subscription.metadata.url
       );
       const issuedAt = Math.round(Date.now() / 1000);
@@ -907,7 +926,7 @@ export class NotifyEngine extends INotifyEngine {
         iat: issuedAt,
         exp: expiry,
         iss: encodeEd25519Key(identityKeyPub),
-        aud: encodeEd25519Key(dappPublicKey),
+        aud: encodeEd25519Key(dappIdentityKey),
         sub: reason,
         ksu: this.client.keyserverUrl,
         app: subscription.metadata.url,
@@ -939,7 +958,7 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const dappPublicKey = await this.resolveDappPublicKey(
+      const { dappIdentityKey } = await this.resolveDappPublicKey(
         subscription.metadata.url
       );
       const issuedAt = Math.round(Date.now() / 1000);
@@ -949,7 +968,7 @@ export class NotifyEngine extends INotifyEngine {
         iat: issuedAt,
         exp: expiry,
         iss: encodeEd25519Key(identityKeyPub),
-        aud: encodeEd25519Key(dappPublicKey),
+        aud: encodeEd25519Key(dappIdentityKey),
         sub: composeDidPkh(subscription.account),
         app: subscription.metadata.url,
         ksu: this.client.keyserverUrl,
@@ -1009,7 +1028,9 @@ export class NotifyEngine extends INotifyEngine {
     });
   };
 
-  private resolveDappPublicKey = async (dappUrl: string): Promise<string> => {
+  private resolveDappPublicKey = async (
+    dappUrl: string
+  ): Promise<{ dappPublicKey: string; dappIdentityKey: string }> => {
     let didDoc: NotifyClientTypes.NotifyDidDocument;
 
     try {
@@ -1026,11 +1047,19 @@ export class NotifyEngine extends INotifyEngine {
     const base64Jwk = publicKeyJwk.x.replace(/-/g, "+").replace(/_/g, "/");
     const dappPublicKey = Buffer.from(base64Jwk, "base64").toString("hex");
 
+    const { publicKeyJwk: identityKeyJwk } = didDoc.verificationMethod[1];
+    const base64IdentityJwk = identityKeyJwk.x
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+    const dappIdentityKey = Buffer.from(base64IdentityJwk, "base64").toString(
+      "hex"
+    );
+
     this.client.logger.info(
       `[Notify] subscribe > publicKey for ${dappUrl} is: ${dappPublicKey}`
     );
 
-    return dappPublicKey;
+    return { dappPublicKey, dappIdentityKey };
   };
 
   private resolveNotifyConfig = async (
