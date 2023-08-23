@@ -237,7 +237,7 @@ export class NotifyClient extends INotifyClient {
         if (existingSubExists) return;
 
         this.messages.set(subTopic, { topic: subTopic, messages: [] });
-        this.core.crypto.setSymKey(subscription.symKey).then(() => {
+        this.core.crypto.setSymKey(subscription.symKey, subTopic).then(() => {
           if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
             this.core.relayer.subscriber.subscribe(subTopic);
           }
