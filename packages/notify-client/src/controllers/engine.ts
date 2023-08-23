@@ -1028,7 +1028,7 @@ export class NotifyEngine extends INotifyEngine {
     });
   };
 
-  private resolveDappPublicKey = async (
+  private resolveDappKeys = async (
     dappUrl: string
   ): Promise<{ dappPublicKey: string; dappIdentityKey: string }> => {
     let didDoc: NotifyClientTypes.NotifyDidDocument;
