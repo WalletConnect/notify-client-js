@@ -584,7 +584,7 @@ export class NotifyEngine extends INotifyEngine {
     };
 
   protected onNotifyMessageRequest: INotifyEngine["onNotifyMessageRequest"] =
-    async (topic, payload, publishedAt) => {
+    async (topic, payload) => {
       this.client.logger.info({
         event: "Engine.onNotifyMessageRequest",
         topic,
@@ -615,7 +615,9 @@ export class NotifyEngine extends INotifyEngine {
             id: payload.id,
             topic,
             message: messageClaims.msg,
-            publishedAt,
+            // Not using publishedAt as these messages can be coming from Archive API
+            // Multiplying by 1000 to get the timestamp in ms, instead of seconds
+            publishedAt: messageClaims.iat * 1000,
           },
         },
       });
