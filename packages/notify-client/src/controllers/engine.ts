@@ -82,7 +82,7 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    const { dappPublicKey, dappIdentityKey } = await this.resolveDappPublicKey(
+    const { dappPublicKey, dappIdentityKey } = await this.resolveDappKeys(
       metadata.url
     );
     const notifyConfig = await this.resolveNotifyConfig(metadata.url);
@@ -436,15 +436,6 @@ export class NotifyEngine extends INotifyEngine {
       RELAYER_EVENTS.message,
       async (event: RelayerTypes.MessageEvent) => {
         const { topic, message, publishedAt } = event;
-
-        console.log(
-          "Got message: ",
-          message,
-          "Topic: ",
-          topic,
-          "Published at:",
-          publishedAt
-        );
 
         const payload = await this.client.core.crypto.decode(topic, message);
 
@@ -873,7 +864,7 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const { dappIdentityKey } = await this.resolveDappPublicKey(
+      const { dappIdentityKey } = await this.resolveDappKeys(
         subscription.metadata.url
       );
       const issuedAt = Math.round(Date.now() / 1000);
@@ -916,7 +907,7 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const { dappIdentityKey } = await this.resolveDappPublicKey(
+      const { dappIdentityKey } = await this.resolveDappKeys(
         subscription.metadata.url
       );
       const issuedAt = Math.round(Date.now() / 1000);
@@ -958,7 +949,7 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const { dappIdentityKey } = await this.resolveDappPublicKey(
+      const { dappIdentityKey } = await this.resolveDappKeys(
         subscription.metadata.url
       );
       const issuedAt = Math.round(Date.now() / 1000);
