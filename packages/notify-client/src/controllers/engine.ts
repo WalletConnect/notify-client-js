@@ -124,13 +124,6 @@ export class NotifyEngine extends INotifyEngine {
       app: metadata.url,
     };
 
-    console.log(
-      "DECODED JWT",
-      payload,
-      "Decoded ed25519 identity key:",
-      identityKeyPub
-    );
-
     this.client.logger.info(
       `[Notify] subscribe > generating subscriptionAuth JWT for payload: ${JSON.stringify(
         payload
@@ -438,8 +431,6 @@ export class NotifyEngine extends INotifyEngine {
         const { topic, message, publishedAt } = event;
 
         const payload = await this.client.core.crypto.decode(topic, message);
-
-        console.log("Decoded: ", payload);
 
         if (isJsonRpcRequest(payload)) {
           this.client.core.history.set(topic, payload);
