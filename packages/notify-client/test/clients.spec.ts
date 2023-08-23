@@ -227,6 +227,47 @@ describe("Notify", () => {
       });
     });
 
+    describe("getActiveSubscriptions", () => {
+      it("can query currently active notify subscriptions", async () => {
+        const { notifySubscriptionEvent } = await createNotifySubscription(
+          wallet,
+          account,
+          onSign
+        );
+
+        expect(notifySubscriptionEvent.params.subscription.topic).toBeDefined();
+
+        const walletSubscriptions = wallet.getActiveSubscriptions();
+
+        // Check that wallet is in expected state.
+        expect(Object.keys(walletSubscriptions).length).toBe(1);
+      });
+      it("can filter currently active notify subscriptions", async () => {
+        [1, 2].forEach((num) => {
+          wallet.subscriptions.set(`topic${num}`, {
+            account: `account${num}`,
+            expiry: Date.now(),
+            relay: {
+              protocol: RELAYER_DEFAULT_PROTOCOL,
+            },
+            scope: {},
+            metadata: gmDappMetadata,
+            topic: `topic${num}`,
+            symKey: "",
+          });
+        });
+
+        const walletSubscriptions = wallet.getActiveSubscriptions({
+          account: "account2",
+        });
+
+        expect(Object.keys(walletSubscriptions).length).toBe(1);
+        expect(
+          Object.values(walletSubscriptions).map((sub) => sub.account)
+        ).toEqual(["account2"]);
+      });
+    });
+
     describe("getMessageHistory", async () => {
       it("can get message history for a known notify topic", async () => {
         await createNotifySubscription(wallet, account, onSign);
@@ -426,49 +467,6 @@ describe("Notify", () => {
 
         expect(walletMessage).toEqual("Test");
         expect(walletPeerMessage).toEqual(walletMessage);
-      });
-    });
-  });
-
-  describe("Common (BaseClient)", () => {
-    describe("getActiveSubscriptions", () => {
-      it("can query currently active notify subscriptions", async () => {
-        const { notifySubscriptionEvent } = await createNotifySubscription(
-          wallet,
-          account,
-          onSign
-        );
-
-        expect(notifySubscriptionEvent.params.subscription.topic).toBeDefined();
-
-        const walletSubscriptions = wallet.getActiveSubscriptions();
-
-        // Check that wallet is in expected state.
-        expect(Object.keys(walletSubscriptions).length).toBe(1);
-      });
-      it("can filter currently active notify subscriptions", async () => {
-        [1, 2].forEach((num) => {
-          wallet.subscriptions.set(`topic${num}`, {
-            account: `account${num}`,
-            expiry: Date.now(),
-            relay: {
-              protocol: RELAYER_DEFAULT_PROTOCOL,
-            },
-            scope: {},
-            metadata: gmDappMetadata,
-            topic: `topic${num}`,
-            symKey: "",
-          });
-        });
-
-        const walletSubscriptions = wallet.getActiveSubscriptions({
-          account: "account2",
-        });
-
-        expect(Object.keys(walletSubscriptions).length).toBe(1);
-        expect(
-          Object.values(walletSubscriptions).map((sub) => sub.account)
-        ).toEqual(["account2"]);
       });
     });
   });
