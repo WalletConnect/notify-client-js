@@ -276,7 +276,7 @@ export class NotifyClient extends INotifyClient {
         });
     });
 
-    this.emit("sync_stores_initialized", {}) 
+    this.emit("sync_stores_initialized", {});
   };
 
   // ---------- Private ----------------------------------------------- //

@@ -14,7 +14,7 @@ export declare namespace NotifyClientTypes {
     | "notify_message"
     | "notify_delete"
     | "notify_update"
-    // JS Implementation specific event, used to indicate stores are done initializing 
+    // JS Implementation specific event, used to indicate stores are done initializing
     | "sync_stores_initialized";
 
   type NotifyResponseEventArgs = {
