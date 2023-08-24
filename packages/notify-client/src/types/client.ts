@@ -13,7 +13,9 @@ export declare namespace NotifyClientTypes {
     | "notify_subscription"
     | "notify_message"
     | "notify_delete"
-    | "notify_update";
+    | "notify_update"
+    // JS Implementation specific event, used to indicate stores are done initializing
+    | "sync_stores_initialized";
 
   type NotifyResponseEventArgs = {
     error?: ErrorResponse;
@@ -37,6 +39,7 @@ export declare namespace NotifyClientTypes {
     notify_message: BaseEventArgs<NotifyMessageRequestEventArgs>;
     notify_delete: BaseEventArgs<NotifyDeleteRequestEventArgs>;
     notify_update: BaseEventArgs<NotifyResponseEventArgs>;
+    sync_stores_initialized: Record<string, never>; // empty object
   }
 
   interface BaseJwtClaims {
