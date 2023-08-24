@@ -6,6 +6,8 @@ import {
 import { JsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import { ICore } from "@walletconnect/types";
 
+const HISTORY_MAX_FETCH_SIZE = 200;
+
 // Only inject necessary messages
 // Primarily to reduce sync messages
 export const reduceAndInjectHistory = async (
@@ -69,18 +71,30 @@ export const fetchAndInjectHistory = async (
   historyClient: HistoryClient
 ) => {
   try {
-    const messages = await historyClient.getMessages({
-      topic,
-      direction: "backward",
-      messageCount: 200,
-    });
+    let originId = "";
+    let retrievedCount = 0;
 
-    core.logger.info(
-      `Fetched ${messages.messageResponse.messages.length} messages from history`
-    );
+    // Fetch history until we have exhausted all of this topic's history.
+    do {
+      const messages = await historyClient.getMessages({
+        topic,
+        direction: "backward",
+        messageCount: HISTORY_MAX_FETCH_SIZE,
+        originId,
+      });
 
-    const currentMessages = messages.messageResponse.messages;
-    await reduceAndInjectHistory(core, currentMessages, topic);
+      core.logger.info(
+        `Fetched ${messages.messageResponse.messages.length} messages from history for topic: ${topic}, store: ${name}`
+      );
+
+      retrievedCount = messages.messageResponse.messages.length;
+      originId =
+        messages.messageResponse.messages[HISTORY_MAX_FETCH_SIZE - 1]
+          .message_id;
+
+      const currentMessages = messages.messageResponse.messages;
+      await reduceAndInjectHistory(core, currentMessages, topic);
+    } while (retrievedCount === HISTORY_MAX_FETCH_SIZE);
   } catch (e: any) {
     throw new Error(
       `Failed to fetch and inject history for ${name}: ${e.message}`
