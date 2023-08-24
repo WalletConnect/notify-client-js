@@ -39,7 +39,7 @@ export declare namespace NotifyClientTypes {
     notify_message: BaseEventArgs<NotifyMessageRequestEventArgs>;
     notify_delete: BaseEventArgs<NotifyDeleteRequestEventArgs>;
     notify_update: BaseEventArgs<NotifyResponseEventArgs>;
-    sync_stores_initialized: {};
+    sync_stores_initialized: Record<string, never>; // empty object
   }
 
   interface BaseJwtClaims {
