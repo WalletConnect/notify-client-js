@@ -2,7 +2,7 @@
 
 > Notify Client is currently under active development. Please be aware that until v1.0 (stable) is reached, `0.x.x` releases of the package may include breaking changes on the minor semver version increment. This means updates could modify the API, remove deprecated features, or change default behavior.
 >
-> Please check the [release summaries](https://github.com/WalletConnect/push-client-js/releases) for any notes on important changes between versions.
+> Please check the [release summaries](https://github.com/WalletConnect/notify-client-js/releases) for any notes on important changes between versions.
 
 ## Installation
 

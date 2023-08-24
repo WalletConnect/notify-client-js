@@ -1,10 +1,10 @@
 {
-  "name": "push-client-js",
+  "name": "notify-client-js",
   "description": "Repository for all packages related to the WalletConnect Notify Client",
   "version": "0.0.1",
   "private": true,
   "author": "WalletConnect, Inc. <walletconnect.com>",
-  "homepage": "https://github.com/walletconnect/push-client-js/",
+  "homepage": "https://github.com/walletconnect/notify-client-js/",
   "license": "Apache-2.0",
   "workspaces": [
     "packages/*"
@@ -25,10 +25,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/walletconnect/push-client-js.git"
+    "url": "git+https://github.com/walletconnect/notify-client-js.git"
   },
   "bugs": {
-    "url": "https://github.com/walletconnect/push-client-js/issues"
+    "url": "https://github.com/walletconnect/notify-client-js/issues"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "22.0.1",

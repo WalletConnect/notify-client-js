@@ -3,7 +3,7 @@
   "description": "WalletConnect Notify Message Decrypter",
   "version": "0.1.0",
   "author": "WalletConnect, Inc. <walletconnect.com>",
-  "homepage": "https://github.com/walletconnect/push-client-js/",
+  "homepage": "https://github.com/walletconnect/notify-client-js/",
   "license": "Apache-2.0",
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
