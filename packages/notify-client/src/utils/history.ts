@@ -76,12 +76,20 @@ export const fetchAndInjectHistory = async (
 
     // Fetch history until we have exhausted all of this topic's history.
     do {
-      const messages = await historyClient.getMessages({
+      const baseFetchParams = {
         topic,
         direction: "backward",
         messageCount: HISTORY_MAX_FETCH_SIZE,
-        originId,
-      });
+      } as const;
+
+      const fetchParams = originId
+        ? ({
+            ...baseFetchParams,
+            originId,
+          } as const)
+        : baseFetchParams;
+
+      const messages = await historyClient.getMessages(fetchParams);
 
       core.logger.info(
         `Fetched ${messages.messageResponse.messages.length} messages from history for topic: ${topic}, store: ${name}`
@@ -89,8 +97,9 @@ export const fetchAndInjectHistory = async (
 
       retrievedCount = messages.messageResponse.messages.length;
       originId =
-        messages.messageResponse.messages[HISTORY_MAX_FETCH_SIZE - 1]
-          .message_id;
+        messages.messageResponse.messages[
+          messages.messageResponse.messages.length - 1
+        ].message_id;
 
       const currentMessages = messages.messageResponse.messages;
       await reduceAndInjectHistory(core, currentMessages, topic);
