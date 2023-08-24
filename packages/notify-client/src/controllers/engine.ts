@@ -607,7 +607,16 @@ export class NotifyEngine extends INotifyEngine {
         return;
       }
 
+      // To account for data races occuring from history injection of notify messages
+      if (!this.client.messages.keys.some((key) => key === topic)) {
+        await this.client.messages.set(topic, {
+          messages: {},
+          topic,
+        });
+      }
+
       const currentMessages = this.client.messages.get(topic).messages;
+
       await this.client.messages.update(topic, {
         messages: {
           ...currentMessages,
