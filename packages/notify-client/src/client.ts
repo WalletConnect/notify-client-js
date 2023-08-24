@@ -7,51 +7,51 @@ import {
 import { EventEmitter } from "events";
 import pino from "pino";
 
+import { HistoryClient } from "@walletconnect/history";
 import { IdentityKeys } from "@walletconnect/identity-keys";
 import {
   DEFAULT_KEYSERVER_URL,
-  PUSH_CLIENT_PROTOCOL,
-  PUSH_CLIENT_STORAGE_PREFIX,
-  PUSH_CLIENT_VERSION,
-  PUSH_WALLET_CLIENT_DEFAULT_NAME,
+  NOTIFY_CLIENT_PROTOCOL,
+  NOTIFY_CLIENT_STORAGE_PREFIX,
+  NOTIFY_CLIENT_VERSION,
+  NOTIFY_WALLET_CLIENT_DEFAULT_NAME,
 } from "./constants";
-import { PushEngine } from "./controllers";
-import { IWalletClient, PushClientTypes } from "./types";
-import { HistoryClient } from "@walletconnect/history";
+import { NotifyEngine } from "./controllers";
+import { INotifyClient, NotifyClientTypes } from "./types";
 import { fetchAndInjectHistory } from "./utils/history";
 
-export class WalletClient extends IWalletClient {
-  public readonly protocol = PUSH_CLIENT_PROTOCOL;
-  public readonly version = PUSH_CLIENT_VERSION;
-  public readonly name: IWalletClient["name"] = PUSH_WALLET_CLIENT_DEFAULT_NAME;
-  public readonly keyserverUrl: IWalletClient["keyserverUrl"];
+export class NotifyClient extends INotifyClient {
+  public readonly protocol = NOTIFY_CLIENT_PROTOCOL;
+  public readonly version = NOTIFY_CLIENT_VERSION;
+  public readonly name: INotifyClient["name"] =
+    NOTIFY_WALLET_CLIENT_DEFAULT_NAME;
+  public readonly keyserverUrl: INotifyClient["keyserverUrl"];
 
-  public core: IWalletClient["core"];
-  public logger: IWalletClient["logger"];
-  public events: IWalletClient["events"] = new EventEmitter();
-  public engine: IWalletClient["engine"];
-  public requests: IWalletClient["requests"];
-  public proposals: IWalletClient["proposals"];
-  public subscriptions: IWalletClient["subscriptions"];
-  public messages: IWalletClient["messages"];
-  public identityKeys: IWalletClient["identityKeys"];
+  public core: INotifyClient["core"];
+  public logger: INotifyClient["logger"];
+  public events: INotifyClient["events"] = new EventEmitter();
+  public engine: INotifyClient["engine"];
+  public requests: INotifyClient["requests"];
+  public subscriptions: INotifyClient["subscriptions"];
+  public messages: INotifyClient["messages"];
+  public identityKeys: INotifyClient["identityKeys"];
 
   public historyClient: HistoryClient;
 
-  public syncClient: IWalletClient["syncClient"];
-  public SyncStoreController: IWalletClient["SyncStoreController"];
+  public syncClient: INotifyClient["syncClient"];
+  public SyncStoreController: INotifyClient["SyncStoreController"];
 
-  static async init(opts: PushClientTypes.WalletClientOptions) {
-    const client = new WalletClient(opts);
+  static async init(opts: NotifyClientTypes.ClientOptions) {
+    const client = new NotifyClient(opts);
     await client.initialize();
 
     return client;
   }
 
-  constructor(opts: PushClientTypes.WalletClientOptions) {
+  constructor(opts: NotifyClientTypes.ClientOptions) {
     super(opts);
 
-    this.name = opts.name || PUSH_WALLET_CLIENT_DEFAULT_NAME;
+    this.name = opts.name || NOTIFY_WALLET_CLIENT_DEFAULT_NAME;
 
     const logger =
       typeof opts.logger !== "undefined" && typeof opts.logger !== "string"
@@ -75,28 +75,22 @@ export class WalletClient extends IWalletClient {
       this.core,
       this.logger,
       "requests",
-      PUSH_CLIENT_STORAGE_PREFIX
-    );
-    this.proposals = new Store(
-      this.core,
-      this.logger,
-      "proposals",
-      PUSH_CLIENT_STORAGE_PREFIX
+      NOTIFY_CLIENT_STORAGE_PREFIX
     );
     this.subscriptions = new Store(
       this.core,
       this.logger,
       "subscriptions",
-      PUSH_CLIENT_STORAGE_PREFIX
+      NOTIFY_CLIENT_STORAGE_PREFIX
     );
     this.messages = new Store(
       this.core,
       this.logger,
       "messages",
-      PUSH_CLIENT_STORAGE_PREFIX
+      NOTIFY_CLIENT_STORAGE_PREFIX
     );
-    this.identityKeys = new IdentityKeys(this.core);
-    this.engine = new PushEngine(this);
+    this.identityKeys = opts.identityKeys ?? new IdentityKeys(this.core);
+    this.engine = new NotifyEngine(this);
   }
 
   get context() {
@@ -109,25 +103,7 @@ export class WalletClient extends IWalletClient {
 
   // ---------- Engine ----------------------------------------------- //
 
-  public approve: IWalletClient["approve"] = async (params) => {
-    try {
-      return await this.engine.approve(params);
-    } catch (error: any) {
-      this.logger.error(error.message);
-      throw error;
-    }
-  };
-
-  public reject: IWalletClient["reject"] = async (params) => {
-    try {
-      return await this.engine.reject(params);
-    } catch (error: any) {
-      this.logger.error(error.message);
-      throw error;
-    }
-  };
-
-  public subscribe: IWalletClient["subscribe"] = async (params) => {
+  public subscribe: INotifyClient["subscribe"] = async (params) => {
     try {
       return await this.engine.subscribe(params);
     } catch (error: any) {
@@ -136,7 +112,7 @@ export class WalletClient extends IWalletClient {
     }
   };
 
-  public update: IWalletClient["update"] = async (params) => {
+  public update: INotifyClient["update"] = async (params) => {
     try {
       return await this.engine.update(params);
     } catch (error: any) {
@@ -145,7 +121,7 @@ export class WalletClient extends IWalletClient {
     }
   };
 
-  public decryptMessage: IWalletClient["decryptMessage"] = async (params) => {
+  public decryptMessage: INotifyClient["decryptMessage"] = async (params) => {
     try {
       return await this.engine.decryptMessage(params);
     } catch (error: any) {
@@ -154,7 +130,7 @@ export class WalletClient extends IWalletClient {
     }
   };
 
-  public getMessageHistory: IWalletClient["getMessageHistory"] = (params) => {
+  public getMessageHistory: INotifyClient["getMessageHistory"] = (params) => {
     try {
       return this.engine.getMessageHistory(params);
     } catch (error: any) {
@@ -163,16 +139,18 @@ export class WalletClient extends IWalletClient {
     }
   };
 
-  public deletePushMessage: IWalletClient["deletePushMessage"] = (params) => {
+  public deleteNotifyMessage: INotifyClient["deleteNotifyMessage"] = (
+    params
+  ) => {
     try {
-      return this.engine.deletePushMessage(params);
+      return this.engine.deleteNotifyMessage(params);
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;
     }
   };
 
-  public getActiveSubscriptions: IWalletClient["getActiveSubscriptions"] = (
+  public getActiveSubscriptions: INotifyClient["getActiveSubscriptions"] = (
     params
   ) => {
     try {
@@ -183,7 +161,7 @@ export class WalletClient extends IWalletClient {
     }
   };
 
-  public deleteSubscription: IWalletClient["deleteSubscription"] = async (
+  public deleteSubscription: INotifyClient["deleteSubscription"] = async (
     params
   ) => {
     try {
@@ -194,12 +172,9 @@ export class WalletClient extends IWalletClient {
     }
   };
 
-  public enableSync: IWalletClient["enableSync"] = async ({
-    account,
-    onSign,
-  }) => {
+  public register: INotifyClient["register"] = async ({ account, onSign }) => {
     try {
-      return await this.engine.enableSync({ account, onSign });
+      return await this.engine.register({ account, onSign });
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;
@@ -208,34 +183,34 @@ export class WalletClient extends IWalletClient {
 
   // ---------- Events ----------------------------------------------- //
 
-  public emit: IWalletClient["emit"] = (name, listener) => {
+  public emit: INotifyClient["emit"] = (name, listener) => {
     return this.events.emit(name, listener);
   };
 
-  public on: IWalletClient["on"] = (name, listener) => {
+  public on: INotifyClient["on"] = (name, listener) => {
     return this.events.on(name, listener);
   };
 
-  public once: IWalletClient["once"] = (name, listener) => {
+  public once: INotifyClient["once"] = (name, listener) => {
     return this.events.once(name, listener);
   };
 
-  public off: IWalletClient["off"] = (name, listener) => {
+  public off: INotifyClient["off"] = (name, listener) => {
     return this.events.off(name, listener);
   };
 
-  public removeListener: IWalletClient["removeListener"] = (name, listener) => {
+  public removeListener: INotifyClient["removeListener"] = (name, listener) => {
     return this.events.removeListener(name, listener);
   };
 
   // ---------- Helpers ----------------------------------------------- //
 
-  public initSyncStores: IWalletClient["initSyncStores"] = async ({
+  public initSyncStores: INotifyClient["initSyncStores"] = async ({
     account,
     signature,
   }) => {
     this.subscriptions = new this.SyncStoreController(
-      "com.walletconnect.notify.pushSubscription",
+      "com.walletconnect.notify.notifySubscription",
       this.syncClient,
       account,
       signature,
@@ -262,7 +237,7 @@ export class WalletClient extends IWalletClient {
         if (existingSubExists) return;
 
         this.messages.set(subTopic, { topic: subTopic, messages: [] });
-        this.core.crypto.setSymKey(subscription.symKey).then(() => {
+        this.core.crypto.setSymKey(subscription.symKey, subTopic).then(() => {
           if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
             this.core.relayer.subscriber.subscribe(subTopic);
           }
@@ -271,7 +246,9 @@ export class WalletClient extends IWalletClient {
     );
     await this.subscriptions.init();
 
-    const historyFetchedStores = ["com.walletconnect.notify.pushSubscription"];
+    const historyFetchedStores = [
+      "com.walletconnect.notify.notifySubscription",
+    ];
 
     const stores = this.syncClient.storeMap.getAll().filter((store) => {
       return (
@@ -312,7 +289,6 @@ export class WalletClient extends IWalletClient {
 
       await this.core.start();
       await this.requests.init();
-      await this.proposals.init();
       await this.subscriptions.init();
       await this.messages.init();
       await this.identityKeys.init();
@@ -326,9 +302,9 @@ export class WalletClient extends IWalletClient {
         this.initSyncStores({ account, signature });
       }
 
-      this.logger.info(`PushWalletClient Initialization Success`);
+      this.logger.info(`NotifyClient Initialization Success`);
     } catch (error: any) {
-      this.logger.info(`PushWalletClient Initialization Failure`);
+      this.logger.info(`NotifyClient Initialization Failure`);
       this.logger.error(error.message);
       throw error;
     }

@@ -1,13 +1,13 @@
 {
   "name": "push-client-js",
-  "description": "Repository for all packages related to the WalletConnect Push Client",
+  "description": "Repository for all packages related to the WalletConnect Notify Client",
   "version": "0.0.1",
   "private": true,
   "author": "WalletConnect, Inc. <walletconnect.com>",
   "homepage": "https://github.com/walletconnect/push-client-js/",
   "license": "Apache-2.0",
   "workspaces": [
-    "packages/push-client"
+    "packages/*"
   ],
   "scripts": {
     "clean": "npm run clean --workspaces",
@@ -19,7 +19,9 @@
     "test:watch": "npm run test:watch --workspaces",
     "npm-publish": "npm publish --access public --workspaces",
     "npm-publish:canary": "npm publish --access public --tag canary --workspaces",
-    "npm-publish:experimental": "npm publish --access public --tag experimental --workspaces"
+    "npm-publish:experimental": "npm publish --access public --tag experimental --workspaces",
+    "npm-publish:notify": "npm publish --access public --workspace packages/notify-client",
+    "npm-publish:notify:canary": "npm publish --access public --tag canary --workspace packages/notify-client"
   },
   "repository": {
     "type": "git",
