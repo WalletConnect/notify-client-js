@@ -89,24 +89,26 @@ export const fetchAndInjectHistory = async (
           } as const)
         : baseFetchParams;
 
-      const messages = await historyClient.getMessages(fetchParams);
+      try {
+        const messages = await historyClient.getMessages(fetchParams);
+        core.logger.info(
+          `Fetched ${messages.messageResponse.messages.length} messages from history for topic: ${topic}, store: ${name}`
+        );
 
-      core.logger.info(
-        `Fetched ${messages.messageResponse.messages.length} messages from history for topic: ${topic}, store: ${name}`
-      );
+        retrievedCount = messages.messageResponse.messages.length;
+        // Origin Id is used by history API to determine from which message to pull backwards
+        originId =
+          messages.messageResponse.messages[
+            messages.messageResponse.messages.length - 1
+          ].message_id;
 
-      retrievedCount = messages.messageResponse.messages.length;
-      originId =
-        messages.messageResponse.messages[
-          messages.messageResponse.messages.length - 1
-        ].message_id;
-
-      const currentMessages = messages.messageResponse.messages;
-      await reduceAndInjectHistory(core, currentMessages, topic);
+        const currentMessages = messages.messageResponse.messages;
+        await reduceAndInjectHistory(core, currentMessages, topic);
+      } catch (e) {
+        retrievedCount = 0;
+        core.logger.error(`Failed to fetch and inject history for ${name}`, e);
+        break;
+      }
     } while (retrievedCount === HISTORY_MAX_FETCH_SIZE);
-  } catch (e: any) {
-    throw new Error(
-      `Failed to fetch and inject history for ${name}: ${e.message}`
-    );
-  }
+  } catch (e: any) {}
 };
