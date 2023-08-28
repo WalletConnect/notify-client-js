@@ -6,6 +6,8 @@ import {
 import { JsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import { ICore } from "@walletconnect/types";
 
+const HISTORY_MAX_FETCH_SIZE = 200;
+
 // Only inject necessary messages
 // Primarily to reduce sync messages
 export const reduceAndInjectHistory = async (
@@ -68,22 +70,44 @@ export const fetchAndInjectHistory = async (
   core: ICore,
   historyClient: HistoryClient
 ) => {
-  try {
-    const messages = await historyClient.getMessages({
+  let lastMessageId = "";
+  let retrievedCount = 0;
+
+  // Fetch history until we have exhausted all of this topic's history.
+  do {
+    const baseFetchParams = {
       topic,
       direction: "backward",
-      messageCount: 200,
-    });
+      messageCount: HISTORY_MAX_FETCH_SIZE,
+    } as const;
 
-    core.logger.info(
-      `Fetched ${messages.messageResponse.messages.length} messages from history`
-    );
+    const fetchParams = lastMessageId
+      ? ({
+          ...baseFetchParams,
+          // lastMessageId is used by Archive API to determine from which message to pull backwards,
+          // which is why it is passed as originId.
+          originId: lastMessageId,
+        } as const)
+      : baseFetchParams;
 
-    const currentMessages = messages.messageResponse.messages;
-    await reduceAndInjectHistory(core, currentMessages, topic);
-  } catch (e: any) {
-    throw new Error(
-      `Failed to fetch and inject history for ${name}: ${e.message}`
-    );
-  }
+    try {
+      const messages = await historyClient.getMessages(fetchParams);
+      core.logger.info(
+        `Fetched ${messages.messageResponse.messages.length} messages from history for topic: ${topic}, store: ${name}`
+      );
+
+      retrievedCount = messages.messageResponse.messages.length;
+      lastMessageId =
+        messages.messageResponse.messages[
+          messages.messageResponse.messages.length - 1
+        ].message_id;
+
+      const currentMessages = messages.messageResponse.messages;
+      await reduceAndInjectHistory(core, currentMessages, topic);
+    } catch (e) {
+      retrievedCount = 0;
+      core.logger.error(`Failed to fetch and inject history for ${name}`, e);
+      break;
+    }
+  } while (retrievedCount === HISTORY_MAX_FETCH_SIZE);
 };
