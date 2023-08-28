@@ -70,45 +70,43 @@ export const fetchAndInjectHistory = async (
   core: ICore,
   historyClient: HistoryClient
 ) => {
-  try {
-    let originId = "";
-    let retrievedCount = 0;
+  let originId = "";
+  let retrievedCount = 0;
 
-    // Fetch history until we have exhausted all of this topic's history.
-    do {
-      const baseFetchParams = {
-        topic,
-        direction: "backward",
-        messageCount: HISTORY_MAX_FETCH_SIZE,
-      } as const;
+  // Fetch history until we have exhausted all of this topic's history.
+  do {
+    const baseFetchParams = {
+      topic,
+      direction: "backward",
+      messageCount: HISTORY_MAX_FETCH_SIZE,
+    } as const;
 
-      const fetchParams = originId
-        ? ({
-            ...baseFetchParams,
-            originId,
-          } as const)
-        : baseFetchParams;
+    const fetchParams = originId
+      ? ({
+          ...baseFetchParams,
+          originId,
+        } as const)
+      : baseFetchParams;
 
-      try {
-        const messages = await historyClient.getMessages(fetchParams);
-        core.logger.info(
-          `Fetched ${messages.messageResponse.messages.length} messages from history for topic: ${topic}, store: ${name}`
-        );
+    try {
+      const messages = await historyClient.getMessages(fetchParams);
+      core.logger.info(
+        `Fetched ${messages.messageResponse.messages.length} messages from history for topic: ${topic}, store: ${name}`
+      );
 
-        retrievedCount = messages.messageResponse.messages.length;
-        // Origin Id is used by history API to determine from which message to pull backwards
-        originId =
-          messages.messageResponse.messages[
-            messages.messageResponse.messages.length - 1
-          ].message_id;
+      retrievedCount = messages.messageResponse.messages.length;
+      // Origin Id is used by history API to determine from which message to pull backwards
+      originId =
+        messages.messageResponse.messages[
+          messages.messageResponse.messages.length - 1
+        ].message_id;
 
-        const currentMessages = messages.messageResponse.messages;
-        await reduceAndInjectHistory(core, currentMessages, topic);
-      } catch (e) {
-        retrievedCount = 0;
-        core.logger.error(`Failed to fetch and inject history for ${name}`, e);
-        break;
-      }
-    } while (retrievedCount === HISTORY_MAX_FETCH_SIZE);
-  } catch (e: any) {}
+      const currentMessages = messages.messageResponse.messages;
+      await reduceAndInjectHistory(core, currentMessages, topic);
+    } catch (e) {
+      retrievedCount = 0;
+      core.logger.error(`Failed to fetch and inject history for ${name}`, e);
+      break;
+    }
+  } while (retrievedCount === HISTORY_MAX_FETCH_SIZE);
 };
