@@ -84,6 +84,8 @@ export const fetchAndInjectHistory = async (
     const fetchParams = lastMessageId
       ? ({
           ...baseFetchParams,
+          // lastMessageId is used by Archive API to determine from which message to pull backwards,
+          // which is why it is passed as originId.
           originId: lastMessageId,
         } as const)
       : baseFetchParams;
@@ -95,7 +97,6 @@ export const fetchAndInjectHistory = async (
       );
 
       retrievedCount = messages.messageResponse.messages.length;
-      // Origin Id is used by history API to determine from which message to pull backwards
       lastMessageId =
         messages.messageResponse.messages[
           messages.messageResponse.messages.length - 1
