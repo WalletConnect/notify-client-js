@@ -70,7 +70,7 @@ export const fetchAndInjectHistory = async (
   core: ICore,
   historyClient: HistoryClient
 ) => {
-  let originId = "";
+  let lastMessageId = "";
   let retrievedCount = 0;
 
   // Fetch history until we have exhausted all of this topic's history.
@@ -81,10 +81,10 @@ export const fetchAndInjectHistory = async (
       messageCount: HISTORY_MAX_FETCH_SIZE,
     } as const;
 
-    const fetchParams = originId
+    const fetchParams = lastMessageId
       ? ({
           ...baseFetchParams,
-          originId,
+          originId: lastMessageId,
         } as const)
       : baseFetchParams;
 
@@ -96,7 +96,7 @@ export const fetchAndInjectHistory = async (
 
       retrievedCount = messages.messageResponse.messages.length;
       // Origin Id is used by history API to determine from which message to pull backwards
-      originId =
+      lastMessageId =
         messages.messageResponse.messages[
           messages.messageResponse.messages.length - 1
         ].message_id;
