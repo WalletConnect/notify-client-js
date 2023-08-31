@@ -228,7 +228,6 @@ export class NotifyClient extends INotifyClient {
       });
 
       this.initHistory();
-      console.log("init history");
 
       this.logger.info(`NotifyClient Initialization Success`);
     } catch (error: any) {

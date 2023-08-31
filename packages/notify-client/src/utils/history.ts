@@ -73,8 +73,6 @@ export const fetchAndInjectHistory = async (
   let lastMessageId = "";
   let retrievedCount = 0;
 
-  console.log("Params: ", JSON.stringify("Beginning history fetch"));
-
   // Fetch history until we have exhausted all of this topic's history.
   do {
     const baseFetchParams = {
