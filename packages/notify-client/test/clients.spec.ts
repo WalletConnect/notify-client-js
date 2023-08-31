@@ -1,7 +1,6 @@
 import { Wallet as EthersWallet } from "@ethersproject/wallet";
 import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
-import { ISyncClient, SyncClient, SyncStore } from "@walletconnect/sync-client";
 import cloneDeep from "lodash.clonedeep";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { INotifyClient, NotifyClient, NotifyClientTypes } from "../src/";
@@ -22,7 +21,6 @@ const projectId = process.env.TEST_PROJECT_ID;
 
 describe("Notify", () => {
   let wallet: INotifyClient;
-  let syncClient: ISyncClient;
   let ethersWallet: EthersWallet;
   let account: string;
   let onSign: (message: string) => Promise<string>;
@@ -32,18 +30,11 @@ describe("Notify", () => {
       projectId,
     });
 
-    syncClient = await SyncClient.init({
-      core,
-      projectId,
-    });
-
     wallet = await NotifyClient.init({
       name: "testNotifyClient",
       logger: "error",
       relayUrl: process.env.TEST_RELAY_URL || DEFAULT_RELAY_URL,
       core,
-      syncClient,
-      SyncStoreController: SyncStore,
       projectId,
     });
 
@@ -52,6 +43,7 @@ describe("Notify", () => {
     account = `eip155:1:${ethersWallet.address}`;
     onSign = (message: string) => ethersWallet.signMessage(message);
   });
+
   afterEach(async () => {
     await disconnectSocket(wallet.core);
   });
@@ -375,98 +367,6 @@ describe("Notify", () => {
         expect(Object.values(wallet.messages.get(topic).messages).length).toBe(
           0
         );
-      });
-    });
-  });
-
-  describe("Sync Functionality", () => {
-    describe("Notify Subscriptions", () => {
-      if (!hasGmSecret) {
-        console.warn(
-          "Skipping sync notify subscription test. NOTIFY_GM_PROJECT_SECRET env variable not set."
-        );
-      }
-      it.skipIf(!hasGmSecret)("Syncs notify subscriptions", async () => {
-        let gotSyncUpdate = false;
-        const core1 = new Core({ projectId });
-        const sync1 = await SyncClient.init({
-          core: core1,
-          projectId,
-        });
-        const core2 = new Core({ projectId });
-        const sync2 = await SyncClient.init({
-          core: core2,
-          projectId,
-        });
-
-        const wallet1 = await NotifyClient.init({
-          SyncStoreController: SyncStore,
-          syncClient: sync1,
-          core: core1,
-          projectId,
-        });
-        const wallet2 = await NotifyClient.init({
-          SyncStoreController: SyncStore,
-          syncClient: sync2,
-          core: core2,
-          projectId,
-        });
-
-        const ethersWallet = EthersWallet.createRandom();
-        await wallet1.register({
-          account: `eip155:1:${ethersWallet.address}`,
-          onSign: (message) => {
-            return ethersWallet.signMessage(message);
-          },
-        });
-        await wallet2.register({
-          account: `eip155:1:${ethersWallet.address}`,
-          onSign: (message) => {
-            return ethersWallet.signMessage(message);
-          },
-        });
-
-        wallet2.syncClient.on("sync_update", () => {
-          gotSyncUpdate = true;
-        });
-
-        let gotNotifySubscriptionResponse = false;
-        wallet1.once("notify_subscription", () => {
-          gotNotifySubscriptionResponse = true;
-        });
-        await wallet1.subscribe({
-          account: `eip155:1:${ethersWallet.address}`,
-          metadata: gmDappMetadata,
-        });
-        await waitForEvent(() => gotNotifySubscriptionResponse);
-
-        await waitForEvent(() => gotSyncUpdate);
-
-        expect(wallet2.getActiveSubscriptions()).toEqual(
-          wallet1.getActiveSubscriptions()
-        );
-
-        let walletMessage: string = "";
-        let walletPeerMessage: string = "";
-        wallet1.on("notify_message", (m) => {
-          walletMessage = m.params.message.body;
-        });
-
-        wallet2.on("notify_message", (m) => {
-          walletPeerMessage = m.params.message.body;
-        });
-
-        await sendNotifyMessage(
-          projectId,
-          `eip155:1:${ethersWallet.address}`,
-          "Test"
-        );
-
-        await waitForEvent(() => Boolean(walletMessage));
-        await waitForEvent(() => Boolean(walletPeerMessage));
-
-        expect(walletMessage).toEqual("Test");
-        expect(walletPeerMessage).toEqual(walletMessage);
       });
     });
   });

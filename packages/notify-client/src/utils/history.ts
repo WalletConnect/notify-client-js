@@ -73,6 +73,8 @@ export const fetchAndInjectHistory = async (
   let lastMessageId = "";
   let retrievedCount = 0;
 
+  console.log("Params: ", JSON.stringify("Beginning history fetch"));
+
   // Fetch history until we have exhausted all of this topic's history.
   do {
     const baseFetchParams = {
@@ -90,6 +92,8 @@ export const fetchAndInjectHistory = async (
         } as const)
       : baseFetchParams;
 
+    console.log("Params: ", JSON.stringify(fetchParams));
+
     try {
       const messages = await historyClient.getMessages(fetchParams);
       core.logger.info(
@@ -97,6 +101,11 @@ export const fetchAndInjectHistory = async (
       );
 
       retrievedCount = messages.messageResponse.messages.length;
+
+      if (retrievedCount === 0) {
+        break;
+      }
+
       lastMessageId =
         messages.messageResponse.messages[
           messages.messageResponse.messages.length - 1

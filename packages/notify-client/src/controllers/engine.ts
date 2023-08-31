@@ -66,13 +66,6 @@ export class NotifyEngine extends INotifyEngine {
     // Retrieve existing identity or register a new one for this account on this device.
     const identity = await this.registerIdentity(account, onSign);
 
-    const signature = await onSign(
-      await this.client.syncClient.getMessage({ account })
-    );
-    await this.client.syncClient.register({ account, signature });
-
-    await this.client.initSyncStores({ account, signature });
-
     return identity;
   };
 
