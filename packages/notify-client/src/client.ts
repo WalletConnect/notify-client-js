@@ -215,17 +215,17 @@ export class NotifyClient extends INotifyClient {
   private async initialize() {
     this.logger.trace(`Initialized`);
     try {
-      await this.historyClient.registerTags({
-        relayUrl: this.core.relayUrl || RELAYER_DEFAULT_RELAY_URL,
-        tags: ["4002"],
-      });
-
       await this.core.start();
       await this.requests.init();
       await this.subscriptions.init();
       await this.messages.init();
       await this.identityKeys.init();
       this.engine.init();
+
+      await this.historyClient.registerTags({
+        relayUrl: this.core.relayUrl || RELAYER_DEFAULT_RELAY_URL,
+        tags: ["4002"],
+      });
 
       this.initHistory();
       console.log("init history");
