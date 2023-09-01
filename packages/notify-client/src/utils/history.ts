@@ -90,7 +90,6 @@ export const fetchAndInjectHistory = async (
         } as const)
       : baseFetchParams;
 
-    console.log("Params: ", JSON.stringify(fetchParams));
 
     try {
       const messages = await historyClient.getMessages(fetchParams);
