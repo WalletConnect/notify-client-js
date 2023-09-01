@@ -38,9 +38,6 @@ export class NotifyClient extends INotifyClient {
 
   public historyClient: HistoryClient;
 
-  public syncClient: INotifyClient["syncClient"];
-  public SyncStoreController: INotifyClient["SyncStoreController"];
-
   static async init(opts: NotifyClientTypes.ClientOptions) {
     const client = new NotifyClient(opts);
     await client.initialize();
@@ -61,9 +58,6 @@ export class NotifyClient extends INotifyClient {
               level: opts.logger || "error",
             })
           );
-
-    this.syncClient = opts.syncClient;
-    this.SyncStoreController = opts.SyncStoreController;
 
     this.keyserverUrl = opts?.keyserverUrl ?? DEFAULT_KEYSERVER_URL;
     this.core = opts.core || new Core(opts);
@@ -205,78 +199,15 @@ export class NotifyClient extends INotifyClient {
 
   // ---------- Helpers ----------------------------------------------- //
 
-  public initSyncStores: INotifyClient["initSyncStores"] = async ({
-    account,
-    signature,
-  }) => {
-    this.subscriptions = new this.SyncStoreController(
-      "com.walletconnect.notify.notifySubscription",
-      this.syncClient,
-      account,
-      signature,
-      (subTopic, subscription) => {
-        if (!subscription) {
-          // Unsubscribe only if currently subscribed
-          if (this.core.relayer.subscriber.topics.includes(subTopic)) {
-            this.core.relayer.subscriber.unsubscribe(subTopic);
-          }
-          // Delete messages since subscription was removed
-          this.messages.delete(subTopic, {
-            code: -1,
-            message: "Deleted parent subscription",
-          });
-
-          // Delete symkey since subscription was removed
-          this.core.crypto.deleteSymKey(subTopic);
-
-          return;
-        }
-
-        const existingSubExists =
-          this.messages.getAll({ topic: subTopic }).length > 0;
-        if (existingSubExists) return;
-
-        this.messages.set(subTopic, { topic: subTopic, messages: [] });
-        this.core.crypto.setSymKey(subscription.symKey, subTopic).then(() => {
-          if (!this.core.relayer.subscriber.topics.includes(subTopic)) {
-            this.core.relayer.subscriber.subscribe(subTopic);
-          }
-        });
-      }
-    );
-    await this.subscriptions.init();
-
-    const historyFetchedStores = [
-      "com.walletconnect.notify.notifySubscription",
-    ];
-
-    const stores = this.syncClient.storeMap.getAll().filter((store) => {
-      return (
-        historyFetchedStores.includes(store.key) && store.account === account
-      );
-    });
-
-    stores.forEach((store) => {
+  public initHistory: INotifyClient["initHistory"] = async () => {
+    for (const sub of this.subscriptions.getAll()) {
       fetchAndInjectHistory(
-        store.topic,
-        store.key,
+        sub.topic,
+        sub.metadata.name,
         this.core,
         this.historyClient
-      )
-        .catch((e) => this.logger.error(e.message))
-        .then(() => {
-          this.subscriptions.getAll().forEach(({ topic, metadata }) => {
-            fetchAndInjectHistory(
-              topic,
-              metadata.name,
-              this.core,
-              this.historyClient
-            );
-          });
-        });
-    });
-
-    this.emit("sync_stores_initialized", {});
+      );
+    }
   };
 
   // ---------- Private ----------------------------------------------- //
@@ -284,11 +215,6 @@ export class NotifyClient extends INotifyClient {
   private async initialize() {
     this.logger.trace(`Initialized`);
     try {
-      await this.historyClient.registerTags({
-        relayUrl: this.core.relayUrl || RELAYER_DEFAULT_RELAY_URL,
-        tags: ["4002", "5000", "5002"],
-      });
-
       await this.core.start();
       await this.requests.init();
       await this.subscriptions.init();
@@ -296,13 +222,12 @@ export class NotifyClient extends INotifyClient {
       await this.identityKeys.init();
       this.engine.init();
 
-      // Sync all accounts
-      for (const {
-        account,
-        signature,
-      } of this.syncClient.signatures.getAll()) {
-        this.initSyncStores({ account, signature });
-      }
+      await this.historyClient.registerTags({
+        relayUrl: this.core.relayUrl || RELAYER_DEFAULT_RELAY_URL,
+        tags: ["4002"],
+      });
+
+      this.initHistory();
 
       this.logger.info(`NotifyClient Initialization Success`);
     } catch (error: any) {

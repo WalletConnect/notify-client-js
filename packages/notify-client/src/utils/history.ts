@@ -97,6 +97,11 @@ export const fetchAndInjectHistory = async (
       );
 
       retrievedCount = messages.messageResponse.messages.length;
+
+      if (retrievedCount === 0) {
+        break;
+      }
+
       lastMessageId =
         messages.messageResponse.messages[
           messages.messageResponse.messages.length - 1

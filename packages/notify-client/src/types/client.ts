@@ -1,7 +1,6 @@
 import { HistoryClient } from "@walletconnect/history";
 import { IdentityKeys } from "@walletconnect/identity-keys";
 import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
-import { ISyncClient, SyncStore } from "@walletconnect/sync-client";
 import { CoreTypes, ICore, IStore, RelayerTypes } from "@walletconnect/types";
 import EventEmitter from "events";
 import { Logger } from "pino";
@@ -52,9 +51,7 @@ export declare namespace NotifyClientTypes {
   interface ClientOptions extends CoreTypes.Options {
     core?: ICore;
     keyserverUrl?: string;
-    syncClient: ISyncClient;
     identityKeys?: IdentityKeys;
-    SyncStoreController: typeof SyncStore;
   }
 
   interface Metadata {
@@ -207,9 +204,6 @@ export abstract class INotifyClient {
 
   public abstract historyClient: HistoryClient;
 
-  public abstract readonly syncClient: ISyncClient;
-  public abstract readonly SyncStoreController: typeof SyncStore;
-
   public abstract requests: IStore<
     number,
     {
@@ -246,10 +240,7 @@ export abstract class INotifyClient {
 
   // ---------- Helpers  ------------------------------------------------------------- //
 
-  public abstract initSyncStores: (params: {
-    account: string;
-    signature: string;
-  }) => Promise<void>;
+  public abstract initHistory: () => Promise<void>;
 
   // ---------- Event Handlers ------------------------------------------------------- //
 
