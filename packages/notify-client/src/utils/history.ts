@@ -90,7 +90,6 @@ export const fetchAndInjectHistory = async (
         } as const)
       : baseFetchParams;
 
-
     try {
       const messages = await historyClient.getMessages(fetchParams);
       core.logger.info(
