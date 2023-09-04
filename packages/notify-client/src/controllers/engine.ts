@@ -133,7 +133,7 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     // SPEC: Wallet subscribes to response topic
-    await this.client.core.relayer.subscribe(responseTopic);
+    await this.client.core.relayer.subscriber.subscribe(responseTopic);
 
     this.client.logger.info(
       `[Notify] subscribe > subscribed to responseTopic ${responseTopic}`
