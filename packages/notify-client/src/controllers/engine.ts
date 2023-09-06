@@ -62,7 +62,16 @@ export class NotifyEngine extends INotifyEngine {
 
   // ---------- Public --------------------------------------- //
 
-  public register: INotifyEngine["register"] = async ({ account, onSign }) => {
+  public register: INotifyEngine["register"] = async ({
+    account,
+    onSign,
+    limited,
+    domain,
+  }) => {
+    const statement = limited
+      ? "<TODO: LIMITED STATEMENT>"
+      : "<TODO: UNLIMITED STATEMENT>";
+
     // Retrieve existing identity or register a new one for this account on this device.
     const identity = await this.registerIdentity(account, onSign);
 
