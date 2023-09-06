@@ -49,6 +49,16 @@ export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
       tag: 4011,
     },
   },
+  wc_notifySubscriptionsChanged: {
+    req: {
+      ttl: 300,
+      tag: 4012,
+    },
+    res: {
+      ttl: 300,
+      tag: 4013,
+    },
+  },
   wc_notifyUpdate: {
     req: {
       ttl: THIRTY_SECONDS,

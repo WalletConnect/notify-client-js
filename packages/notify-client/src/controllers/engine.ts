@@ -32,7 +32,6 @@ import axios from "axios";
 import jwtDecode, { InvalidTokenError } from "jwt-decode";
 
 import {
-  DEFAULT_RELAY_SERVER_URL,
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
   NOTIFY_SUBSCRIPTION_EXPIRY,
@@ -918,7 +917,7 @@ export class NotifyEngine extends INotifyEngine {
       claims
     );
 
-    const resId = await this.sendRequest(
+    await this.sendRequest(
       notifyServerWatchTopic,
       "wc_notifyWatchSubscription",
       {

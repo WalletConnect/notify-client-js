@@ -11,6 +11,7 @@ import { HistoryClient } from "@walletconnect/history";
 import { IdentityKeys } from "@walletconnect/identity-keys";
 import {
   DEFAULT_KEYSERVER_URL,
+  DEFAULT_NOTIFY_SERVER_URL,
   NOTIFY_CLIENT_PROTOCOL,
   NOTIFY_CLIENT_STORAGE_PREFIX,
   NOTIFY_CLIENT_VERSION,
@@ -26,6 +27,7 @@ export class NotifyClient extends INotifyClient {
   public readonly name: INotifyClient["name"] =
     NOTIFY_WALLET_CLIENT_DEFAULT_NAME;
   public readonly keyserverUrl: INotifyClient["keyserverUrl"];
+  public readonly notifyServerUrl: INotifyClient["notifyServerUrl"];
 
   public core: INotifyClient["core"];
   public logger: INotifyClient["logger"];
@@ -60,6 +62,7 @@ export class NotifyClient extends INotifyClient {
           );
 
     this.keyserverUrl = opts?.keyserverUrl ?? DEFAULT_KEYSERVER_URL;
+    this.notifyServerUrl = DEFAULT_NOTIFY_SERVER_URL;
     this.core = opts.core || new Core(opts);
 
     this.historyClient = new HistoryClient(this.core);
