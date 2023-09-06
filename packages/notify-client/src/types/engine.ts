@@ -136,6 +136,20 @@ export abstract class INotifyEngine {
       | JsonRpcError
   ): void;
 
+  protected abstract onNotifyWatchSubscriptionsResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyWatchSubscription"]>
+      | JsonRpcError
+  ): Promise<void>;
+
+  protected abstract onNotifySubscriptionsChangedRequest(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifySubscriptionsChanged"]>
+      | JsonRpcError
+  ): Promise<void>;
+
   protected abstract onNotifyUpdateResponse(
     topic: string,
     payload:

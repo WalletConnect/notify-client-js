@@ -32,6 +32,7 @@ import axios from "axios";
 import jwtDecode, { InvalidTokenError } from "jwt-decode";
 
 import {
+  DEFAULT_RELAY_SERVER_URL,
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
   NOTIFY_SUBSCRIPTION_EXPIRY,
@@ -65,6 +66,8 @@ export class NotifyEngine extends INotifyEngine {
   public register: INotifyEngine["register"] = async ({ account, onSign }) => {
     // Retrieve existing identity or register a new one for this account on this device.
     const identity = await this.registerIdentity(account, onSign);
+
+    await this.watchSubscriptions(account);
 
     return identity;
   };
@@ -477,6 +480,8 @@ export class NotifyEngine extends INotifyEngine {
           return this.onNotifyDeleteResponse(topic, payload);
         case "wc_notifyUpdate":
           return this.onNotifyUpdateResponse(topic, payload);
+        case "wc_notifyWatchSubscription":
+          return this.onNotifyWatchSubscriptionsResponse(topic, payload);
         default:
           return this.client.logger.info(
             `[Notify] Unsupported response method ${resMethod}`
@@ -713,6 +718,65 @@ export class NotifyEngine extends INotifyEngine {
       }
     };
 
+  private updateSubscriptionsUsingJwt = (
+    jwt: string,
+    act:
+      | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims["act"]
+      | NotifyClientTypes.NotifySubscriptionsChangedClaims["act"]
+  ) => {
+    const claims = this.decodeAndValidateJwtAuth<
+      | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims
+      | NotifyClientTypes.NotifySubscriptionsChangedClaims
+    >(jwt, act);
+
+    for (const sub of claims.sbs) {
+      this.client.subscriptions.set(sub.topic, {
+        ...sub,
+        relay: {
+          protocol: RELAYER_DEFAULT_PROTOCOL,
+        },
+      });
+    }
+  };
+
+  protected onNotifyWatchSubscriptionsResponse: INotifyEngine["onNotifyWatchSubscriptionsResponse"] =
+    async (topic, payload) => {
+      if (isJsonRpcError(payload)) {
+        this.client.logger.error({
+          event: "onNotifyWatchSubscriptionsResponse",
+          topic,
+          error: payload.error,
+        });
+        return;
+      }
+
+      if (isJsonRpcResponse(payload)) {
+        this.updateSubscriptionsUsingJwt(
+          payload.result.responseAuth,
+          "notify_watch_subscriptions_response"
+        );
+      }
+    };
+
+  protected onNotifySubscriptionsChangedRequest: INotifyEngine["onNotifySubscriptionsChangedRequest"] =
+    async (topic, payload) => {
+      if (isJsonRpcError(payload)) {
+        this.client.logger.error({
+          event: "onNotifySubscriptionsChangedRequest",
+          topic,
+          error: payload.error,
+        });
+        return;
+      }
+
+      if (isJsonRpcResponse(payload)) {
+        this.updateSubscriptionsUsingJwt(
+          payload.result.responseAuth,
+          "notify_subscriptions_changed"
+        );
+      }
+    };
+
   protected onNotifyUpdateResponse: INotifyEngine["onNotifyUpdateResponse"] =
     async (topic, payload) => {
       if (isJsonRpcResult(payload)) {
@@ -812,6 +876,55 @@ export class NotifyEngine extends INotifyEngine {
       const { message } = getInternalError("NOT_INITIALIZED", this.name);
       throw new Error(message);
     }
+  }
+
+  private async getNotifyServerWatchTopic(notifyId: string) {
+    return hashKey(notifyId);
+  }
+
+  private async watchSubscriptions(accountId: string) {
+    const notifyKeys = await this.resolveDappKeys(this.client.notifyServerUrl);
+
+    // Derive req topic from did.json
+    const notifyServerWatchTopic = await this.getNotifyServerWatchTopic(
+      notifyKeys.dappIdentityKey
+    );
+
+    const issuedAt = Math.round(Date.now() / 1000);
+    const expiry =
+      issuedAt + ENGINE_RPC_OPTS["wc_notifyWatchSubscription"].res.ttl;
+
+    // Generate persistant key kY
+    const keyY = await this.client.core.crypto.generateKeyPair();
+    // Generate res topic from persistant key kY
+    const resTopic = hashKey(keyY);
+    // Subscribe to res topic
+    await this.client.core.relayer.subscribe(resTopic);
+
+    const claims: NotifyClientTypes.NotifyWatchSubscriptionsClaims = {
+      act: "notify_watch_subscriptions",
+      iss: encodeEd25519Key(
+        await this.client.identityKeys.getIdentity({ account: accountId })
+      ),
+      exp: expiry,
+      iat: issuedAt,
+      aud: encodeEd25519Key(notifyKeys.dappIdentityKey),
+      ksu: this.client.keyserverUrl,
+      sub: composeDidPkh(accountId),
+    };
+
+    const generatedAuth = await this.client.identityKeys.generateIdAuth(
+      accountId,
+      claims
+    );
+
+    const resId = await this.sendRequest(
+      notifyServerWatchTopic,
+      "wc_notifyWatchSubscription",
+      {
+        watchSubscriptionsAuth: generatedAuth,
+      }
+    );
   }
 
   private cleanupRequest = async (id: number, expirerHasDeleted?: boolean) => {

@@ -102,11 +102,12 @@ export declare namespace NotifyClientTypes {
 
   interface SubscriptionJWTClaims extends BaseJwtClaims {
     act: "notify_subscription"; // action intent (must be "notify_subscription")
-    iss: string;
-    sub: string;
-    aud: string;
-    scp: string;
-    app: string;
+    iss: string; // did:key of client identity key
+    ksu: string; // key server for identity key verification
+    aud: string; // did:key of client identity key
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
+    scp: string; // scope of notification types authorized by the user
+    app: string; // dapp's domain URL
   }
 
   interface MessageJWTClaims extends BaseJwtClaims {
@@ -143,20 +144,54 @@ export declare namespace NotifyClientTypes {
     app: string; // dapp's domain url
   }
 
+  interface NotifyWatchSubscriptionsClaims extends BaseJwtClaims {
+    act: "notify_watch_subscriptions";
+    iss: string; // did:key of client identity key
+    ksu: string; // keyserver url
+    aud: string; // did:key of notify server identity key
+    sub: string; // blockchain account that this request is associated with (did:pkh)
+  }
+
+  interface NotifySubscriptionsChangedClaims extends BaseJwtClaims {
+    act: "notify_subscriptions_changed";
+    iss: string; // did:key of notify server identity key
+    aud: string; // did:pkh blockchain account that notify subscription is associated with
+    sbs: Omit<NotifySubscription, "relay">[]; // array of [Notify Server Subscriptions]
+  }
+
   interface CommonResponseJWTClaims extends BaseJwtClaims {
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
     aud: string; //did:key of an identity key. Enables to resolve associated Dapp domain used.
     sub: string; // reason for deleting the subscription
     app: string; // dapp's domain url
   }
+
   interface SubscriptionResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_subscription_response";
   }
+
   interface UpdateResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_update_response";
   }
+
   interface DeleteResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_delete_response";
+  }
+
+  interface NotifyWatchSubscriptionsResponseClaims extends BaseJwtClaims {
+    act: "notify_watch_subscriptions_response";
+    iss: string; // did:key of notify server identity key
+    aud: string; // did:key of client identity key
+    sub: string; // did:key of the public key used for key agreement on the Notify topic
+    sbs: Omit<NotifySubscription, "relay">[]; // array of [Notify Server Subscriptions]
+  }
+
+  interface NotifySubscriptionsChangedResponseClaims extends BaseJwtClaims {
+    act: "notify_subscriptions_changed_response";
+    iss: string; // did:key of notify server identity key
+    aud: string; // did:key of client identity key
+    sub: string; // did:key of the public key used for key agreement on the Notify topic
+    sbs: Omit<NotifySubscription, "relay">[]; // array of [Notify Server Subscriptions]
   }
 
   interface NotifyDidDocument {
@@ -196,6 +231,7 @@ export abstract class INotifyClient {
   public abstract readonly version: number;
   public abstract readonly name: string;
   public abstract readonly keyserverUrl: string;
+  public abstract readonly notifyServerUrl: string;
 
   public abstract core: ICore;
   public abstract events: EventEmitter;
