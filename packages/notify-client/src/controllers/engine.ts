@@ -34,8 +34,10 @@ import jwtDecode, { InvalidTokenError } from "jwt-decode";
 import {
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
+  LIMITED_IDENTITY_STATEMENT,
   NOTIFY_SUBSCRIPTION_EXPIRY,
   SDK_ERRORS,
+  UNLIMITED_IDENTITY_STATEMENT,
 } from "../constants";
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
 import { convertUint8ArrayToHex } from "../utils/formats";
@@ -69,11 +71,16 @@ export class NotifyEngine extends INotifyEngine {
     domain,
   }) => {
     const statement = limited
-      ? "<TODO: LIMITED STATEMENT>"
-      : "<TODO: UNLIMITED STATEMENT>";
+      ? LIMITED_IDENTITY_STATEMENT
+      : UNLIMITED_IDENTITY_STATEMENT;
 
     // Retrieve existing identity or register a new one for this account on this device.
-    const identity = await this.registerIdentity(account, onSign);
+    const identity = await this.registerIdentity(
+      account,
+      onSign,
+      statement,
+      domain
+    );
 
     await this.watchSubscriptions(account);
 
@@ -895,7 +902,7 @@ export class NotifyEngine extends INotifyEngine {
 
     // Derive req topic from did.json
     const notifyServerWatchTopic = await this.getNotifyServerWatchTopic(
-      notifyKeys.dappIdentityKey
+      notifyKeys.dappPublicKey
     );
 
     const issuedAt = Math.round(Date.now() / 1000);
@@ -931,6 +938,10 @@ export class NotifyEngine extends INotifyEngine {
       "wc_notifyWatchSubscription",
       {
         watchSubscriptionsAuth: generatedAuth,
+      },
+      {
+        type: TYPE_1,
+        senderPublicKey: keyY,
       }
     );
   }
@@ -1127,11 +1138,15 @@ export class NotifyEngine extends INotifyEngine {
 
   private registerIdentity = async (
     accountId: string,
-    onSign: (message: string) => Promise<string>
+    onSign: (message: string) => Promise<string>,
+    statement: string,
+    domain: string
   ): Promise<string> => {
     return this.client.identityKeys.registerIdentity({
       accountId,
       onSign,
+      statement,
+      domain,
     });
   };
 
