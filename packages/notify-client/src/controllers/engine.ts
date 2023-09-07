@@ -82,7 +82,13 @@ export class NotifyEngine extends INotifyEngine {
       domain
     );
 
-    await this.watchSubscriptions(account);
+    try {
+      await this.watchSubscriptions(account);
+    } catch (error: any) {
+      this.client.logger.error(
+        `[Notify] Engine.register > watching subscriptions failed > ${error.message}`
+      );
+    }
 
     return identity;
   };
