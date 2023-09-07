@@ -169,9 +169,9 @@ export class NotifyClient extends INotifyClient {
     }
   };
 
-  public register: INotifyClient["register"] = async ({ account, onSign }) => {
+  public register: INotifyClient["register"] = async (params) => {
     try {
-      return await this.engine.register({ account, onSign });
+      return await this.engine.register(params);
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;
