@@ -474,7 +474,6 @@ export class NotifyEngine extends INotifyEngine {
   ) => {
     const { topic, payload, publishedAt } = event;
     const reqMethod = payload.method as JsonRpcTypes.WcMethod;
-    console.log("Got req, ", reqMethod);
 
     switch (reqMethod) {
       case "wc_notifyMessage":
@@ -495,7 +494,6 @@ export class NotifyEngine extends INotifyEngine {
       const { topic, payload } = event;
       const record = await this.client.core.history.get(topic, payload.id);
       const resMethod = record.request.method as JsonRpcTypes.WcMethod;
-      console.log("Got res, ", resMethod);
 
       switch (resMethod) {
         case "wc_notifySubscribe":
@@ -835,7 +833,6 @@ export class NotifyEngine extends INotifyEngine {
   protected onNotifySubscriptionsChangedRequest: INotifyEngine["onNotifySubscriptionsChangedRequest"] =
     async (_, payload) => {
       if (isJsonRpcRequest(payload)) {
-        console.log({ changepayload: payload.params });
         this.updateSubscriptionsUsingJwt(
           payload.params.subscriptionsChangedAuth,
           "notify_subscriptions_changed_request"
@@ -973,9 +970,6 @@ export class NotifyEngine extends INotifyEngine {
     const resTopic = hashKey(deriveSymKey(privKeyY, notifyKeys.dappPublicKey));
     // Subscribe to res topic
     await this.client.core.relayer.subscribe(resTopic);
-
-    console.log("watchSubscriptions >", "reqTopic >", notifyServerWatchTopic);
-    console.log("watchSubscriptions >", "resTopic >", resTopic);
 
     const claims: NotifyClientTypes.NotifyWatchSubscriptionsClaims = {
       act: "notify_watch_subscriptions",
