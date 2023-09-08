@@ -35,6 +35,7 @@
     "@walletconnect/core": "^2.9.1",
     "@walletconnect/did-jwt": "2.0.1",
     "@walletconnect/history": "^1.0.4",
+    "@walletconnect/identity-keys": "^0.12.0-8d867",
     "@walletconnect/jsonrpc-utils": "1.0.7",
     "@walletconnect/time": "1.0.2",
     "@walletconnect/utils": "^2.9.1",
