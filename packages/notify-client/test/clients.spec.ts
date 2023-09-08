@@ -81,7 +81,7 @@ describe("Notify", () => {
         await wallet.register({
           account,
           onSign,
-          domain: "notify.gm.walletconnect.com",
+          domain: "dev.gm.walletconnect.com",
           limited: false,
         });
 
@@ -147,7 +147,7 @@ describe("Notify", () => {
         await wallet.register({
           account,
           onSign,
-          domain: "notify.gm.walletconnect.com",
+          domain: "dev.gm.walletconnect.com",
           limited: false,
         });
 
