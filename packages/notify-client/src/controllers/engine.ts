@@ -27,6 +27,7 @@ import {
   hashKey,
   hashMessage,
   parseExpirerTarget,
+  deriveSymKey,
 } from "@walletconnect/utils";
 import axios from "axios";
 import jwtDecode, { InvalidTokenError } from "jwt-decode";
@@ -473,12 +474,15 @@ export class NotifyEngine extends INotifyEngine {
   ) => {
     const { topic, payload, publishedAt } = event;
     const reqMethod = payload.method as JsonRpcTypes.WcMethod;
+    console.log("Got req, ", reqMethod);
 
     switch (reqMethod) {
       case "wc_notifyMessage":
         return this.onNotifyMessageRequest(topic, payload, publishedAt);
       case "wc_notifyDelete":
         return this.onNotifyDeleteRequest(topic, payload);
+      case "wc_notifySubscriptionsChanged":
+        return this.onNotifySubscriptionsChangedRequest(topic, payload);
       default:
         return this.client.logger.info(
           `[Notify] Unsupported request method ${reqMethod}`
@@ -491,6 +495,7 @@ export class NotifyEngine extends INotifyEngine {
       const { topic, payload } = event;
       const record = await this.client.core.history.get(topic, payload.id);
       const resMethod = record.request.method as JsonRpcTypes.WcMethod;
+      console.log("Got res, ", resMethod);
 
       switch (resMethod) {
         case "wc_notifySubscribe":
@@ -739,7 +744,7 @@ export class NotifyEngine extends INotifyEngine {
       }
     };
 
-  private updateSubscriptionsUsingJwt = (
+  private updateSubscriptionsUsingJwt = async (
     jwt: string,
     act:
       | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims["act"]
@@ -750,9 +755,57 @@ export class NotifyEngine extends INotifyEngine {
       | NotifyClientTypes.NotifySubscriptionsChangedClaims
     >(jwt, act);
 
+    const newStateSubsTopics = claims.sbs.map((sb) => hashKey(sb.sym_key));
+    for (const currentSub of this.client.subscriptions
+      .getAll()
+      .map((sub) => sub.topic)) {
+      if (!newStateSubsTopics.includes(currentSub)) {
+        this.client.subscriptions.delete(currentSub, {
+          code: -1,
+          message: "Not in recent state",
+        });
+      }
+    }
+
     for (const sub of claims.sbs) {
-      this.client.subscriptions.set(sub.topic, {
-        ...sub,
+      const sbTopic = hashKey(sub.sym_key);
+
+      try {
+        this.client.core.relayer.subscribe(sbTopic);
+      } catch (e) {
+        this.client.logger.error("Failed to subscribe from claims.sbs", e);
+      }
+
+      const dappConfig = await this.resolveNotifyConfig(sub.dapp_url);
+      const scopeMap: NotifyClientTypes.ScopeMap = Object.fromEntries(
+        dappConfig.types.map((type) => {
+          if (sub.scope.includes(type.name)) {
+            return [
+              type.name,
+              {
+                ...type,
+                enabled: true,
+              },
+            ];
+          }
+
+          return [
+            type.name,
+            {
+              ...type,
+              enabled: false,
+            },
+          ];
+        })
+      );
+
+      this.client.subscriptions.set(sbTopic, {
+        account: sub.account,
+        expiry: sub.expiry,
+        topic: sbTopic,
+        scope: scopeMap,
+        symKey: sub.sym_key,
+        metadata: dappConfig.metadata,
         relay: {
           protocol: RELAYER_DEFAULT_PROTOCOL,
         },
@@ -780,20 +833,12 @@ export class NotifyEngine extends INotifyEngine {
     };
 
   protected onNotifySubscriptionsChangedRequest: INotifyEngine["onNotifySubscriptionsChangedRequest"] =
-    async (topic, payload) => {
-      if (isJsonRpcError(payload)) {
-        this.client.logger.error({
-          event: "onNotifySubscriptionsChangedRequest",
-          topic,
-          error: payload.error,
-        });
-        return;
-      }
-
-      if (isJsonRpcResponse(payload)) {
+    async (_, payload) => {
+      if (isJsonRpcRequest(payload)) {
+        console.log({ changepayload: payload.params });
         this.updateSubscriptionsUsingJwt(
-          payload.result.responseAuth,
-          "notify_subscriptions_changed"
+          payload.params.subscriptionsChangedAuth,
+          "notify_subscriptions_changed_request"
         );
       }
     };
@@ -911,16 +956,26 @@ export class NotifyEngine extends INotifyEngine {
       notifyKeys.dappPublicKey
     );
 
+    this.client.logger.info(
+      "watchSubscriptions >",
+      "notifyServerWatchTopic >",
+      notifyServerWatchTopic
+    );
+
     const issuedAt = Math.round(Date.now() / 1000);
     const expiry =
       issuedAt + ENGINE_RPC_OPTS["wc_notifyWatchSubscription"].res.ttl;
 
     // Generate persistant key kY
-    const keyY = await this.client.core.crypto.generateKeyPair();
+    const pubKeyY = await this.client.core.crypto.generateKeyPair();
+    const privKeyY = this.client.core.crypto.keychain.get(pubKeyY);
     // Generate res topic from persistant key kY
-    const resTopic = hashKey(keyY);
+    const resTopic = hashKey(deriveSymKey(privKeyY, notifyKeys.dappPublicKey));
     // Subscribe to res topic
     await this.client.core.relayer.subscribe(resTopic);
+
+    console.log("watchSubscriptions >", "reqTopic >", notifyServerWatchTopic);
+    console.log("watchSubscriptions >", "resTopic >", resTopic);
 
     const claims: NotifyClientTypes.NotifyWatchSubscriptionsClaims = {
       act: "notify_watch_subscriptions",
@@ -939,7 +994,13 @@ export class NotifyEngine extends INotifyEngine {
       claims
     );
 
-    await this.sendRequest(
+    this.client.logger.info(
+      "watchSubscriptions >",
+      "subscriptionAuth >",
+      generatedAuth
+    );
+
+    const id = await this.sendRequest(
       notifyServerWatchTopic,
       "wc_notifyWatchSubscription",
       {
@@ -947,9 +1008,12 @@ export class NotifyEngine extends INotifyEngine {
       },
       {
         type: TYPE_1,
-        senderPublicKey: keyY,
+        senderPublicKey: pubKeyY,
+        receiverPublicKey: notifyKeys.dappPublicKey,
       }
     );
+
+    this.client.logger.info("watchSubscriptions >", "requestId >", id);
   }
 
   private cleanupRequest = async (id: number, expirerHasDeleted?: boolean) => {

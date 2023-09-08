@@ -3,13 +3,18 @@ import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import cloneDeep from "lodash.clonedeep";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { INotifyClient, NotifyClient, NotifyClientTypes } from "../src/";
+import {
+  DEFAULT_KEYSERVER_URL,
+  INotifyClient,
+  NotifyClient,
+  NotifyClientTypes,
+} from "../src/";
 import { waitForEvent } from "./helpers/async";
 import { gmDappMetadata } from "./helpers/mocks";
 import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
 import { disconnectSocket } from "./helpers/ws";
 
-const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
+const DEFAULT_RELAY_URL = "wss://staging.relay.walletconnect.com";
 
 if (!process.env.TEST_PROJECT_ID) {
   throw new ReferenceError("TEST_PROJECT_ID env variable not set");
@@ -28,12 +33,14 @@ describe("Notify", () => {
   beforeEach(async () => {
     const core = new Core({
       projectId,
+      relayUrl: DEFAULT_RELAY_URL,
     });
 
     wallet = await NotifyClient.init({
       name: "testNotifyClient",
       logger: "error",
-      relayUrl: process.env.TEST_RELAY_URL || DEFAULT_RELAY_URL,
+      keyserverUrl: DEFAULT_KEYSERVER_URL,
+      relayUrl: DEFAULT_RELAY_URL,
       core,
       projectId,
     });
@@ -74,12 +81,15 @@ describe("Notify", () => {
         await wallet.register({
           account,
           onSign,
+          domain: "notify.gm.walletconnect.com",
+          limited: false,
         });
 
         await wallet.subscribe({
           account,
           metadata: gmDappMetadata,
         });
+        console.log("Subscribed");
 
         await waitForEvent(() => gotNotifySubscriptionResponse);
 
@@ -137,6 +147,8 @@ describe("Notify", () => {
         await wallet.register({
           account,
           onSign,
+          domain: "notify.gm.walletconnect.com",
+          limited: false,
         });
 
         await wallet.subscribe({

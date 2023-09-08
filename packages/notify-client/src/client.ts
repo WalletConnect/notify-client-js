@@ -86,7 +86,8 @@ export class NotifyClient extends INotifyClient {
       "messages",
       NOTIFY_CLIENT_STORAGE_PREFIX
     );
-    this.identityKeys = opts.identityKeys ?? new IdentityKeys(this.core);
+    this.identityKeys =
+      opts.identityKeys ?? new IdentityKeys(this.core, this.keyserverUrl);
     this.engine = new NotifyEngine(this);
   }
 

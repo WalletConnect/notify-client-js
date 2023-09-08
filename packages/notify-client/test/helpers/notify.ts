@@ -1,10 +1,10 @@
 import axios from "axios";
-import { INotifyClient } from "../../src";
+import { DEFAULT_NOTIFY_SERVER_URL, INotifyClient } from "../../src";
 import { waitForEvent } from "./async";
 import { gmDappMetadata } from "./mocks";
 
 const NOTIFY_SERVER_URL =
-  process.env.NOTIFY_SERVER_URL || "https://notify.walletconnect.com";
+  process.env.NOTIFY_SERVER_URL || DEFAULT_NOTIFY_SERVER_URL;
 
 export const createNotifySubscription = async (
   wallet: INotifyClient,
@@ -20,6 +20,8 @@ export const createNotifySubscription = async (
   });
 
   await wallet.register({
+    domain: "notify.gm.walletconnect.com",
+    limited: false,
     account,
     onSign,
   });

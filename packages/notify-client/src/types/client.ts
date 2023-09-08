@@ -85,6 +85,14 @@ export declare namespace NotifyClientTypes {
     symKey: string;
   }
 
+  interface NotifyServerSubscription {
+    dapp_url: string;
+    scope: string[];
+    account: string;
+    sym_key: string;
+    expiry: number;
+  }
+
   interface NotifyMessage {
     title: string;
     body: string;
@@ -153,10 +161,10 @@ export declare namespace NotifyClientTypes {
   }
 
   interface NotifySubscriptionsChangedClaims extends BaseJwtClaims {
-    act: "notify_subscriptions_changed";
+    act: "notify_subscriptions_changed_request";
     iss: string; // did:key of notify server identity key
     aud: string; // did:pkh blockchain account that notify subscription is associated with
-    sbs: Omit<NotifySubscription, "relay">[]; // array of [Notify Server Subscriptions]
+    sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
   }
 
   interface CommonResponseJWTClaims extends BaseJwtClaims {
@@ -183,7 +191,7 @@ export declare namespace NotifyClientTypes {
     iss: string; // did:key of notify server identity key
     aud: string; // did:key of client identity key
     sub: string; // did:key of the public key used for key agreement on the Notify topic
-    sbs: Omit<NotifySubscription, "relay">[]; // array of [Notify Server Subscriptions]
+    sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
   }
 
   interface NotifySubscriptionsChangedResponseClaims extends BaseJwtClaims {
@@ -217,6 +225,7 @@ export declare namespace NotifyClientTypes {
       name: string;
       description: string;
     }>;
+    metadata: Metadata;
   }
 }
 

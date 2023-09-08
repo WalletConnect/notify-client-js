@@ -147,9 +147,9 @@ export abstract class INotifyEngine {
 
   protected abstract onNotifySubscriptionsChangedRequest(
     topic: string,
-    payload:
-      | JsonRpcResult<JsonRpcTypes.Results["wc_notifySubscriptionsChanged"]>
-      | JsonRpcError
+    payload: JsonRpcRequest<
+      JsonRpcTypes.RequestParams["wc_notifySubscriptionsChanged"]
+    >
   ): Promise<void>;
 
   protected abstract onNotifyUpdateResponse(
