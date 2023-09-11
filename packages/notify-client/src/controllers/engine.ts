@@ -101,13 +101,12 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    const appUrl = `https://${appDomain}`;
-
-    const { dappPublicKey, dappIdentityKey } = await this.resolveKeys(appUrl);
-    const notifyConfig = await this.resolveNotifyConfig(appUrl);
+    const dappUrl = `https://${appDomain}`;
+    const { dappPublicKey, dappIdentityKey } = await this.resolveKeys(dappUrl);
+    const notifyConfig = await this.resolveNotifyConfig(dappUrl);
 
     this.client.logger.info(
-      `[Notify] subscribe > publicKey for ${appUrl} is: ${dappPublicKey}`
+      `[Notify] subscribe > publicKey for ${dappUrl} is: ${dappPublicKey}`
     );
 
     // SPEC: Wallet derives subscribe topic, which is the sha256 hash of public key X
@@ -207,7 +206,7 @@ export class NotifyEngine extends INotifyEngine {
           name: notifyConfig.name,
           description: notifyConfig.description,
           icons: notifyConfig.icons,
-          url: appDomain,
+          appDomain,
         },
         publicKey: selfPublicKey,
         scope: scopeMap,
@@ -780,7 +779,9 @@ export class NotifyEngine extends INotifyEngine {
         this.client.logger.error("Failed to subscribe from claims.sbs", e);
       }
 
-      const dappConfig = await this.resolveNotifyConfig(sub.dappUrl);
+      const dappConfig = await this.resolveNotifyConfig(
+        `https://${sub.appDomain}`
+      );
       const scopeMap: NotifyClientTypes.ScopeMap = Object.fromEntries(
         dappConfig.types.map((type) => {
           if (sub.scope.includes(type.name)) {
@@ -803,7 +804,6 @@ export class NotifyEngine extends INotifyEngine {
         })
       );
 
-      console.log("Setting sub", sub);
       await this.client.subscriptions.set(sbTopic, {
         account: sub.account,
         expiry: sub.expiry,
@@ -814,7 +814,7 @@ export class NotifyEngine extends INotifyEngine {
           name: dappConfig.name,
           description: dappConfig.description,
           icons: dappConfig.icons,
-          url: sub.dappUrl,
+          appDomain: sub.appDomain,
         },
         relay: {
           protocol: RELAYER_DEFAULT_PROTOCOL,
@@ -1073,7 +1073,7 @@ export class NotifyEngine extends INotifyEngine {
         account: subscription.account,
       });
       const { dappIdentityKey } = await this.resolveKeys(
-        subscription.metadata.url
+        `https://${subscription.metadata.appDomain}`
       );
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyMessage"].res.ttl;
@@ -1084,7 +1084,7 @@ export class NotifyEngine extends INotifyEngine {
         iss: encodeEd25519Key(identityKeyPub),
         aud: encodeEd25519Key(dappIdentityKey),
         sub: hashMessage(JSON.stringify(message)),
-        app: `${DID_WEB_PREFIX}${subscription.metadata.url}`,
+        app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
         ksu: this.client.keyserverUrl,
       };
 
@@ -1116,7 +1116,7 @@ export class NotifyEngine extends INotifyEngine {
         account: subscription.account,
       });
       const { dappIdentityKey } = await this.resolveKeys(
-        subscription.metadata.url
+        `https://${subscription.metadata.appDomain}`
       );
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyDelete"].req.ttl;
@@ -1128,7 +1128,7 @@ export class NotifyEngine extends INotifyEngine {
         aud: encodeEd25519Key(dappIdentityKey),
         sub: reason,
         ksu: this.client.keyserverUrl,
-        app: `${DID_WEB_PREFIX}${subscription.metadata.url}`,
+        app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
       };
 
       const deleteAuth = await this.client.identityKeys.generateIdAuth(
@@ -1158,7 +1158,7 @@ export class NotifyEngine extends INotifyEngine {
         account: subscription.account,
       });
       const { dappIdentityKey } = await this.resolveKeys(
-        subscription.metadata.url
+        `https://${subscription.metadata.appDomain}`
       );
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyUpdate"].req.ttl;
@@ -1169,7 +1169,7 @@ export class NotifyEngine extends INotifyEngine {
         iss: encodeEd25519Key(identityKeyPub),
         aud: encodeEd25519Key(dappIdentityKey),
         sub: composeDidPkh(subscription.account),
-        app: `${DID_WEB_PREFIX}${subscription.metadata.url}`,
+        app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
         ksu: this.client.keyserverUrl,
         scp: scope.join(JWT_SCP_SEPARATOR),
       };
@@ -1245,6 +1245,8 @@ export class NotifyEngine extends INotifyEngine {
         `Failed to fetch dapp's DID doc from ${dappUrl}/.well-known/did.json. Error: ${error.message}`
       );
     }
+
+    console.log({ didDoc, dappUrl });
 
     const { publicKeyJwk } = didDoc.verificationMethod[0];
     const base64Jwk = publicKeyJwk.x.replace(/-/g, "+").replace(/_/g, "/");

@@ -87,7 +87,7 @@ describe("Notify", () => {
 
         await wallet.subscribe({
           account,
-          appDomain: gmDappMetadata.url,
+          appDomain: gmDappMetadata.appDomain,
         });
 
         await waitForEvent(() => gotNotifySubscriptionResponse);
@@ -151,7 +151,7 @@ describe("Notify", () => {
         });
 
         await wallet.subscribe({
-          appDomain: gmDappMetadata.url,
+          appDomain: gmDappMetadata.appDomain,
           account,
         });
 
@@ -409,7 +409,7 @@ describe("Notify", () => {
         });
 
         await wallet.subscribe({
-          appDomain: gmDappMetadata.url,
+          appDomain: gmDappMetadata.appDomain,
           account,
         });
 

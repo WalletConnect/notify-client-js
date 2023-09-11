@@ -61,8 +61,8 @@ export declare namespace NotifyClientTypes {
   interface Metadata {
     name: string;
     description: string;
-    url: string;
     icons: string[];
+    appDomain: string;
   }
 
   type ScopeMap = Record<string, { description: string; enabled: boolean }>;
@@ -86,7 +86,7 @@ export declare namespace NotifyClientTypes {
   }
 
   interface NotifyServerSubscription {
-    dappUrl: string;
+    appDomain: string;
     scope: string[];
     account: string;
     symKey: string;

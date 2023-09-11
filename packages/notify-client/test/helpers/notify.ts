@@ -27,7 +27,7 @@ export const createNotifySubscription = async (
   });
 
   await wallet.subscribe({
-    appDomain: gmDappMetadata.url,
+    appDomain: gmDappMetadata.appDomain,
     account,
   });
 
