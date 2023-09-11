@@ -396,7 +396,7 @@ describe("Notify", () => {
         });
 
         let updatedCount = 0;
-        wallet.on("notify_subscriptions_updated", (event) => {
+        wallet.on("notify_subscriptions_changed", (event) => {
           console.log("Update event >>>>");
           updatedCount += 1;
           updateEvent = event;

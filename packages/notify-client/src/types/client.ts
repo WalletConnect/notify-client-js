@@ -13,7 +13,7 @@ export declare namespace NotifyClientTypes {
     | "notify_message"
     | "notify_delete"
     | "notify_update"
-    | "notify_subscriptions_updated"
+    | "notify_subscriptions_changed"
     // JS Implementation specific event, used to indicate stores are done initializing
     | "sync_stores_initialized";
 
@@ -41,7 +41,7 @@ export declare namespace NotifyClientTypes {
     notify_message: BaseEventArgs<NotifyMessageRequestEventArgs>;
     notify_delete: BaseEventArgs<NotifyDeleteRequestEventArgs>;
     notify_update: BaseEventArgs<NotifyResponseEventArgs>;
-    notify_subscriptions_updated: NotifySubscriptionsUpdatedEventArgs;
+    notify_subscriptions_changed: NotifySubscriptionsUpdatedEventArgs;
     sync_stores_initialized: Record<string, never>; // empty object
   }
 

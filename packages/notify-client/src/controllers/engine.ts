@@ -100,7 +100,7 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    const { dappPublicKey, dappIdentityKey } = await this.resolveDappKeys(
+    const { dappPublicKey, dappIdentityKey } = await this.resolveKeys(
       metadata.url
     );
     const notifyConfig = await this.resolveNotifyConfig(metadata.url);
@@ -798,7 +798,7 @@ export class NotifyEngine extends INotifyEngine {
       );
 
       console.log("Setting sub", sub);
-      this.client.subscriptions.set(sbTopic, {
+      await this.client.subscriptions.set(sbTopic, {
         account: sub.account,
         expiry: sub.expiry,
         topic: sbTopic,
@@ -812,7 +812,7 @@ export class NotifyEngine extends INotifyEngine {
     }
 
     this.client.emit(
-      "notify_subscriptions_updated",
+      "notify_subscriptions_changed",
       this.client.subscriptions.getAll()
     );
   };
@@ -952,7 +952,7 @@ export class NotifyEngine extends INotifyEngine {
   }
 
   private async watchSubscriptions(accountId: string) {
-    const notifyKeys = await this.resolveDappKeys(this.client.notifyServerUrl);
+    const notifyKeys = await this.resolveKeys(this.client.notifyServerUrl);
 
     // Derive req topic from did.json
     const notifyServerWatchTopic = await this.getNotifyServerWatchTopic(
@@ -1061,7 +1061,7 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const { dappIdentityKey } = await this.resolveDappKeys(
+      const { dappIdentityKey } = await this.resolveKeys(
         subscription.metadata.url
       );
       const issuedAt = Math.round(Date.now() / 1000);
@@ -1104,7 +1104,7 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const { dappIdentityKey } = await this.resolveDappKeys(
+      const { dappIdentityKey } = await this.resolveKeys(
         subscription.metadata.url
       );
       const issuedAt = Math.round(Date.now() / 1000);
@@ -1146,7 +1146,7 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const { dappIdentityKey } = await this.resolveDappKeys(
+      const { dappIdentityKey } = await this.resolveKeys(
         subscription.metadata.url
       );
       const issuedAt = Math.round(Date.now() / 1000);
@@ -1220,7 +1220,7 @@ export class NotifyEngine extends INotifyEngine {
     });
   };
 
-  private resolveDappKeys = async (
+  private resolveKeys = async (
     dappUrl: string
   ): Promise<{ dappPublicKey: string; dappIdentityKey: string }> => {
     let didDoc: NotifyClientTypes.NotifyDidDocument;
