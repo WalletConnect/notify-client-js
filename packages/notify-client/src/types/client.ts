@@ -13,6 +13,7 @@ export declare namespace NotifyClientTypes {
     | "notify_message"
     | "notify_delete"
     | "notify_update"
+    | "notify_subscriptions_updated"
     // JS Implementation specific event, used to indicate stores are done initializing
     | "sync_stores_initialized";
 
@@ -20,6 +21,8 @@ export declare namespace NotifyClientTypes {
     error?: ErrorResponse;
     subscription?: NotifyClientTypes.NotifySubscription;
   };
+
+  type NotifySubscriptionsUpdatedEventArgs = NotifySubscription[];
 
   type NotifyMessageRequestEventArgs = {
     message: NotifyClientTypes.NotifyMessage;
@@ -38,6 +41,7 @@ export declare namespace NotifyClientTypes {
     notify_message: BaseEventArgs<NotifyMessageRequestEventArgs>;
     notify_delete: BaseEventArgs<NotifyDeleteRequestEventArgs>;
     notify_update: BaseEventArgs<NotifyResponseEventArgs>;
+    notify_subscriptions_updated: NotifySubscriptionsUpdatedEventArgs;
     sync_stores_initialized: Record<string, never>; // empty object
   }
 
@@ -86,10 +90,10 @@ export declare namespace NotifyClientTypes {
   }
 
   interface NotifyServerSubscription {
-    dapp_url: string;
+    dappUrl: string;
     scope: string[];
     account: string;
-    sym_key: string;
+    symKey: string;
     expiry: number;
   }
 
@@ -161,7 +165,7 @@ export declare namespace NotifyClientTypes {
   }
 
   interface NotifySubscriptionsChangedClaims extends BaseJwtClaims {
-    act: "notify_subscriptions_changed_request";
+    act: "notify_subscriptions_changed";
     iss: string; // did:key of notify server identity key
     aud: string; // did:pkh blockchain account that notify subscription is associated with
     sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]

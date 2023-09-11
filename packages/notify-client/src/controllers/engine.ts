@@ -753,7 +753,7 @@ export class NotifyEngine extends INotifyEngine {
       | NotifyClientTypes.NotifySubscriptionsChangedClaims
     >(jwt, act);
 
-    const newStateSubsTopics = claims.sbs.map((sb) => hashKey(sb.sym_key));
+    const newStateSubsTopics = claims.sbs.map((sb) => hashKey(sb.symKey));
     for (const currentSub of this.client.subscriptions
       .getAll()
       .map((sub) => sub.topic)) {
@@ -766,7 +766,7 @@ export class NotifyEngine extends INotifyEngine {
     }
 
     for (const sub of claims.sbs) {
-      const sbTopic = hashKey(sub.sym_key);
+      const sbTopic = hashKey(sub.symKey);
 
       try {
         this.client.core.relayer.subscribe(sbTopic);
@@ -774,7 +774,7 @@ export class NotifyEngine extends INotifyEngine {
         this.client.logger.error("Failed to subscribe from claims.sbs", e);
       }
 
-      const dappConfig = await this.resolveNotifyConfig(sub.dapp_url);
+      const dappConfig = await this.resolveNotifyConfig(sub.dappUrl);
       const scopeMap: NotifyClientTypes.ScopeMap = Object.fromEntries(
         dappConfig.types.map((type) => {
           if (sub.scope.includes(type.name)) {
@@ -797,18 +797,24 @@ export class NotifyEngine extends INotifyEngine {
         })
       );
 
+      console.log("Setting sub", sub);
       this.client.subscriptions.set(sbTopic, {
         account: sub.account,
         expiry: sub.expiry,
         topic: sbTopic,
         scope: scopeMap,
-        symKey: sub.sym_key,
+        symKey: sub.symKey,
         metadata: dappConfig.metadata,
         relay: {
           protocol: RELAYER_DEFAULT_PROTOCOL,
         },
       });
     }
+
+    this.client.emit(
+      "notify_subscriptions_updated",
+      this.client.subscriptions.getAll()
+    );
   };
 
   protected onNotifyWatchSubscriptionsResponse: INotifyEngine["onNotifyWatchSubscriptionsResponse"] =
@@ -835,7 +841,7 @@ export class NotifyEngine extends INotifyEngine {
       if (isJsonRpcRequest(payload)) {
         this.updateSubscriptionsUsingJwt(
           payload.params.subscriptionsChangedAuth,
-          "notify_subscriptions_changed_request"
+          "notify_subscriptions_changed"
         );
       }
     };

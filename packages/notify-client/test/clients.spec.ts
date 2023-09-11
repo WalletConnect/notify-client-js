@@ -381,5 +381,57 @@ describe("Notify", () => {
         );
       });
     });
+
+    describe("watchSubscriptions", () => {
+      it("fires correct event update", async () => {
+        // Essentially a copy of the update test.
+        let gotNotifySubscriptionResponse = false;
+        let updateEvent: any = {};
+        let initialNotifySubscription =
+          {} as NotifyClientTypes.NotifySubscription;
+
+        wallet.once("notify_subscription", (event) => {
+          gotNotifySubscriptionResponse = true;
+          initialNotifySubscription = cloneDeep(event.params.subscription!);
+        });
+
+        let gotUpdate = false;
+        wallet.on("notify_subscriptions_updated", (event) => {
+          gotUpdate = true;
+          updateEvent = event;
+        });
+
+        await wallet.register({
+          account,
+          onSign,
+          domain: "dev.gm.walletconnect.com",
+          limited: false,
+        });
+
+        await wallet.subscribe({
+          metadata: gmDappMetadata,
+          account,
+        });
+
+        await waitForEvent(() => gotNotifySubscriptionResponse);
+
+        expect(initialNotifySubscription.metadata).to.deep.equal(
+          gmDappMetadata
+        );
+        expect(initialNotifySubscription.topic).toBeDefined();
+
+        await wallet.update({
+          topic: initialNotifySubscription.topic,
+          scope: [""],
+        });
+
+        // Wait for `notify_subscriptions_updated' instead of `notify_update` event
+        // Both should fire so this effectively tests if 'notify_subscriptions_changed_request' is
+        // fired and decoded.
+        await waitForEvent(() => gotUpdate);
+
+        expect(updateEvent).toEqual(wallet.subscriptions.getAll());
+      });
+    });
   });
 });
