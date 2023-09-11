@@ -21,13 +21,13 @@ export const createNotifySubscription = async (
 
   await wallet.register({
     domain: "notify.gm.walletconnect.com",
-    limited: false,
+    isLimited: false,
     account,
     onSign,
   });
 
   await wallet.subscribe({
-    metadata: gmDappMetadata,
+    appDomain: gmDappMetadata.url,
     account,
   });
 

@@ -82,12 +82,12 @@ describe("Notify", () => {
           account,
           onSign,
           domain: "dev.gm.walletconnect.com",
-          limited: false,
+          isLimited: false,
         });
 
         await wallet.subscribe({
           account,
-          metadata: gmDappMetadata,
+          appDomain: gmDappMetadata.url,
         });
 
         await waitForEvent(() => gotNotifySubscriptionResponse);
@@ -147,11 +147,11 @@ describe("Notify", () => {
           account,
           onSign,
           domain: "dev.gm.walletconnect.com",
-          limited: false,
+          isLimited: false,
         });
 
         await wallet.subscribe({
-          metadata: gmDappMetadata,
+          appDomain: gmDappMetadata.url,
           account,
         });
 
@@ -405,11 +405,11 @@ describe("Notify", () => {
           account,
           onSign,
           domain: "dev.gm.walletconnect.com",
-          limited: false,
+          isLimited: false,
         });
 
         await wallet.subscribe({
-          metadata: gmDappMetadata,
+          appDomain: gmDappMetadata.url,
           account,
         });
 

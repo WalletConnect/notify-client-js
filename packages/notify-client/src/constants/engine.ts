@@ -12,6 +12,8 @@ export const LIMITED_IDENTITY_STATEMENT =
 export const UNLIMITED_IDENTITY_STATEMENT =
   "I further authorize this WALLET to send and receive messages on my behalf for ALL domains using my WalletConnect identity.";
 
+export const DID_WEB_PREFIX = "did:web:";
+
 // RPC Options
 export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
   wc_notifySubscribe: {

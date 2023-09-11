@@ -32,12 +32,12 @@ export abstract class INotifyEngine {
   public abstract register(params: {
     account: string;
     onSign: (message: string) => Promise<string>;
-    limited: boolean;
+    isLimited: boolean;
     domain: string;
   }): Promise<string>;
 
   public abstract subscribe(params: {
-    metadata: NotifyClientTypes.Metadata;
+    appDomain: string;
     account: string;
   }): Promise<{ id: number; subscriptionAuth: string }>;
 

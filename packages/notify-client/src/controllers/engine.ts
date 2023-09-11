@@ -33,6 +33,7 @@ import axios from "axios";
 import jwtDecode, { InvalidTokenError } from "jwt-decode";
 
 import {
+  DID_WEB_PREFIX,
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
   LIMITED_IDENTITY_STATEMENT,
@@ -68,10 +69,10 @@ export class NotifyEngine extends INotifyEngine {
   public register: INotifyEngine["register"] = async ({
     account,
     onSign,
-    limited,
+    isLimited,
     domain,
   }) => {
-    const statement = limited
+    const statement = isLimited
       ? LIMITED_IDENTITY_STATEMENT
       : UNLIMITED_IDENTITY_STATEMENT;
 
@@ -95,18 +96,18 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   public subscribe: INotifyEngine["subscribe"] = async ({
-    metadata,
+    appDomain,
     account,
   }) => {
     this.isInitialized();
 
-    const { dappPublicKey, dappIdentityKey } = await this.resolveKeys(
-      metadata.url
-    );
-    const notifyConfig = await this.resolveNotifyConfig(metadata.url);
+    const appUrl = `https://${appDomain}`;
+
+    const { dappPublicKey, dappIdentityKey } = await this.resolveKeys(appUrl);
+    const notifyConfig = await this.resolveNotifyConfig(appUrl);
 
     this.client.logger.info(
-      `[Notify] subscribe > publicKey for ${metadata.url} is: ${dappPublicKey}`
+      `[Notify] subscribe > publicKey for ${appUrl} is: ${dappPublicKey}`
     );
 
     // SPEC: Wallet derives subscribe topic, which is the sha256 hash of public key X
@@ -139,7 +140,7 @@ export class NotifyEngine extends INotifyEngine {
       ksu: this.client.keyserverUrl,
       scp,
       act: "notify_subscription",
-      app: metadata.url,
+      app: `${DID_WEB_PREFIX}${appDomain}`,
     };
 
     this.client.logger.info(
@@ -202,7 +203,12 @@ export class NotifyEngine extends INotifyEngine {
       topic: responseTopic,
       request: {
         account,
-        metadata,
+        metadata: {
+          name: notifyConfig.name,
+          description: notifyConfig.description,
+          icons: notifyConfig.icons,
+          url: appDomain,
+        },
         publicKey: selfPublicKey,
         scope: scopeMap,
       },
@@ -1078,7 +1084,7 @@ export class NotifyEngine extends INotifyEngine {
         iss: encodeEd25519Key(identityKeyPub),
         aud: encodeEd25519Key(dappIdentityKey),
         sub: hashMessage(JSON.stringify(message)),
-        app: subscription.metadata.url,
+        app: `${DID_WEB_PREFIX}${subscription.metadata.url}`,
         ksu: this.client.keyserverUrl,
       };
 
@@ -1122,7 +1128,7 @@ export class NotifyEngine extends INotifyEngine {
         aud: encodeEd25519Key(dappIdentityKey),
         sub: reason,
         ksu: this.client.keyserverUrl,
-        app: subscription.metadata.url,
+        app: `${DID_WEB_PREFIX}${subscription.metadata.url}`,
       };
 
       const deleteAuth = await this.client.identityKeys.generateIdAuth(
@@ -1163,7 +1169,7 @@ export class NotifyEngine extends INotifyEngine {
         iss: encodeEd25519Key(identityKeyPub),
         aud: encodeEd25519Key(dappIdentityKey),
         sub: composeDidPkh(subscription.account),
-        app: subscription.metadata.url,
+        app: `${DID_WEB_PREFIX}${subscription.metadata.url}`,
         ksu: this.client.keyserverUrl,
         scp: scope.join(JWT_SCP_SEPARATOR),
       };
