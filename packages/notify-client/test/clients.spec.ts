@@ -89,7 +89,6 @@ describe("Notify", () => {
           account,
           metadata: gmDappMetadata,
         });
-        console.log("Subscribed");
 
         await waitForEvent(() => gotNotifySubscriptionResponse);
 
@@ -125,7 +124,7 @@ describe("Notify", () => {
           notifyMessageEvent = event;
         });
 
-        await sendNotifyMessage(projectId, account, "Test");
+        await sendNotifyMessage(account, "Test");
 
         await waitForEvent(() => gotNotifyMessageResponse);
 

@@ -37,7 +37,6 @@ export const createNotifySubscription = async (
 };
 
 export const sendNotifyMessage = async (
-  projectId: string,
   account: string,
   messageBody: string
 ) => {
