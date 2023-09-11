@@ -660,21 +660,21 @@ export class NotifyEngine extends INotifyEngine {
       });
 
       try {
-        const receiptAuth = await this.generateMessageReceiptAuth({
+        const responseAuth = await this.generateMessageResponseAuth({
           topic,
           message: messageClaims.msg,
         });
 
         this.client.logger.info(
-          `[Notify] Engine.onNotifyMessageRequest > generated receiptAuth JWT: ${receiptAuth}`
+          `[Notify] Engine.onNotifyMessageRequest > generated responseAuth JWT: ${responseAuth}`
         );
 
         await this.sendResult<"wc_notifyMessage">(payload.id, topic, {
-          receiptAuth,
+          responseAuth,
         });
       } catch (error: any) {
         this.client.logger.error(
-          `[Notify] Engine.onNotifyMessageRequest > generating receiptAuth failed: ${error.message}`
+          `[Notify] Engine.onNotifyMessageRequest > generating responseAuth failed: ${error.message}`
         );
         await this.sendError(payload.id, topic, {
           code: -1,
@@ -1060,7 +1060,7 @@ export class NotifyEngine extends INotifyEngine {
     return this.client.identityKeys.generateIdAuth(accountId, payload);
   };
 
-  private generateMessageReceiptAuth = async ({
+  private generateMessageResponseAuth = async ({
     topic,
     message,
   }: {
@@ -1077,8 +1077,8 @@ export class NotifyEngine extends INotifyEngine {
       );
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyMessage"].res.ttl;
-      const payload: NotifyClientTypes.MessageReceiptJWTClaims = {
-        act: "notify_receipt",
+      const payload: NotifyClientTypes.MessageResponseJWTClaims = {
+        act: "notify_message_response",
         iat: issuedAt,
         exp: expiry,
         iss: encodeEd25519Key(identityKeyPub),
@@ -1088,15 +1088,15 @@ export class NotifyEngine extends INotifyEngine {
         ksu: this.client.keyserverUrl,
       };
 
-      const receiptAuth = await this.client.identityKeys.generateIdAuth(
+      const responseAuth = await this.client.identityKeys.generateIdAuth(
         subscription.account,
         payload
       );
 
-      return receiptAuth;
+      return responseAuth;
     } catch (error: any) {
       throw new Error(
-        `generateMessageReceiptAuth failed for message on topic ${topic}: ${
+        `generateMessageResponseAuth failed for message on topic ${topic}: ${
           error.message || error
         }`
       );

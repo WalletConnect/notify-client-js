@@ -127,8 +127,8 @@ export declare namespace NotifyClientTypes {
     msg: NotifyMessage;
   }
 
-  interface MessageReceiptJWTClaims extends BaseJwtClaims {
-    act: "notify_receipt"; // description of action intent. Must be equal to "notify_receipt"
+  interface MessageResponseJWTClaims extends BaseJwtClaims {
+    act: "notify_message_response"; // description of action intent. Must be equal to "notify_message_response"
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
     aud: string; // did:key of an identity key. Enables to resolve associated Dapp domain used.
     sub: string; // hash of the stringified notify message object received
