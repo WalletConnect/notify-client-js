@@ -63,10 +63,6 @@ export declare namespace NotifyClientTypes {
     description: string;
     url: string;
     icons: string[];
-    redirect?: {
-      native?: string;
-      universal?: string;
-    };
   }
 
   type ScopeMap = Record<string, { description: string; enabled: boolean }>;
@@ -223,13 +219,14 @@ export declare namespace NotifyClientTypes {
   }
 
   interface NotifyConfigDocument {
-    version: number;
-    lastModified: number;
+    schemaVersion: number;
     types: Array<{
       name: string;
       description: string;
     }>;
-    metadata: Metadata;
+    name: Metadata["name"];
+    description: Metadata["description"];
+    icons: Metadata["icons"];
   }
 }
 

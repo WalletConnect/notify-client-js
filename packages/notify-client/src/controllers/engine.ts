@@ -804,7 +804,12 @@ export class NotifyEngine extends INotifyEngine {
         topic: sbTopic,
         scope: scopeMap,
         symKey: sub.symKey,
-        metadata: dappConfig.metadata,
+        metadata: {
+          name: dappConfig.name,
+          description: dappConfig.description,
+          icons: dappConfig.icons,
+          url: sub.dappUrl,
+        },
         relay: {
           protocol: RELAYER_DEFAULT_PROTOCOL,
         },
