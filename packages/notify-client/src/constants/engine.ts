@@ -1,4 +1,4 @@
-import { THIRTY_DAYS, THIRTY_SECONDS } from "@walletconnect/time";
+import { FIVE_MINUTES, THIRTY_DAYS } from "@walletconnect/time";
 import { JsonRpcTypes, RpcOpts } from "../types";
 
 // Expiries
@@ -16,7 +16,7 @@ export const UNLIMITED_IDENTITY_STATEMENT =
 export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
   wc_notifySubscribe: {
     req: {
-      ttl: THIRTY_SECONDS,
+      ttl: FIVE_MINUTES,
       tag: 4000,
     },
     res: {
@@ -46,7 +46,7 @@ export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
   },
   wc_notifyUpdate: {
     req: {
-      ttl: THIRTY_SECONDS,
+      ttl: FIVE_MINUTES,
       tag: 4008,
     },
     res: {
@@ -56,21 +56,21 @@ export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
   },
   wc_notifyWatchSubscription: {
     req: {
-      ttl: 300,
+      ttl: FIVE_MINUTES,
       tag: 4010,
     },
     res: {
-      ttl: 300,
+      ttl: FIVE_MINUTES,
       tag: 4011,
     },
   },
   wc_notifySubscriptionsChanged: {
     req: {
-      ttl: 300,
+      ttl: FIVE_MINUTES,
       tag: 4012,
     },
     res: {
-      ttl: 300,
+      ttl: FIVE_MINUTES,
       tag: 4013,
     },
   },
