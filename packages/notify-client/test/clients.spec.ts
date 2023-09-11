@@ -395,9 +395,10 @@ describe("Notify", () => {
           initialNotifySubscription = cloneDeep(event.params.subscription!);
         });
 
-        let gotUpdate = false;
+        let updatedCount = 0;
         wallet.on("notify_subscriptions_updated", (event) => {
-          gotUpdate = true;
+          console.log("Update event >>>>");
+          updatedCount += 1;
           updateEvent = event;
         });
 
@@ -428,7 +429,7 @@ describe("Notify", () => {
         // Wait for `notify_subscriptions_updated' instead of `notify_update` event
         // Both should fire so this effectively tests if 'notify_subscriptions_changed_request' is
         // fired and decoded.
-        await waitForEvent(() => gotUpdate);
+        await waitForEvent(() => updatedCount === 3);
 
         expect(updateEvent).toEqual(wallet.subscriptions.getAll());
       });
