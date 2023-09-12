@@ -215,6 +215,7 @@ export declare namespace NotifyClientTypes {
       };
     }>;
     keyAgreement: string[];
+    authentication: string[];
   }
 
   interface NotifyConfigDocument {

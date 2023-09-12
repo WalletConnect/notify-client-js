@@ -1242,11 +1242,31 @@ export class NotifyEngine extends INotifyEngine {
       );
     }
 
-    const { publicKeyJwk } = didDoc.verificationMethod[0];
+    // Look up the required keys for keyAgreement and authentication in the didDoc.
+    const keyAgreementVerificationMethod = didDoc.verificationMethod.find(
+      (vm) => vm.id === didDoc.keyAgreement[0]
+    );
+    const authenticationVerificationMethod = didDoc.verificationMethod.find(
+      (vm) => vm.id === didDoc.authentication[0]
+    );
+
+    if (!keyAgreementVerificationMethod) {
+      throw new Error(
+        `No keyAgreement verification method found in DID doc for ${dappUrl}`
+      );
+    }
+    if (!authenticationVerificationMethod) {
+      throw new Error(
+        `No authentication verification method found in DID doc for ${dappUrl}`
+      );
+    }
+
+    // Derive the dappPublicKey and dappIdentityKey from the JWKs.
+    const { publicKeyJwk } = keyAgreementVerificationMethod;
     const base64Jwk = publicKeyJwk.x.replace(/-/g, "+").replace(/_/g, "/");
     const dappPublicKey = Buffer.from(base64Jwk, "base64").toString("hex");
 
-    const { publicKeyJwk: identityKeyJwk } = didDoc.verificationMethod[1];
+    const { publicKeyJwk: identityKeyJwk } = authenticationVerificationMethod;
     const base64IdentityJwk = identityKeyJwk.x
       .replace(/-/g, "+")
       .replace(/_/g, "/");
