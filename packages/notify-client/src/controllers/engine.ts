@@ -1246,8 +1246,6 @@ export class NotifyEngine extends INotifyEngine {
       );
     }
 
-    console.log({ didDoc, dappUrl });
-
     const { publicKeyJwk } = didDoc.verificationMethod[0];
     const base64Jwk = publicKeyJwk.x.replace(/-/g, "+").replace(/_/g, "/");
     const dappPublicKey = Buffer.from(base64Jwk, "base64").toString("hex");
