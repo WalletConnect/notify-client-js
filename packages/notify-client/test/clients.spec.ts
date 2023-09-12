@@ -14,7 +14,7 @@ import { gmDappMetadata } from "./helpers/mocks";
 import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
 import { disconnectSocket } from "./helpers/ws";
 
-const DEFAULT_RELAY_URL = "wss://staging.relay.walletconnect.com";
+const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
 if (!process.env.TEST_PROJECT_ID) {
   throw new ReferenceError("TEST_PROJECT_ID env variable not set");
