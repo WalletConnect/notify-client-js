@@ -5,5 +5,5 @@ export const convertUint8ArrayToHex = (uint8Array: Uint8Array): string =>
 
 export const getDappUrl = (appDomain: string) =>
   appDomain.startsWith("localhost")
-    ? `https://${appDomain}`
-    : `http://${appDomain}`;
+    ? `http://${appDomain}`
+    : `https://${appDomain}`;
