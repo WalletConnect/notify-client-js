@@ -121,8 +121,7 @@ export declare namespace NotifyClientTypes {
   interface MessageJWTClaims extends BaseJwtClaims {
     act: "notify_message"; // action intent (must be "notify_message")
     iss: string; // public key of cast server (did:key)
-    aud: string; // blockchain account (did:pkh)
-    sub: string; // subscriptionId (sha256 hash of subscriptionAuth)
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     app: string; // dapp domain url,
     msg: NotifyMessage;
   }
@@ -131,7 +130,7 @@ export declare namespace NotifyClientTypes {
     act: "notify_message_response"; // description of action intent. Must be equal to "notify_message_response"
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
     aud: string; // did:key of an identity key. Enables to resolve associated Dapp domain used.
-    sub: string; // hash of the stringified notify message object received
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     app: string; // dapp's domain url
   }
 
@@ -148,7 +147,7 @@ export declare namespace NotifyClientTypes {
     act: "notify_delete"; // description of action intent. Must be equal to "notify_delete"
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
     aud: string; //did:key of an identity key. Enables to resolve associated Dapp domain used.
-    sub: string; // reason for deleting the subscription
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     app: string; // dapp's domain url
   }
 
@@ -157,7 +156,7 @@ export declare namespace NotifyClientTypes {
     iss: string; // did:key of client identity key
     ksu: string; // keyserver url
     aud: string; // did:key of notify server identity key
-    sub: string; // blockchain account that this request is associated with (did:pkh)
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
   }
 
   interface NotifySubscriptionsChangedClaims extends BaseJwtClaims {
@@ -170,7 +169,7 @@ export declare namespace NotifyClientTypes {
   interface CommonResponseJWTClaims extends BaseJwtClaims {
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
     aud: string; //did:key of an identity key. Enables to resolve associated Dapp domain used.
-    sub: string; // reason for deleting the subscription
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     app: string; // dapp's domain url
   }
 
