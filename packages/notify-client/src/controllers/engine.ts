@@ -23,11 +23,11 @@ import { ExpirerTypes, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
   calcExpiry,
+  deriveSymKey,
   getInternalError,
   hashKey,
   hashMessage,
   parseExpirerTarget,
-  deriveSymKey,
 } from "@walletconnect/utils";
 import axios from "axios";
 import jwtDecode, { InvalidTokenError } from "jwt-decode";
@@ -42,7 +42,7 @@ import {
   UNLIMITED_IDENTITY_STATEMENT,
 } from "../constants";
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
-import { convertUint8ArrayToHex } from "../utils/formats";
+import { convertUint8ArrayToHex, getDappUrl } from "../utils/formats";
 
 export class NotifyEngine extends INotifyEngine {
   public name = "notifyEngine";
@@ -101,7 +101,7 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    const dappUrl = `https://${appDomain}`;
+    const dappUrl = getDappUrl(appDomain);
     const { dappPublicKey, dappIdentityKey } = await this.resolveKeys(dappUrl);
     const notifyConfig = await this.resolveNotifyConfig(dappUrl);
 
@@ -779,9 +779,8 @@ export class NotifyEngine extends INotifyEngine {
         this.client.logger.error("Failed to subscribe from claims.sbs", e);
       }
 
-      const dappConfig = await this.resolveNotifyConfig(
-        `https://${sub.appDomain}`
-      );
+      const dappUrl = getDappUrl(sub.appDomain);
+      const dappConfig = await this.resolveNotifyConfig(dappUrl);
       const scopeMap: NotifyClientTypes.ScopeMap = Object.fromEntries(
         dappConfig.types.map((type) => {
           if (sub.scope.includes(type.name)) {
@@ -1072,9 +1071,8 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const { dappIdentityKey } = await this.resolveKeys(
-        `https://${subscription.metadata.appDomain}`
-      );
+      const dappUrl = getDappUrl(subscription.metadata.appDomain);
+      const { dappIdentityKey } = await this.resolveKeys(dappUrl);
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyMessage"].res.ttl;
       const payload: NotifyClientTypes.MessageResponseJWTClaims = {
@@ -1115,9 +1113,8 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const { dappIdentityKey } = await this.resolveKeys(
-        `https://${subscription.metadata.appDomain}`
-      );
+      const dappUrl = getDappUrl(subscription.metadata.appDomain);
+      const { dappIdentityKey } = await this.resolveKeys(dappUrl);
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyDelete"].req.ttl;
       const payload: NotifyClientTypes.DeleteJWTClaims = {
@@ -1157,9 +1154,8 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const { dappIdentityKey } = await this.resolveKeys(
-        `https://${subscription.metadata.appDomain}`
-      );
+      const dappUrl = getDappUrl(subscription.metadata.appDomain);
+      const { dappIdentityKey } = await this.resolveKeys(dappUrl);
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyUpdate"].req.ttl;
       const payload: NotifyClientTypes.UpdateJWTClaims = {
