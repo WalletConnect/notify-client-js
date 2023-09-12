@@ -81,7 +81,7 @@ describe("Notify", () => {
         await wallet.register({
           account,
           onSign,
-          domain: "dev.gm.walletconnect.com",
+          domain: gmDappMetadata.appDomain,
           isLimited: false,
         });
 
