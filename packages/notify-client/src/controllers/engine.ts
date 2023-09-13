@@ -6,7 +6,6 @@ import {
 import {
   JwtPayload,
   composeDidPkh,
-  decodeEd25519Key,
   encodeEd25519Key,
 } from "@walletconnect/did-jwt";
 import {
@@ -26,7 +25,6 @@ import {
   deriveSymKey,
   getInternalError,
   hashKey,
-  hashMessage,
   parseExpirerTarget,
 } from "@walletconnect/utils";
 import axios from "axios";
@@ -37,12 +35,10 @@ import {
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
   LIMITED_IDENTITY_STATEMENT,
-  NOTIFY_SUBSCRIPTION_EXPIRY,
-  SDK_ERRORS,
   UNLIMITED_IDENTITY_STATEMENT,
 } from "../constants";
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
-import { convertUint8ArrayToHex, getDappUrl } from "../utils/formats";
+import { getDappUrl } from "../utils/formats";
 
 export class NotifyEngine extends INotifyEngine {
   public name = "notifyEngine";
@@ -332,11 +328,9 @@ export class NotifyEngine extends INotifyEngine {
 
     const deleteAuth = await this.generateDeleteAuth({
       topic,
-      reason: SDK_ERRORS["USER_UNSUBSCRIBED"].message,
     });
 
     await this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
-    await this.cleanupSubscription(topic);
 
     this.client.logger.info(
       `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
@@ -542,70 +536,13 @@ export class NotifyEngine extends INotifyEngine {
           response,
         });
 
-        const { request } = this.client.requests.get(id);
-
-        const subscriptionResponseClaims =
-          this.decodeAndValidateJwtAuth<NotifyClientTypes.SubscriptionResponseJWTClaims>(
-            response.result.responseAuth,
-            "notify_subscription_response"
-          );
-
-        console.log("subscriptionResponseClaims", subscriptionResponseClaims);
-
-        // SPEC: `sub` is a did:key of the public key used for key agreement on the Notify topic
-        // TODO: this conversion should be done automatically by the did-jwt package's
-        // `decodeEd25519Key` fn, which currently returns a plain Uint8Array.
-        const resultPublicKey = convertUint8ArrayToHex(
-          decodeEd25519Key(subscriptionResponseClaims.sub)
-        );
-
-        // SPEC: Wallet derives symmetric key P with keys Y and Z.
-        // SPEC: Notify topic is derived from the sha256 hash of the symmetric key P
-        const notifyTopic = await this.client.core.crypto.generateSharedKey(
-          request.publicKey,
-          resultPublicKey
-        );
-
-        this.client.logger.info(
-          `onNotifySubscribeResponse > derived notifyTopic ${notifyTopic} from selfPublicKey ${request.publicKey} and Notify publicKey ${resultPublicKey}`
-        );
-        console.log(
-          `onNotifySubscribeResponse > derived notifyTopic ${notifyTopic} from selfPublicKey ${request.publicKey} and Notify publicKey ${resultPublicKey}`
-        );
-
-        const notifySubscription = {
-          topic: notifyTopic,
-          account: request.account,
-          relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
-          metadata: request.metadata,
-          scope: request.scope,
-          expiry: calcExpiry(NOTIFY_SUBSCRIPTION_EXPIRY),
-          symKey: this.client.core.crypto.keychain.get(notifyTopic),
-        };
-
-        // Store the new NotifySubscription.
-        await this.client.subscriptions.set(notifyTopic, notifySubscription);
-
-        // Set up a store for messages sent to this notify topic.
-        await this.client.messages.set(notifyTopic, {
-          topic: notifyTopic,
-          messages: {},
-        });
-
-        // SPEC: Wallet subscribes to derived notifyTopic.
-        await this.client.core.relayer.subscribe(notifyTopic);
-
-        // Wallet unsubscribes from response topic.
-        await this.client.core.relayer.unsubscribe(responseTopic);
-
-        console.log("EMIT notifySubscription", notifySubscription);
-
+        // TODO: Define how to handle the notify_subscription event going forward.
         // Emit the NotifySubscription at client level.
         this.client.emit("notify_subscription", {
           id: response.id,
-          topic: notifyTopic,
+          topic: responseTopic,
           params: {
-            subscription: notifySubscription,
+            subscription: {} as any,
           },
         });
       } else if (isJsonRpcError(response)) {
@@ -674,7 +611,6 @@ export class NotifyEngine extends INotifyEngine {
       try {
         const responseAuth = await this.generateMessageResponseAuth({
           topic,
-          message: messageClaims.msg,
         });
 
         this.client.logger.info(
@@ -726,11 +662,6 @@ export class NotifyEngine extends INotifyEngine {
         payload
       );
       try {
-        // TODO: Using a placeholder responseAuth for now since this handler may be removed from the engine.
-        await this.sendResult<"wc_notifyDelete">(id, topic, {
-          responseAuth: "",
-        });
-        await this.cleanupSubscription(topic);
         this.client.events.emit("notify_delete", { id, topic });
       } catch (err: any) {
         this.client.logger.error(err);
@@ -745,11 +676,6 @@ export class NotifyEngine extends INotifyEngine {
           "[Notify] Engine.onNotifyDeleteResponse > result:",
           topic,
           payload
-        );
-
-        this.decodeAndValidateJwtAuth<NotifyClientTypes.DeleteResponseJWTClaims>(
-          payload.result.responseAuth,
-          "notify_delete_response"
         );
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error(
@@ -774,14 +700,11 @@ export class NotifyEngine extends INotifyEngine {
     console.log("updateSubscriptionsUsingJwt > claims", claims);
 
     const newStateSubsTopics = claims.sbs.map((sb) => hashKey(sb.symKey));
-    for (const currentSub of this.client.subscriptions
+    for (const currentSubTopic of this.client.subscriptions
       .getAll()
       .map((sub) => sub.topic)) {
-      if (!newStateSubsTopics.includes(currentSub)) {
-        this.client.subscriptions.delete(currentSub, {
-          code: -1,
-          message: "Not in recent state",
-        });
+      if (!newStateSubsTopics.includes(currentSubTopic)) {
+        await this.cleanupSubscription(currentSubTopic);
       }
     }
 
@@ -834,6 +757,13 @@ export class NotifyEngine extends INotifyEngine {
           protocol: RELAYER_DEFAULT_PROTOCOL,
         },
       });
+      // Set up a store for messages sent to this notify topic.
+      await this.client.messages.set(sbTopic, {
+        topic: sbTopic,
+        messages: {},
+      });
+      // Set the symKey in the keychain for the new subscription.
+      await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
     }
 
     this.client.emit(
@@ -856,7 +786,7 @@ export class NotifyEngine extends INotifyEngine {
       }
 
       if (isJsonRpcResponse(payload)) {
-        this.updateSubscriptionsUsingJwt(
+        await this.updateSubscriptionsUsingJwt(
           payload.result.responseAuth,
           "notify_watch_subscriptions_response"
         );
@@ -864,13 +794,12 @@ export class NotifyEngine extends INotifyEngine {
     };
 
   protected onNotifySubscriptionsChangedRequest: INotifyEngine["onNotifySubscriptionsChangedRequest"] =
-    async (_, payload) => {
-      if (isJsonRpcRequest(payload)) {
-        this.updateSubscriptionsUsingJwt(
-          payload.params.subscriptionsChangedAuth,
-          "notify_subscriptions_changed"
-        );
-      }
+    async (topic, payload) => {
+      console.log("onNotifySubscriptionsChangedRequest", topic, payload);
+      await this.updateSubscriptionsUsingJwt(
+        payload.params.subscriptionsChangedAuth,
+        "notify_subscriptions_changed"
+      );
     };
 
   protected onNotifyUpdateResponse: INotifyEngine["onNotifyUpdateResponse"] =
@@ -882,51 +811,12 @@ export class NotifyEngine extends INotifyEngine {
           result: payload,
         });
 
-        const { id, result } = payload;
-
-        // TODO: Perform further validations on the updateResponse JWT claims.
-        this.decodeAndValidateJwtAuth<NotifyClientTypes.UpdateResponseJWTClaims>(
-          result.responseAuth,
-          "notify_update_response"
-        );
-
-        const { request } = this.client.requests.get(id);
-        const existingSubscription = this.client.subscriptions.get(topic);
-
-        if (!request.scopeUpdate) {
-          throw new Error(
-            `No scope update found in request for notify update: ${JSON.stringify(
-              request
-            )}`
-          );
-        }
-
-        const updatedScope = Object.entries(existingSubscription.scope).reduce(
-          (map, [scope, setting]) => {
-            map[scope] = setting;
-            if (request.scopeUpdate?.includes(scope)) {
-              map[scope].enabled = true;
-            } else {
-              map[scope].enabled = false;
-            }
-            return map;
-          },
-          {} as NotifyClientTypes.NotifySubscription["scope"]
-        );
-
-        const updatedSubscription: NotifyClientTypes.NotifySubscription = {
-          ...existingSubscription,
-          scope: updatedScope,
-          expiry: calcExpiry(NOTIFY_SUBSCRIPTION_EXPIRY),
-        };
-
-        await this.client.subscriptions.set(topic, updatedSubscription);
-
+        // TODO: resolve how we emit `notify_update` going forward.
         this.client.events.emit("notify_update", {
-          id,
+          id: payload.id,
           topic,
           params: {
-            subscription: updatedSubscription,
+            subscription: {},
           },
         });
       } else if (isJsonRpcError(payload)) {
@@ -1059,6 +949,7 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   private cleanupSubscription = async (topic: string) => {
+    this.client.logger.info(`[Notify] cleanupSubscription > topic: ${topic}`);
     // Await the unsubscribe first to avoid deleting the symKey too early below.
     await this.client.core.relayer.unsubscribe(topic);
     await Promise.all([
@@ -1083,10 +974,8 @@ export class NotifyEngine extends INotifyEngine {
 
   private generateMessageResponseAuth = async ({
     topic,
-    message,
   }: {
     topic: string;
-    message: NotifyClientTypes.NotifyMessage;
   }) => {
     try {
       const subscription = this.client.subscriptions.get(topic);
@@ -1103,7 +992,7 @@ export class NotifyEngine extends INotifyEngine {
         exp: expiry,
         iss: encodeEd25519Key(identityKeyPub),
         aud: encodeEd25519Key(dappIdentityKey),
-        sub: hashMessage(JSON.stringify(message)),
+        sub: composeDidPkh(subscription.account),
         app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
         ksu: this.client.keyserverUrl,
       };
@@ -1123,13 +1012,7 @@ export class NotifyEngine extends INotifyEngine {
     }
   };
 
-  private generateDeleteAuth = async ({
-    topic,
-    reason,
-  }: {
-    topic: string;
-    reason: string;
-  }) => {
+  private generateDeleteAuth = async ({ topic }: { topic: string }) => {
     try {
       const subscription = this.client.subscriptions.get(topic);
       const identityKeyPub = await this.client.identityKeys.getIdentity({
@@ -1145,7 +1028,7 @@ export class NotifyEngine extends INotifyEngine {
         exp: expiry,
         iss: encodeEd25519Key(identityKeyPub),
         aud: encodeEd25519Key(dappIdentityKey),
-        sub: reason,
+        sub: composeDidPkh(subscription.account),
         ksu: this.client.keyserverUrl,
         app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
       };
@@ -1297,11 +1180,11 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     this.client.logger.info(
-      `[Notify] subscribe > publicKey for ${dappUrl} is: ${dappPublicKey}`
+      `[Notify] resolveKeys > publicKey for ${dappUrl} is: ${dappPublicKey}`
     );
 
     console.log(
-      `[Notify] subscribe > publicKey for ${dappUrl} is: ${dappPublicKey}`
+      `[Notify] resolveKeys > publicKey for ${dappUrl} is: ${dappPublicKey}`
     );
 
     return { dappPublicKey, dappIdentityKey };

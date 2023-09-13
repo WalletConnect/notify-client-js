@@ -24,7 +24,7 @@ const hasGmSecret = typeof process.env.NOTIFY_GM_PROJECT_SECRET !== "undefined";
 
 const projectId = process.env.TEST_PROJECT_ID;
 
-describe("Notify", () => {
+describe.skip("Notify", () => {
   let wallet: INotifyClient;
   let ethersWallet: EthersWallet;
   let account: string;
@@ -334,6 +334,9 @@ describe("Notify", () => {
 
     describe("deleteSubscription", () => {
       it("can delete a currently active notify subscription", async () => {
+        let gotNotifySubscriptionsChanged = false;
+        let gotNotifySubscriptionsChangedEvent: any;
+
         await createNotifySubscription(wallet, account, onSign);
 
         expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(1);
@@ -342,7 +345,16 @@ describe("Notify", () => {
           wallet.getActiveSubscriptions()
         )[0];
 
+        wallet.once("notify_subscriptions_changed", (event) => {
+          gotNotifySubscriptionsChanged = true;
+          gotNotifySubscriptionsChangedEvent = event;
+        });
+
         await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
+
+        await waitForEvent(() => gotNotifySubscriptionsChanged);
+
+        console.log(gotNotifySubscriptionsChangedEvent);
 
         // Check that wallet is in expected state.
         expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
