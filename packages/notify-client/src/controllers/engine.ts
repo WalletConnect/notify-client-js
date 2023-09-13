@@ -535,6 +535,12 @@ export class NotifyEngine extends INotifyEngine {
           topic: responseTopic,
           response,
         });
+        console.log({
+          event: "onNotifySubscribeResponse",
+          id,
+          topic: responseTopic,
+          response,
+        });
 
         const { request } = this.client.requests.get(id);
 
@@ -543,6 +549,8 @@ export class NotifyEngine extends INotifyEngine {
             response.result.responseAuth,
             "notify_subscription_response"
           );
+
+        console.log("subscriptionResponseClaims", subscriptionResponseClaims);
 
         // SPEC: `sub` is a did:key of the public key used for key agreement on the Notify topic
         // TODO: this conversion should be done automatically by the did-jwt package's
@@ -559,7 +567,10 @@ export class NotifyEngine extends INotifyEngine {
         );
 
         this.client.logger.info(
-          `onNotifySubscribeResponse > derived notifyTopic ${notifyTopic} from selfPublicKey ${request.publicKey} and Cast publicKey ${resultPublicKey}`
+          `onNotifySubscribeResponse > derived notifyTopic ${notifyTopic} from selfPublicKey ${request.publicKey} and Notify publicKey ${resultPublicKey}`
+        );
+        console.log(
+          `onNotifySubscribeResponse > derived notifyTopic ${notifyTopic} from selfPublicKey ${request.publicKey} and Notify publicKey ${resultPublicKey}`
         );
 
         const notifySubscription = {
@@ -586,6 +597,8 @@ export class NotifyEngine extends INotifyEngine {
 
         // Wallet unsubscribes from response topic.
         await this.client.core.relayer.unsubscribe(responseTopic);
+
+        console.log("EMIT notifySubscription", notifySubscription);
 
         // Emit the NotifySubscription at client level.
         this.client.emit("notify_subscription", {
@@ -758,6 +771,8 @@ export class NotifyEngine extends INotifyEngine {
       | NotifyClientTypes.NotifySubscriptionsChangedClaims
     >(jwt, act);
 
+    console.log("updateSubscriptionsUsingJwt > claims", claims);
+
     const newStateSubsTopics = claims.sbs.map((sb) => hashKey(sb.symKey));
     for (const currentSub of this.client.subscriptions
       .getAll()
@@ -829,6 +844,8 @@ export class NotifyEngine extends INotifyEngine {
 
   protected onNotifyWatchSubscriptionsResponse: INotifyEngine["onNotifyWatchSubscriptionsResponse"] =
     async (topic, payload) => {
+      console.log("onNotifyWatchSubscriptionsResponse", topic, payload);
+
       if (isJsonRpcError(payload)) {
         this.client.logger.error({
           event: "onNotifyWatchSubscriptionsResponse",
@@ -972,6 +989,11 @@ export class NotifyEngine extends INotifyEngine {
     this.client.logger.info(
       "watchSubscriptions >",
       "notifyServerWatchTopic >",
+      notifyServerWatchTopic
+    );
+
+    console.log(
+      "watchSubscriptions > notifyServerWatchTopic >",
       notifyServerWatchTopic
     );
 
@@ -1275,6 +1297,10 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     this.client.logger.info(
+      `[Notify] subscribe > publicKey for ${dappUrl} is: ${dappPublicKey}`
+    );
+
+    console.log(
       `[Notify] subscribe > publicKey for ${dappUrl} is: ${dappPublicKey}`
     );
 
