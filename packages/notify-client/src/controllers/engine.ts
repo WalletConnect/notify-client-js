@@ -774,7 +774,7 @@ export class NotifyEngine extends INotifyEngine {
       const sbTopic = hashKey(sub.symKey);
 
       try {
-        this.client.core.relayer.subscribe(sbTopic);
+        await this.client.core.relayer.subscribe(sbTopic);
       } catch (e) {
         this.client.logger.error("Failed to subscribe from claims.sbs", e);
       }
@@ -985,7 +985,7 @@ export class NotifyEngine extends INotifyEngine {
     // Generate res topic from persistant key kY
     const resTopic = hashKey(deriveSymKey(privKeyY, notifyKeys.dappPublicKey));
     // Subscribe to res topic
-    await this.client.core.relayer.subscribe(resTopic);
+    await this.client.core.relayer.subscriber.subscribe(resTopic);
 
     const claims: NotifyClientTypes.NotifyWatchSubscriptionsClaims = {
       act: "notify_watch_subscriptions",
@@ -1242,11 +1242,31 @@ export class NotifyEngine extends INotifyEngine {
       );
     }
 
-    const { publicKeyJwk } = didDoc.verificationMethod[0];
+    // Look up the required keys for keyAgreement and authentication in the didDoc.
+    const keyAgreementVerificationMethod = didDoc.verificationMethod.find(
+      (vm) => vm.id === didDoc.keyAgreement[0]
+    );
+    const authenticationVerificationMethod = didDoc.verificationMethod.find(
+      (vm) => vm.id === didDoc.authentication[0]
+    );
+
+    if (!keyAgreementVerificationMethod) {
+      throw new Error(
+        `No keyAgreement verification method found in DID doc for ${dappUrl}`
+      );
+    }
+    if (!authenticationVerificationMethod) {
+      throw new Error(
+        `No authentication verification method found in DID doc for ${dappUrl}`
+      );
+    }
+
+    // Derive the dappPublicKey and dappIdentityKey from the JWKs.
+    const { publicKeyJwk } = keyAgreementVerificationMethod;
     const base64Jwk = publicKeyJwk.x.replace(/-/g, "+").replace(/_/g, "/");
     const dappPublicKey = Buffer.from(base64Jwk, "base64").toString("hex");
 
-    const { publicKeyJwk: identityKeyJwk } = didDoc.verificationMethod[1];
+    const { publicKeyJwk: identityKeyJwk } = authenticationVerificationMethod;
     const base64IdentityJwk = identityKeyJwk.x
       .replace(/-/g, "+")
       .replace(/_/g, "/");
