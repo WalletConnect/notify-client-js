@@ -72,10 +72,16 @@ describe("Notify", () => {
       it("can issue a `notify_subscription` request and handle the response", async () => {
         let gotNotifySubscriptionResponse = false;
         let notifySubscriptionEvent: any;
+        let gotNotifySubscriptionsChangedRequest = false;
+        let gotNotifySubscriptionsChangedEvent: any;
 
         wallet.once("notify_subscription", (event) => {
           gotNotifySubscriptionResponse = true;
           notifySubscriptionEvent = event;
+        });
+        wallet.once("notify_subscriptions_changed", (event) => {
+          gotNotifySubscriptionsChangedRequest = true;
+          gotNotifySubscriptionsChangedEvent = event;
         });
 
         await wallet.register({
@@ -91,6 +97,7 @@ describe("Notify", () => {
         });
 
         await waitForEvent(() => gotNotifySubscriptionResponse);
+        await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
 
         expect(
           notifySubscriptionEvent.params.subscription.metadata
