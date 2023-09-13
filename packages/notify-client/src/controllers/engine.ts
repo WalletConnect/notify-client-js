@@ -774,7 +774,7 @@ export class NotifyEngine extends INotifyEngine {
       const sbTopic = hashKey(sub.symKey);
 
       try {
-        this.client.core.relayer.subscribe(sbTopic);
+        await this.client.core.relayer.subscribe(sbTopic);
       } catch (e) {
         this.client.logger.error("Failed to subscribe from claims.sbs", e);
       }
