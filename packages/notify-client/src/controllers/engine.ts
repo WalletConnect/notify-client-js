@@ -886,9 +886,14 @@ export class NotifyEngine extends INotifyEngine {
           `[Notify] updateSubscriptionsUsingJwt > cleanupSubscription on topic ${currentSubTopic}`
         );
 
-        const oldSub = this.client.subscriptions.get(currentSubTopic);
-        if (oldSub.account === claims.sub.split(":").slice(2).join(":")) {
-          await this.cleanupSubscription(currentSubTopic);
+        // We only want to clean up the subscription if it was created by the current account.
+        if (this.client.subscriptions.keys.includes(currentSubTopic)) {
+          const existingSub = this.client.subscriptions.get(currentSubTopic);
+          if (
+            existingSub.account === claims.sub.split(":").slice(2).join(":")
+          ) {
+            await this.cleanupSubscription(currentSubTopic);
+          }
         }
       }
     }
