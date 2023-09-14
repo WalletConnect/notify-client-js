@@ -885,7 +885,11 @@ export class NotifyEngine extends INotifyEngine {
         this.client.logger.info(
           `[Notify] updateSubscriptionsUsingJwt > cleanupSubscription on topic ${currentSubTopic}`
         );
-        await this.cleanupSubscription(currentSubTopic);
+
+        const oldSub = this.client.subscriptions.get(currentSubTopic);
+        if (oldSub.account === claims.sub.split(":").slice(2).join(":")) {
+          await this.cleanupSubscription(currentSubTopic);
+        }
       }
     }
 

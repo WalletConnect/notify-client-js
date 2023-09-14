@@ -162,6 +162,7 @@ export declare namespace NotifyClientTypes {
     act: "notify_subscriptions_changed";
     iss: string; // did:key of notify server identity key
     aud: string; // did:pkh blockchain account that notify subscription is associated with
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
   }
 
