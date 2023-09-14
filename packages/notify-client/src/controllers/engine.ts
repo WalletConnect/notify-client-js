@@ -882,11 +882,23 @@ export class NotifyEngine extends INotifyEngine {
       .getAll()
       .map((sub) => sub.topic)) {
       if (!newStateSubsTopics.includes(currentSubTopic)) {
+        this.client.logger.info(
+          `[Notify] updateSubscriptionsUsingJwt > cleanupSubscription on topic ${currentSubTopic}`
+        );
         await this.cleanupSubscription(currentSubTopic);
       }
     }
 
-    for (const sub of claims.sbs) {
+    const newSubscriptions = claims.sbs.filter(
+      (sb) => !this.client.subscriptions.keys.includes(hashKey(sb.symKey))
+    );
+    console.log(
+      "updateSubscriptionsUsingJwt > newSubscriptions",
+      newSubscriptions
+    );
+
+    // Only do the subscription and store work if there are new subscriptions.
+    const setupNewSubscriptionsPromises = newSubscriptions.map(async (sub) => {
       const sbTopic = hashKey(sub.symKey);
 
       try {
@@ -942,7 +954,9 @@ export class NotifyEngine extends INotifyEngine {
       });
       // Set the symKey in the keychain for the new subscription.
       await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
-    }
+    });
+
+    await Promise.all(setupNewSubscriptionsPromises);
 
     return this.client.subscriptions.getAll();
   };
