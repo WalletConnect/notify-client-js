@@ -686,89 +686,6 @@ export class NotifyEngine extends INotifyEngine {
       }
     };
 
-  private updateSubscriptionsUsingJwt = async (
-    jwt: string,
-    act:
-      | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims["act"]
-      | NotifyClientTypes.NotifySubscriptionsChangedClaims["act"]
-  ) => {
-    const claims = this.decodeAndValidateJwtAuth<
-      | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims
-      | NotifyClientTypes.NotifySubscriptionsChangedClaims
-    >(jwt, act);
-
-    console.log("updateSubscriptionsUsingJwt > claims", claims);
-
-    const newStateSubsTopics = claims.sbs.map((sb) => hashKey(sb.symKey));
-    for (const currentSubTopic of this.client.subscriptions
-      .getAll()
-      .map((sub) => sub.topic)) {
-      if (!newStateSubsTopics.includes(currentSubTopic)) {
-        await this.cleanupSubscription(currentSubTopic);
-      }
-    }
-
-    for (const sub of claims.sbs) {
-      const sbTopic = hashKey(sub.symKey);
-
-      try {
-        await this.client.core.relayer.subscribe(sbTopic);
-      } catch (e) {
-        this.client.logger.error("Failed to subscribe from claims.sbs", e);
-      }
-
-      const dappUrl = getDappUrl(sub.appDomain);
-      const dappConfig = await this.resolveNotifyConfig(dappUrl);
-      const scopeMap: NotifyClientTypes.ScopeMap = Object.fromEntries(
-        dappConfig.types.map((type) => {
-          if (sub.scope.includes(type.name)) {
-            return [
-              type.name,
-              {
-                ...type,
-                enabled: true,
-              },
-            ];
-          }
-
-          return [
-            type.name,
-            {
-              ...type,
-              enabled: false,
-            },
-          ];
-        })
-      );
-
-      await this.client.subscriptions.set(sbTopic, {
-        account: sub.account,
-        expiry: sub.expiry,
-        topic: sbTopic,
-        scope: scopeMap,
-        symKey: sub.symKey,
-        metadata: {
-          name: dappConfig.name,
-          description: dappConfig.description,
-          icons: dappConfig.icons,
-          appDomain: sub.appDomain,
-        },
-        relay: {
-          protocol: RELAYER_DEFAULT_PROTOCOL,
-        },
-      });
-      // Set up a store for messages sent to this notify topic.
-      await this.client.messages.set(sbTopic, {
-        topic: sbTopic,
-        messages: {},
-      });
-      // Set the symKey in the keychain for the new subscription.
-      await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
-    }
-
-    return this.client.subscriptions.getAll();
-  };
-
   protected onNotifyWatchSubscriptionsResponse: INotifyEngine["onNotifyWatchSubscriptionsResponse"] =
     async (topic, payload) => {
       console.log("onNotifyWatchSubscriptionsResponse", topic, payload);
@@ -946,6 +863,89 @@ export class NotifyEngine extends INotifyEngine {
 
     this.client.logger.info("watchSubscriptions >", "requestId >", id);
   }
+
+  private updateSubscriptionsUsingJwt = async (
+    jwt: string,
+    act:
+      | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims["act"]
+      | NotifyClientTypes.NotifySubscriptionsChangedClaims["act"]
+  ) => {
+    const claims = this.decodeAndValidateJwtAuth<
+      | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims
+      | NotifyClientTypes.NotifySubscriptionsChangedClaims
+    >(jwt, act);
+
+    console.log("updateSubscriptionsUsingJwt > claims", claims);
+
+    const newStateSubsTopics = claims.sbs.map((sb) => hashKey(sb.symKey));
+    for (const currentSubTopic of this.client.subscriptions
+      .getAll()
+      .map((sub) => sub.topic)) {
+      if (!newStateSubsTopics.includes(currentSubTopic)) {
+        await this.cleanupSubscription(currentSubTopic);
+      }
+    }
+
+    for (const sub of claims.sbs) {
+      const sbTopic = hashKey(sub.symKey);
+
+      try {
+        await this.client.core.relayer.subscribe(sbTopic);
+      } catch (e) {
+        this.client.logger.error("Failed to subscribe from claims.sbs", e);
+      }
+
+      const dappUrl = getDappUrl(sub.appDomain);
+      const dappConfig = await this.resolveNotifyConfig(dappUrl);
+      const scopeMap: NotifyClientTypes.ScopeMap = Object.fromEntries(
+        dappConfig.types.map((type) => {
+          if (sub.scope.includes(type.name)) {
+            return [
+              type.name,
+              {
+                ...type,
+                enabled: true,
+              },
+            ];
+          }
+
+          return [
+            type.name,
+            {
+              ...type,
+              enabled: false,
+            },
+          ];
+        })
+      );
+
+      await this.client.subscriptions.set(sbTopic, {
+        account: sub.account,
+        expiry: sub.expiry,
+        topic: sbTopic,
+        scope: scopeMap,
+        symKey: sub.symKey,
+        metadata: {
+          name: dappConfig.name,
+          description: dappConfig.description,
+          icons: dappConfig.icons,
+          appDomain: sub.appDomain,
+        },
+        relay: {
+          protocol: RELAYER_DEFAULT_PROTOCOL,
+        },
+      });
+      // Set up a store for messages sent to this notify topic.
+      await this.client.messages.set(sbTopic, {
+        topic: sbTopic,
+        messages: {},
+      });
+      // Set the symKey in the keychain for the new subscription.
+      await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
+    }
+
+    return this.client.subscriptions.getAll();
+  };
 
   private cleanupRequest = async (id: number, expirerHasDeleted?: boolean) => {
     await Promise.all([
