@@ -13,16 +13,16 @@ export declare namespace NotifyClientTypes {
     | "notify_message"
     | "notify_delete"
     | "notify_update"
-    | "notify_subscriptions_changed"
-    // JS Implementation specific event, used to indicate stores are done initializing
-    | "sync_stores_initialized";
+    | "notify_subscriptions_changed";
 
   type NotifyResponseEventArgs = {
     error?: ErrorResponse;
     subscription?: NotifyClientTypes.NotifySubscription;
   };
 
-  type NotifySubscriptionsUpdatedEventArgs = NotifySubscription[];
+  type NotifySubscriptionsChangedEventArgs = {
+    subscriptions: NotifySubscription[];
+  };
 
   type NotifyMessageRequestEventArgs = {
     message: NotifyClientTypes.NotifyMessage;
@@ -41,8 +41,7 @@ export declare namespace NotifyClientTypes {
     notify_message: BaseEventArgs<NotifyMessageRequestEventArgs>;
     notify_delete: BaseEventArgs<NotifyDeleteRequestEventArgs>;
     notify_update: BaseEventArgs<NotifyResponseEventArgs>;
-    notify_subscriptions_changed: NotifySubscriptionsUpdatedEventArgs;
-    sync_stores_initialized: Record<string, never>; // empty object
+    notify_subscriptions_changed: BaseEventArgs<NotifySubscriptionsChangedEventArgs>;
   }
 
   interface BaseJwtClaims {

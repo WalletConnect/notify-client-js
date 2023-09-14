@@ -766,40 +766,49 @@ export class NotifyEngine extends INotifyEngine {
       await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
     }
 
-    this.client.emit(
-      "notify_subscriptions_changed",
-      this.client.subscriptions.getAll()
-    );
+    return this.client.subscriptions.getAll();
   };
 
   protected onNotifyWatchSubscriptionsResponse: INotifyEngine["onNotifyWatchSubscriptionsResponse"] =
     async (topic, payload) => {
       console.log("onNotifyWatchSubscriptionsResponse", topic, payload);
 
-      if (isJsonRpcError(payload)) {
+      if (isJsonRpcResult(payload)) {
+        const subscriptions = await this.updateSubscriptionsUsingJwt(
+          payload.result.responseAuth,
+          "notify_watch_subscriptions_response"
+        );
+        this.client.emit("notify_subscriptions_changed", {
+          id: payload.id,
+          topic,
+          params: {
+            subscriptions,
+          },
+        });
+      } else if (isJsonRpcError(payload)) {
         this.client.logger.error({
           event: "onNotifyWatchSubscriptionsResponse",
           topic,
           error: payload.error,
         });
-        return;
-      }
-
-      if (isJsonRpcResponse(payload)) {
-        await this.updateSubscriptionsUsingJwt(
-          payload.result.responseAuth,
-          "notify_watch_subscriptions_response"
-        );
       }
     };
 
   protected onNotifySubscriptionsChangedRequest: INotifyEngine["onNotifySubscriptionsChangedRequest"] =
     async (topic, payload) => {
       console.log("onNotifySubscriptionsChangedRequest", topic, payload);
-      await this.updateSubscriptionsUsingJwt(
+
+      const subscriptions = await this.updateSubscriptionsUsingJwt(
         payload.params.subscriptionsChangedAuth,
         "notify_subscriptions_changed"
       );
+      this.client.emit("notify_subscriptions_changed", {
+        id: payload.id,
+        topic,
+        params: {
+          subscriptions,
+        },
+      });
     };
 
   protected onNotifyUpdateResponse: INotifyEngine["onNotifyUpdateResponse"] =
@@ -891,10 +900,10 @@ export class NotifyEngine extends INotifyEngine {
     const expiry =
       issuedAt + ENGINE_RPC_OPTS["wc_notifyWatchSubscription"].res.ttl;
 
-    // Generate persistant key kY
+    // Generate persistent key kY
     const pubKeyY = await this.client.core.crypto.generateKeyPair();
     const privKeyY = this.client.core.crypto.keychain.get(pubKeyY);
-    // Generate res topic from persistant key kY
+    // Generate res topic from persistent key kY
     const resTopic = hashKey(deriveSymKey(privKeyY, notifyKeys.dappPublicKey));
     // Subscribe to res topic
     await this.client.core.relayer.subscriber.subscribe(resTopic);
