@@ -882,16 +882,15 @@ export class NotifyEngine extends INotifyEngine {
       .getAll()
       .map((sub) => sub.topic)) {
       if (!newStateSubsTopics.includes(currentSubTopic)) {
-        this.client.logger.info(
-          `[Notify] updateSubscriptionsUsingJwt > cleanupSubscription on topic ${currentSubTopic}`
-        );
-
         // We only want to clean up the subscription if it was created by the current account.
         if (this.client.subscriptions.keys.includes(currentSubTopic)) {
           const existingSub = this.client.subscriptions.get(currentSubTopic);
           if (
             existingSub.account === claims.sub.split(":").slice(2).join(":")
           ) {
+            this.client.logger.info(
+              `[Notify] updateSubscriptionsUsingJwt > cleanupSubscription on topic ${currentSubTopic}`
+            );
             await this.cleanupSubscription(currentSubTopic);
           }
         }
