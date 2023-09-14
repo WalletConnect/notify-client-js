@@ -877,6 +877,7 @@ export class NotifyEngine extends INotifyEngine {
 
     console.log("updateSubscriptionsUsingJwt > claims", claims);
 
+    // Clean up any subscriptions that are no longer valid.
     const newStateSubsTopics = claims.sbs.map((sb) => hashKey(sb.symKey));
     for (const currentSubTopic of this.client.subscriptions
       .getAll()
@@ -897,26 +898,12 @@ export class NotifyEngine extends INotifyEngine {
       }
     }
 
-    const newSubscriptions = claims.sbs.filter(
-      (sb) => !this.client.subscriptions.keys.includes(hashKey(sb.symKey))
-    );
-    console.log(
-      "updateSubscriptionsUsingJwt > newSubscriptions",
-      newSubscriptions
-    );
-
-    // Only do the subscription and store work if there are new subscriptions.
-    const setupNewSubscriptionsPromises = newSubscriptions.map(async (sub) => {
+    // Update all subscriptions to account for any changes in scope.
+    const updateSubscriptionsPromises = claims.sbs.map(async (sub) => {
       const sbTopic = hashKey(sub.symKey);
-
-      try {
-        await this.client.core.relayer.subscribe(sbTopic);
-      } catch (e) {
-        this.client.logger.error("Failed to subscribe from claims.sbs", e);
-      }
-
       const dappUrl = getDappUrl(sub.appDomain);
       const dappConfig = await this.resolveNotifyConfig(dappUrl);
+      // TODO: use `generateScopeMapFromConfig` here instead.
       const scopeMap: NotifyClientTypes.ScopeMap = Object.fromEntries(
         dappConfig.types.map((type) => {
           if (sub.scope.includes(type.name)) {
@@ -955,6 +942,25 @@ export class NotifyEngine extends INotifyEngine {
           protocol: RELAYER_DEFAULT_PROTOCOL,
         },
       });
+    });
+
+    // Only set messages and symKeys for new subscriptions.
+    const newSubscriptions = claims.sbs.filter(
+      (sb) => !this.client.subscriptions.keys.includes(hashKey(sb.symKey))
+    );
+    console.log(
+      "updateSubscriptionsUsingJwt > newSubscriptions",
+      newSubscriptions
+    );
+    const setupNewSubscriptionsPromises = newSubscriptions.map(async (sub) => {
+      const sbTopic = hashKey(sub.symKey);
+
+      try {
+        await this.client.core.relayer.subscribe(sbTopic);
+      } catch (e) {
+        this.client.logger.error("Failed to subscribe from claims.sbs", e);
+      }
+
       // Set up a store for messages sent to this notify topic.
       await this.client.messages.set(sbTopic, {
         topic: sbTopic,
@@ -964,7 +970,10 @@ export class NotifyEngine extends INotifyEngine {
       await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
     });
 
-    await Promise.all(setupNewSubscriptionsPromises);
+    await Promise.all([
+      ...updateSubscriptionsPromises,
+      ...setupNewSubscriptionsPromises,
+    ]);
 
     return this.client.subscriptions.getAll();
   };
