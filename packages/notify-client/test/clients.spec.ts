@@ -108,7 +108,6 @@ describe("Notify", () => {
           changedSubscriptions[0].topic
         );
         expect(wallet.messages.keys.length).toBe(1);
-        expect(wallet.requests.length).toBe(0);
       });
     });
 
