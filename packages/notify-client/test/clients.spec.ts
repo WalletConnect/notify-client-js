@@ -68,7 +68,7 @@ describe("Notify", () => {
       expect(wallet.core.pairing).toBeDefined();
     });
 
-    describe.only("subscribe", () => {
+    describe("subscribe", () => {
       it("can issue a `notify_subscription` request and handle the response", async () => {
         let gotNotifySubscriptionResponse = false;
         let notifySubscriptionEvent: any;
@@ -134,68 +134,51 @@ describe("Notify", () => {
 
     describe("update", () => {
       it("can update an existing notify subscription with a new scope", async () => {
-        let gotNotifySubscriptionResponse = false;
-        let gotNotifySubscriptionsChangedRequest = false;
-        let changedSubscriptions: any;
-
-        wallet.once("notify_subscription", (event) => {
-          gotNotifySubscriptionResponse = true;
-        });
-        wallet.on("notify_subscriptions_changed", (subscriptions) => {
-          console.log(
-            "notify_subscriptions_changed",
-            JSON.stringify(subscriptions, null, 2)
-          );
-          if (subscriptions.length > 0) {
-            gotNotifySubscriptionsChangedRequest = true;
-            changedSubscriptions = subscriptions;
-            console.log(
-              "changedSubscriptions",
-              JSON.stringify(changedSubscriptions, null, 2)
-            );
-          }
-        });
-
-        await wallet.register({
-          account,
-          onSign,
-          domain: "dev.gm.walletconnect.com",
-          isLimited: false,
-        });
-
-        await wallet.subscribe({
-          appDomain: gmDappMetadata.appDomain,
-          account,
-        });
-
-        await waitForEvent(() => gotNotifySubscriptionResponse);
-        await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
+        await createNotifySubscription(wallet, account, onSign);
 
         let gotNotifyUpdateResponse = false;
         let notifyUpdateEvent: any;
+        let gotNotifySubscriptionsChangedRequest = false;
+        let lastChangedSubscriptions: NotifyClientTypes.NotifySubscription[] =
+          [];
 
         wallet.once("notify_update", (event) => {
           gotNotifyUpdateResponse = true;
           notifyUpdateEvent = { ...event };
         });
+        wallet.on("notify_subscriptions_changed", (event) => {
+          console.log("notify_subscriptions_changed", event);
+          gotNotifySubscriptionsChangedRequest = true;
+          lastChangedSubscriptions = event.params.subscriptions;
+        });
+
+        const subscriptions = wallet.subscriptions.getAll();
+
+        // Ensure all scopes are enabled in the initial subscription.
+        expect(
+          Object.values(subscriptions[0].scope)
+            .map((scp) => scp.enabled)
+            .every((enabled) => enabled === true)
+        ).toBe(true);
 
         await wallet.update({
-          topic: changedSubscriptions[0].topic,
-          scope: [""],
+          topic: subscriptions[0].topic,
+          scope: [],
         });
 
         await waitForEvent(() => gotNotifyUpdateResponse);
+        await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
 
         expect(gotNotifyUpdateResponse).toBe(true);
-        // expect(notifyUpdateEvent.params.subscription.topic).toBe(
-        //   initialNotifySubscription.topic
-        // );
-        // expect(notifyUpdateEvent.params.subscription.metadata).to.deep.equal(
-        //   initialNotifySubscription.metadata
-        // );
-        // expect(notifyUpdateEvent.params.subscription.scope).not.to.deep.equal(
-        //   initialNotifySubscription.scope
-        // );
+        expect(wallet.subscriptions.keys[0]).toBe(
+          lastChangedSubscriptions[0].topic
+        );
+        // Ensure all scopes have been disabled in the updated subscription.
+        expect(
+          Object.values(lastChangedSubscriptions[0].scope)
+            .map((scp) => scp.enabled)
+            .every((enabled) => enabled === false)
+        ).toBe(true);
       });
     });
 
@@ -399,53 +382,34 @@ describe("Notify", () => {
 
     describe("watchSubscriptions", () => {
       it("fires correct event update", async () => {
-        // Essentially a copy of the update test.
-        let gotNotifySubscriptionResponse = false;
         let updateEvent: any = {};
-        let initialNotifySubscription =
-          {} as NotifyClientTypes.NotifySubscription;
-
-        wallet.once("notify_subscription", (event) => {
-          gotNotifySubscriptionResponse = true;
-          initialNotifySubscription = cloneDeep(event.params.subscription!);
-        });
-
+        let gotNotifyUpdateResponse = false;
         let updatedCount = 0;
+
         wallet.on("notify_subscriptions_changed", (event) => {
           updatedCount += 1;
+        });
+
+        await createNotifySubscription(wallet, account, onSign);
+
+        expect(wallet.subscriptions.keys.length).toBe(1);
+
+        const subscriptions = wallet.subscriptions.getAll();
+
+        wallet.once("notify_update", (event) => {
+          gotNotifyUpdateResponse = true;
           updateEvent = event;
         });
 
-        await wallet.register({
-          account,
-          onSign,
-          domain: "dev.gm.walletconnect.com",
-          isLimited: false,
-        });
-
-        await wallet.subscribe({
-          appDomain: gmDappMetadata.appDomain,
-          account,
-        });
-
-        await waitForEvent(() => gotNotifySubscriptionResponse);
-
-        expect(initialNotifySubscription.metadata).to.deep.equal(
-          gmDappMetadata
-        );
-        expect(initialNotifySubscription.topic).toBeDefined();
-
         await wallet.update({
-          topic: initialNotifySubscription.topic,
+          topic: subscriptions[0].topic,
           scope: [""],
         });
 
-        // Wait for `notify_subscriptions_updated' instead of `notify_update` event
-        // Both should fire so this effectively tests if 'notify_subscriptions_changed_request' is
-        // fired and decoded.
+        await waitForEvent(() => gotNotifyUpdateResponse);
         await waitForEvent(() => updatedCount === 3);
 
-        expect(updateEvent).toEqual(wallet.subscriptions.getAll());
+        expect(updateEvent.topic).toBe(subscriptions[0].topic);
       });
     });
   });
