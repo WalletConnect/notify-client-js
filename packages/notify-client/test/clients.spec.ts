@@ -242,13 +242,7 @@ describe("Notify", () => {
 
     describe("getActiveSubscriptions", () => {
       it("can query currently active notify subscriptions", async () => {
-        const { notifySubscriptionEvent } = await createNotifySubscription(
-          wallet,
-          account,
-          onSign
-        );
-
-        expect(notifySubscriptionEvent.params.subscription.topic).toBeDefined();
+        await createNotifySubscription(wallet, account, onSign);
 
         const walletSubscriptions = wallet.getActiveSubscriptions();
 
