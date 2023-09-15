@@ -392,7 +392,7 @@ export class NotifyEngine extends INotifyEngine {
     );
     const rpcOpts = ENGINE_RPC_OPTS[method].req;
     this.client.core.history.set(topic, payload);
-    this.client.core.relayer.publish(topic, message, rpcOpts);
+    await this.client.core.relayer.publish(topic, message, rpcOpts);
 
     return payload.id;
   };
@@ -412,7 +412,7 @@ export class NotifyEngine extends INotifyEngine {
     const record = await this.client.core.history.get(topic, id);
     const rpcOpts = ENGINE_RPC_OPTS[record.request.method].res;
 
-    this.client.core.relayer.publish(topic, message, rpcOpts);
+    await this.client.core.relayer.publish(topic, message, rpcOpts);
     await this.client.core.history.resolve(payload);
 
     return payload.id;
