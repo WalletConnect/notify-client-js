@@ -1,4 +1,3 @@
-import { HistoryClient } from "@walletconnect/history";
 import { IdentityKeys } from "@walletconnect/identity-keys";
 import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
 import { CoreTypes, ICore, IStore, RelayerTypes } from "@walletconnect/types";
@@ -248,8 +247,6 @@ export abstract class INotifyClient {
   public abstract logger: Logger;
   public abstract engine: INotifyEngine;
 
-  public abstract historyClient: HistoryClient;
-
   public abstract requests: IStore<
     number,
     {
@@ -283,10 +280,6 @@ export abstract class INotifyClient {
   public abstract deleteNotifyMessage: INotifyEngine["deleteNotifyMessage"];
   public abstract getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"];
   public abstract deleteSubscription: INotifyEngine["deleteSubscription"];
-
-  // ---------- Helpers  ------------------------------------------------------------- //
-
-  public abstract initHistory: () => Promise<void>;
 
   // ---------- Event Handlers ------------------------------------------------------- //
 
