@@ -123,7 +123,9 @@ describe("Notify", () => {
           notifyMessageEvent = event;
         });
 
-        await sendNotifyMessage(account, "Test");
+        const sendResponse = await sendNotifyMessage(account, "Test");
+
+        expect(sendResponse.status).toBe(200);
 
         await waitForEvent(() => gotNotifyMessageResponse);
 
