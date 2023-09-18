@@ -72,7 +72,7 @@ export const sendNotifyMessage = async (
       title: "Test Message",
       icon: "",
       url: "https://test.coms",
-      type: "promotional",
+      type: "gm_hourly",
     },
     accounts: [account],
   };
