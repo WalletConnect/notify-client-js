@@ -44,6 +44,8 @@ export class NotifyEngine extends INotifyEngine {
   public name = "notifyEngine";
   private initialized = false;
 
+  private didDocMap = new Map<string, NotifyClientTypes.NotifyDidDocument>();
+
   constructor(client: INotifyEngine["client"]) {
     super(client);
   }
@@ -1177,14 +1179,22 @@ export class NotifyEngine extends INotifyEngine {
   ): Promise<{ dappPublicKey: string; dappIdentityKey: string }> => {
     let didDoc: NotifyClientTypes.NotifyDidDocument;
 
-    try {
-      // Fetch dapp's public key from its hosted DID doc.
-      const didDocResp = await axios.get(`${dappUrl}/.well-known/did.json`);
-      didDoc = didDocResp.data;
-    } catch (error: any) {
-      throw new Error(
-        `Failed to fetch dapp's DID doc from ${dappUrl}/.well-known/did.json. Error: ${error.message}`
-      );
+    console.log("didDocMap: ", this.didDocMap);
+
+    // Check if we've already fetched the dapp's DID doc.
+    if (this.didDocMap.has(dappUrl)) {
+      didDoc = this.didDocMap.get(dappUrl)!;
+    } else {
+      // If not, fetch dapp's public key from its hosted DID doc.
+      try {
+        const didDocResp = await axios.get(`${dappUrl}/.well-known/did.json`);
+        didDoc = didDocResp.data;
+        this.didDocMap.set(dappUrl, didDoc);
+      } catch (error: any) {
+        throw new Error(
+          `Failed to fetch dapp's DID doc from ${dappUrl}/.well-known/did.json. Error: ${error.message}`
+        );
+      }
     }
 
     // Look up the required keys for keyAgreement and authentication in the didDoc.

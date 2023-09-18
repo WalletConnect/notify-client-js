@@ -1,8 +1,7 @@
 import { Wallet as EthersWallet } from "@ethersproject/wallet";
 import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
-import cloneDeep from "lodash.clonedeep";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_KEYSERVER_URL,
   INotifyClient,
@@ -13,6 +12,8 @@ import { waitForEvent } from "./helpers/async";
 import { gmDappMetadata } from "./helpers/mocks";
 import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
 import { disconnectSocket } from "./helpers/ws";
+import axios from "axios";
+import { ICore } from "@walletconnect/types";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
@@ -25,13 +26,14 @@ const hasGmSecret = typeof process.env.NOTIFY_GM_PROJECT_SECRET !== "undefined";
 const projectId = process.env.TEST_PROJECT_ID;
 
 describe("Notify", () => {
+  let core: ICore;
   let wallet: INotifyClient;
   let ethersWallet: EthersWallet;
   let account: string;
   let onSign: (message: string) => Promise<string>;
 
   beforeEach(async () => {
-    const core = new Core({
+    core = new Core({
       projectId,
       relayUrl: DEFAULT_RELAY_URL,
     });
@@ -130,6 +132,34 @@ describe("Notify", () => {
         await waitForEvent(() => gotNotifyMessageResponse);
 
         expect(notifyMessageEvent.params.message.body).toBe("Test");
+      });
+
+      it("reads the dapp's did.json from memory after the initial fetch", async () => {
+        let incomingMessageCount = 0;
+        await createNotifySubscription(wallet, account, onSign);
+
+        wallet = await NotifyClient.init({
+          name: "testNotifyClient",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core,
+          projectId,
+        });
+
+        wallet.on("notify_message", (event) => {
+          incomingMessageCount += 1;
+        });
+
+        const axiosSpy = vi.spyOn(axios, "get");
+
+        await sendNotifyMessage(account, "Test");
+        await sendNotifyMessage(account, "Test");
+
+        await waitForEvent(() => incomingMessageCount === 2);
+
+        // Ensure `axios.get` was only called once to resolve the dapp's did.json
+        expect(axiosSpy).toHaveBeenCalledTimes(1);
       });
     });
 
