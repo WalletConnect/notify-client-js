@@ -9,5 +9,5 @@ export const gmDappMetadata = {
   description: "A simple gm notification dApp",
   icons: ["https://i.imgur.com/q9QDRXc.png"],
   name: "dev-gm-dapp",
-  appDomain: "dev.gm.walletconnect.com",
+  appDomain: "gm.walletconnect.com",
 };
