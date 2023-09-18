@@ -195,7 +195,7 @@ export class NotifyClient extends INotifyClient {
     return this.events.removeListener(name, listener);
   };
 
-  // ---------- Helpers ----------------------------------------------- //
+  // ---------- Private ----------------------------------------------- //
 
   private async initialize() {
     this.logger.trace(`Initialized`);
