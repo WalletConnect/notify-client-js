@@ -416,6 +416,7 @@ export class NotifyEngine extends INotifyEngine {
 
     await this.client.core.relayer.publish(topic, message, rpcOpts);
     await this.client.core.history.resolve(payload);
+    this.client.core.history.delete(topic, payload.id);
 
     return payload.id;
   };
@@ -437,6 +438,7 @@ export class NotifyEngine extends INotifyEngine {
 
     await this.client.core.relayer.publish(topic, message, rpcOpts);
     await this.client.core.history.resolve(payload);
+    this.client.core.history.delete(topic, payload.id);
 
     return payload.id;
   };

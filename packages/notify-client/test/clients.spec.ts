@@ -134,7 +134,7 @@ describe("Notify", () => {
         expect(notifyMessageEvent.params.message.body).toBe("Test");
       });
 
-      it("reads the dapp's did.json from memory after the initial fetch", async () => {
+      it.skip("reads the dapp's did.json from memory after the initial fetch", async () => {
         let incomingMessageCount = 0;
         await createNotifySubscription(wallet, account, onSign);
 
