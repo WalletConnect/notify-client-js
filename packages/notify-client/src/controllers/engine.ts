@@ -460,11 +460,12 @@ export class NotifyEngine extends INotifyEngine {
           });
         } else if (isJsonRpcResponse(payload)) {
           await this.client.core.history.resolve(payload);
-          this.onRelayEventResponse({
+          await this.onRelayEventResponse({
             topic,
             payload,
             publishedAt,
           });
+          this.client.core.history.delete(topic, payload.id);
         }
       }
     );
