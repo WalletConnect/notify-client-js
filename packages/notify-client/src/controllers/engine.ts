@@ -324,7 +324,9 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    return this.client.messages.get(topic).messages;
+    return this.client.messages.keys.includes(topic)
+      ? this.client.messages.get(topic).messages
+      : {};
   };
 
   public deleteSubscription: INotifyEngine["deleteSubscription"] = async ({
