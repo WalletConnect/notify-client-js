@@ -18,7 +18,11 @@ import {
   isJsonRpcResponse,
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
-import { ExpirerTypes, RelayerTypes } from "@walletconnect/types";
+import {
+  ExpirerTypes,
+  JsonRpcRecord,
+  RelayerTypes,
+} from "@walletconnect/types";
 import {
   TYPE_1,
   calcExpiry,
@@ -496,7 +500,17 @@ export class NotifyEngine extends INotifyEngine {
   protected onRelayEventResponse: INotifyEngine["onRelayEventResponse"] =
     async (event) => {
       const { topic, payload } = event;
-      const record = await this.client.core.history.get(topic, payload.id);
+      let record: JsonRpcRecord;
+
+      if (this.client.core.history.keys.includes(payload.id)) {
+        record = await this.client.core.history.get(topic, payload.id);
+      } else {
+        this.client.logger.info(
+          "[Notify] Engine.onRelayEventResponse > ignoring response for unknown request without history record."
+        );
+        return;
+      }
+
       const resMethod = record.request.method as JsonRpcTypes.WcMethod;
 
       switch (resMethod) {
