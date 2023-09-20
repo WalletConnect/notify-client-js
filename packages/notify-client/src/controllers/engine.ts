@@ -541,14 +541,11 @@ export class NotifyEngine extends INotifyEngine {
           response,
         });
 
-        // TODO: Define how to handle the notify_subscription event going forward.
         // Emit the NotifySubscription at client level.
         this.client.emit("notify_subscription", {
           id: response.id,
           topic: responseTopic,
-          params: {
-            subscription: {} as any,
-          },
+          params: {},
         });
       } else if (isJsonRpcError(response)) {
         // Emit the error response at client level.

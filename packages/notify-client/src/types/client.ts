@@ -16,7 +16,6 @@ export declare namespace NotifyClientTypes {
 
   type NotifyResponseEventArgs = {
     error?: ErrorResponse;
-    subscription?: NotifyClientTypes.NotifySubscription;
   };
 
   type NotifySubscriptionsChangedEventArgs = {
