@@ -229,12 +229,6 @@ export declare namespace NotifyClientTypes {
   }
 }
 
-export interface IdentityKeychain {
-  accountId: string;
-  identityKeyPub: string;
-  identityKeyPriv: string;
-}
-
 export abstract class INotifyClient {
   public abstract readonly protocol: string;
   public abstract readonly version: number;
