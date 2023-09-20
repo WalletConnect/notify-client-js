@@ -11,3 +11,7 @@ export const gmDappMetadata = {
   name: "dev-gm-dapp",
   appDomain: "gm.walletconnect.com",
 };
+
+export const gmHackersMetadata = {
+  appDomain: "hackers.gm.walletconnect.com",
+};

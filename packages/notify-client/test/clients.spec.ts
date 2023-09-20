@@ -442,6 +442,63 @@ describe("Notify", () => {
 
         expect(updateEvent.topic).toBe(subscriptions[0].topic);
       });
+
+      it("handles multiple subscriptions", async () => {
+        const wallet1 = await NotifyClient.init({
+          name: "testNotifyClient1",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core,
+          projectId,
+        });
+
+        let wallet1UpdateCount = 0;
+
+        wallet1.on("notify_subscriptions_changed", (params) => {
+          wallet1UpdateCount++;
+        });
+        await createNotifySubscription(wallet, account, onSign);
+
+        await createNotifySubscription(wallet, account, onSign, true);
+
+        await waitForEvent(() => {
+          // 1 for watchSubscriptions response
+          // 2  for the first subscription(TODO: Figure out why)
+          // 1  for the second subscription
+          return wallet1UpdateCount === 4;
+        });
+
+        console.log("Past the wait");
+        const wallet2 = await NotifyClient.init({
+          name: "debug_me",
+          logger: "info",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core,
+          projectId,
+        });
+
+        let wallet2GotUpdate = false;
+        wallet2.on("notify_subscriptions_changed", () => {
+          wallet2GotUpdate = true;
+        });
+
+        await wallet2.register({
+          account,
+          onSign,
+          isLimited: false,
+          domain: "unrelated.domain.com",
+        });
+
+        await waitForEvent(() => {
+          return wallet2GotUpdate;
+        });
+
+        expect(wallet1.subscriptions.getAll()).toEqual(
+          wallet2.subscriptions.getAll()
+        );
+      });
     });
   });
 });
