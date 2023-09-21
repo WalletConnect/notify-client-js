@@ -984,28 +984,38 @@ export class NotifyEngine extends INotifyEngine {
       newSubscriptions
     );
 
-    const setupNewSubscriptionsPromises = newSubscriptions.map(async (sub) => {
-      const sbTopic = hashKey(sub.symKey);
+    const setupNewSubscriptionsPromises = newSubscriptions.map(
+      (sub) => async () => {
+        const sbTopic = hashKey(sub.symKey);
 
-      try {
-        await this.client.core.relayer.subscribe(sbTopic);
-      } catch (e) {
-        this.client.logger.error("Failed to subscribe from claims.sbs", e);
+        try {
+          //TODO: Figure out why this never resolves
+          await this.client.core.relayer.subscribe(sbTopic);
+        } catch (e) {
+          this.client.logger.error("Failed to subscribe from claims.sbs", e);
+        }
+
+        // Set up a store for messages sent to this notify topic.
+        await this.client.messages.set(sbTopic, {
+          topic: sbTopic,
+          messages: {},
+        });
+
+        // Set the symKey in the keychain for the new subscription.
+        await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
       }
+    );
 
-      // Set up a store for messages sent to this notify topic.
-      await this.client.messages.set(sbTopic, {
-        topic: sbTopic,
-        messages: {},
-      });
-      // Set the symKey in the keychain for the new subscription.
-      await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
-    });
+    await Promise.all(updateSubscriptionsPromises);
 
-    await Promise.all([
-      ...updateSubscriptionsPromises,
-      ...setupNewSubscriptionsPromises,
-    ]);
+    // Handle them sequentially because `core.relayer.subscribe` is not compatible
+    // with concurrent `relayer.subscribe` requests, as a data race occurs between the two
+    // subscriptions and its subscriber.once(SUBSCRIBER_EVENTS.created, ...) will be triggered
+    // with a wrong subscription, seeing that the topics of the two subscriptions do not match,
+    // it will not resolve.
+    for (const setupNewSubscriptionPromise of setupNewSubscriptionsPromises) {
+      await setupNewSubscriptionPromise();
+    }
 
     return this.client.subscriptions.getAll();
   };

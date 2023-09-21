@@ -5,7 +5,7 @@ import {
   NotifyClientTypes,
 } from "../../src";
 import { waitForEvent } from "./async";
-import { gmDappMetadata } from "./mocks";
+import { gmDappMetadata, gmHackersMetadata } from "./mocks";
 
 const NOTIFY_SERVER_URL =
   process.env.NOTIFY_SERVER_URL || DEFAULT_NOTIFY_SERVER_URL;
@@ -13,7 +13,8 @@ const NOTIFY_SERVER_URL =
 export const createNotifySubscription = async (
   wallet: INotifyClient,
   account: string,
-  onSign: (message: string) => Promise<string>
+  onSign: (message: string) => Promise<string>,
+  differentSubscription?: boolean
 ) => {
   let gotNotifySubscriptionResponse = false;
   let notifySubscriptionEvent: NotifyClientTypes.BaseEventArgs<NotifyClientTypes.NotifyResponseEventArgs>;
@@ -32,15 +33,19 @@ export const createNotifySubscription = async (
     }
   });
 
+  const domain = differentSubscription
+    ? gmHackersMetadata.appDomain
+    : gmDappMetadata.appDomain;
+
   await wallet.register({
-    domain: gmDappMetadata.appDomain,
+    domain,
     isLimited: false,
     account,
     onSign,
   });
 
   await wallet.subscribe({
-    appDomain: gmDappMetadata.appDomain,
+    appDomain: domain,
     account,
   });
 
