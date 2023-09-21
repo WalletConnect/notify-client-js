@@ -1010,7 +1010,7 @@ export class NotifyEngine extends INotifyEngine {
 
     // Handle them sequentially because `core.relayer.subscribe` is not compatible
     // with concurrent `relayer.subscribe` requests, as a data race occurs between the two
-    // subscriptions and its subscriber.once(SUBSCRIBER_EVENTS.created... will be triggered
+    // subscriptions and its subscriber.once(SUBSCRIBER_EVENTS.created, ...) will be triggered
     // with a wrong subscription, seeing that the topics of the two subscriptions do not match,
     // it will not resolve.
     for (const setupNewSubscriptionPromise of setupNewSubscriptionsPromises) {
