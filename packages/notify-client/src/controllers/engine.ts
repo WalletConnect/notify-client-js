@@ -988,6 +988,7 @@ export class NotifyEngine extends INotifyEngine {
       const sbTopic = hashKey(sub.symKey);
 
       try {
+        //TODO: Figure out why this never resolves
         await this.client.core.relayer.subscribe(sbTopic);
       } catch (e) {
         this.client.logger.error("Failed to subscribe from claims.sbs", e);
@@ -998,14 +999,16 @@ export class NotifyEngine extends INotifyEngine {
         topic: sbTopic,
         messages: {},
       });
+
       // Set the symKey in the keychain for the new subscription.
       await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
     });
 
-    await Promise.all([
-      ...updateSubscriptionsPromises,
-      ...setupNewSubscriptionsPromises,
-    ]);
+    await Promise.all(updateSubscriptionsPromises);
+
+    for (const promise of setupNewSubscriptionsPromises) {
+      await promise;
+    }
 
     return this.client.subscriptions.getAll();
   };

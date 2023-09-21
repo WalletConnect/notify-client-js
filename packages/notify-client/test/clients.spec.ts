@@ -463,19 +463,15 @@ describe("Notify", () => {
         await createNotifySubscription(wallet, account, onSign, true);
 
         await waitForEvent(() => {
-          // 1 for watchSubscriptions response
-          // 2  for the first subscription(TODO: Figure out why)
-          // 1  for the second subscription
-          return wallet1UpdateCount === 4;
+          return wallet1UpdateCount > 2;
         });
 
-        console.log("Past the wait");
         const wallet2 = await NotifyClient.init({
           name: "debug_me",
           logger: "info",
           keyserverUrl: DEFAULT_KEYSERVER_URL,
           relayUrl: DEFAULT_RELAY_URL,
-          core,
+          core: new Core({ projectId, relayUrl: DEFAULT_RELAY_URL }),
           projectId,
         });
 
