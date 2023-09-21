@@ -960,6 +960,8 @@ export class NotifyEngine extends INotifyEngine {
           protocol: RELAYER_DEFAULT_PROTOCOL,
         },
       });
+
+      await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
     });
 
     // Only set messages and symKeys for new subscriptions.
