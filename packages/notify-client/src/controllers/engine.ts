@@ -550,12 +550,6 @@ export class NotifyEngine extends INotifyEngine {
           topic: responseTopic,
           response,
         });
-        console.log({
-          event: "onNotifySubscribeResponse",
-          id,
-          topic: responseTopic,
-          response,
-        });
 
         // Emit the NotifySubscription at client level.
         this.client.emit("notify_subscription", {
@@ -706,13 +700,25 @@ export class NotifyEngine extends INotifyEngine {
 
   protected onNotifyWatchSubscriptionsResponse: INotifyEngine["onNotifyWatchSubscriptionsResponse"] =
     async (topic, payload) => {
-      console.log("onNotifyWatchSubscriptionsResponse", topic, payload);
+      this.client.logger.info(
+        "onNotifyWatchSubscriptionsResponse",
+        topic,
+        payload
+      );
 
       if (isJsonRpcResult(payload)) {
         const subscriptions = await this.updateSubscriptionsUsingJwt(
           payload.result.responseAuth,
           "notify_watch_subscriptions_response"
         );
+
+        this.client.logger.info({
+          event: "notify_subscriptions_changed",
+          topic,
+          id: payload.id,
+          subscriptions,
+        });
+
         this.client.emit("notify_subscriptions_changed", {
           id: payload.id,
           topic,
@@ -731,12 +737,24 @@ export class NotifyEngine extends INotifyEngine {
 
   protected onNotifySubscriptionsChangedRequest: INotifyEngine["onNotifySubscriptionsChangedRequest"] =
     async (topic, payload) => {
-      console.log("onNotifySubscriptionsChangedRequest", topic, payload);
+      this.client.logger.info(
+        "onNotifySubscriptionsChangedRequest",
+        topic,
+        payload
+      );
 
       const subscriptions = await this.updateSubscriptionsUsingJwt(
         payload.params.subscriptionsChangedAuth,
         "notify_subscriptions_changed"
       );
+
+      this.client.logger.info({
+        event: "notify_subscriptions_changed",
+        topic,
+        id: payload.id,
+        subscriptions,
+      });
+
       this.client.emit("notify_subscriptions_changed", {
         id: payload.id,
         topic,
@@ -755,13 +773,10 @@ export class NotifyEngine extends INotifyEngine {
           result: payload,
         });
 
-        // TODO: resolve how we emit `notify_update` going forward.
         this.client.events.emit("notify_update", {
           id: payload.id,
           topic,
-          params: {
-            subscription: {},
-          },
+          params: {},
         });
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error({
@@ -823,11 +838,6 @@ export class NotifyEngine extends INotifyEngine {
     this.client.logger.info(
       "watchSubscriptions >",
       "notifyServerWatchTopic >",
-      notifyServerWatchTopic
-    );
-
-    console.log(
-      "watchSubscriptions > notifyServerWatchTopic >",
       notifyServerWatchTopic
     );
 
@@ -893,7 +903,7 @@ export class NotifyEngine extends INotifyEngine {
       | NotifyClientTypes.NotifySubscriptionsChangedClaims
     >(jwt, act);
 
-    console.log("updateSubscriptionsUsingJwt > claims", claims);
+    this.client.logger.info("updateSubscriptionsUsingJwt > claims", claims);
 
     // Clean up any subscriptions that are no longer valid.
     const newStateSubsTopics = claims.sbs.map((sb) => hashKey(sb.symKey));
@@ -968,10 +978,12 @@ export class NotifyEngine extends INotifyEngine {
     const newSubscriptions = claims.sbs.filter(
       (sb) => !this.client.subscriptions.keys.includes(hashKey(sb.symKey))
     );
-    console.log(
+
+    this.client.logger.info(
       "updateSubscriptionsUsingJwt > newSubscriptions",
       newSubscriptions
     );
+
     const setupNewSubscriptionsPromises = newSubscriptions.map(async (sub) => {
       const sbTopic = hashKey(sub.symKey);
 
@@ -1197,7 +1209,7 @@ export class NotifyEngine extends INotifyEngine {
   ): Promise<{ dappPublicKey: string; dappIdentityKey: string }> => {
     let didDoc: NotifyClientTypes.NotifyDidDocument;
 
-    console.log("didDocMap: ", this.didDocMap);
+    this.client.logger.debug("didDocMap: ", this.didDocMap);
 
     // Check if we've already fetched the dapp's DID doc.
     if (this.didDocMap.has(dappUrl)) {
@@ -1248,10 +1260,6 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     this.client.logger.info(
-      `[Notify] resolveKeys > publicKey for ${dappUrl} is: ${dappPublicKey}`
-    );
-
-    console.log(
       `[Notify] resolveKeys > publicKey for ${dappUrl} is: ${dappPublicKey}`
     );
 
