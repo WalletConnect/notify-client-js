@@ -32,10 +32,12 @@ export abstract class INotifyEngine {
   public abstract register(params: {
     account: string;
     onSign: (message: string) => Promise<string>;
+    isLimited: boolean;
+    domain: string;
   }): Promise<string>;
 
   public abstract subscribe(params: {
-    metadata: NotifyClientTypes.Metadata;
+    appDomain: string;
     account: string;
   }): Promise<{ id: number; subscriptionAuth: string }>;
 
@@ -135,6 +137,20 @@ export abstract class INotifyEngine {
       | JsonRpcResult<JsonRpcTypes.Results["wc_notifyDelete"]>
       | JsonRpcError
   ): void;
+
+  protected abstract onNotifyWatchSubscriptionsResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyWatchSubscription"]>
+      | JsonRpcError
+  ): Promise<void>;
+
+  protected abstract onNotifySubscriptionsChangedRequest(
+    topic: string,
+    payload: JsonRpcRequest<
+      JsonRpcTypes.RequestParams["wc_notifySubscriptionsChanged"]
+    >
+  ): Promise<void>;
 
   protected abstract onNotifyUpdateResponse(
     topic: string,

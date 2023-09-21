@@ -1,10 +1,14 @@
 import axios from "axios";
-import { INotifyClient } from "../../src";
+import {
+  DEFAULT_NOTIFY_SERVER_URL,
+  INotifyClient,
+  NotifyClientTypes,
+} from "../../src";
 import { waitForEvent } from "./async";
 import { gmDappMetadata } from "./mocks";
 
 const NOTIFY_SERVER_URL =
-  process.env.NOTIFY_SERVER_URL || "https://notify.walletconnect.com";
+  process.env.NOTIFY_SERVER_URL || DEFAULT_NOTIFY_SERVER_URL;
 
 export const createNotifySubscription = async (
   wallet: INotifyClient,
@@ -12,30 +16,41 @@ export const createNotifySubscription = async (
   onSign: (message: string) => Promise<string>
 ) => {
   let gotNotifySubscriptionResponse = false;
-  let notifySubscriptionEvent: any;
+  let notifySubscriptionEvent: NotifyClientTypes.BaseEventArgs<NotifyClientTypes.NotifyResponseEventArgs>;
+  let gotNotifySubscriptionsChangedRequest = false;
+  let changedSubscriptions: NotifyClientTypes.NotifySubscription[] = [];
 
   wallet.once("notify_subscription", (event) => {
     gotNotifySubscriptionResponse = true;
     notifySubscriptionEvent = event;
   });
+  wallet.on("notify_subscriptions_changed", (event) => {
+    console.log("notify_subscriptions_changed", event);
+    if (event.params.subscriptions.length > 0) {
+      gotNotifySubscriptionsChangedRequest = true;
+      changedSubscriptions = event.params.subscriptions;
+    }
+  });
 
   await wallet.register({
+    domain: gmDappMetadata.appDomain,
+    isLimited: false,
     account,
     onSign,
   });
 
   await wallet.subscribe({
-    metadata: gmDappMetadata,
+    appDomain: gmDappMetadata.appDomain,
     account,
   });
 
   await waitForEvent(() => gotNotifySubscriptionResponse);
+  await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
 
-  return { notifySubscriptionEvent };
+  return { notifySubscriptionEvent: notifySubscriptionEvent! };
 };
 
 export const sendNotifyMessage = async (
-  projectId: string,
   account: string,
   messageBody: string
 ) => {

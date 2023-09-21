@@ -1,13 +1,19 @@
 import { Wallet as EthersWallet } from "@ethersproject/wallet";
 import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
-import cloneDeep from "lodash.clonedeep";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { INotifyClient, NotifyClient, NotifyClientTypes } from "../src/";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  DEFAULT_KEYSERVER_URL,
+  INotifyClient,
+  NotifyClient,
+  NotifyClientTypes,
+} from "../src/";
 import { waitForEvent } from "./helpers/async";
 import { gmDappMetadata } from "./helpers/mocks";
 import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
 import { disconnectSocket } from "./helpers/ws";
+import axios from "axios";
+import { ICore } from "@walletconnect/types";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
@@ -20,20 +26,23 @@ const hasGmSecret = typeof process.env.NOTIFY_GM_PROJECT_SECRET !== "undefined";
 const projectId = process.env.TEST_PROJECT_ID;
 
 describe("Notify", () => {
+  let core: ICore;
   let wallet: INotifyClient;
   let ethersWallet: EthersWallet;
   let account: string;
   let onSign: (message: string) => Promise<string>;
 
   beforeEach(async () => {
-    const core = new Core({
+    core = new Core({
       projectId,
+      relayUrl: DEFAULT_RELAY_URL,
     });
 
     wallet = await NotifyClient.init({
       name: "testNotifyClient",
       logger: "error",
-      relayUrl: process.env.TEST_RELAY_URL || DEFAULT_RELAY_URL,
+      keyserverUrl: DEFAULT_KEYSERVER_URL,
+      relayUrl: DEFAULT_RELAY_URL,
       core,
       projectId,
     });
@@ -65,41 +74,42 @@ describe("Notify", () => {
       it("can issue a `notify_subscription` request and handle the response", async () => {
         let gotNotifySubscriptionResponse = false;
         let notifySubscriptionEvent: any;
+        let gotNotifySubscriptionsChangedRequest = false;
+        let changedSubscriptions: NotifyClientTypes.NotifySubscription[] = [];
 
         wallet.once("notify_subscription", (event) => {
           gotNotifySubscriptionResponse = true;
           notifySubscriptionEvent = event;
         });
+        wallet.on("notify_subscriptions_changed", (event) => {
+          console.log("notify_subscriptions_changed", event);
+          if (event.params.subscriptions.length > 0) {
+            gotNotifySubscriptionsChangedRequest = true;
+            changedSubscriptions = event.params.subscriptions;
+          }
+        });
 
         await wallet.register({
           account,
           onSign,
+          domain: gmDappMetadata.appDomain,
+          isLimited: false,
         });
 
         await wallet.subscribe({
           account,
-          metadata: gmDappMetadata,
+          appDomain: gmDappMetadata.appDomain,
         });
 
         await waitForEvent(() => gotNotifySubscriptionResponse);
-
-        expect(
-          notifySubscriptionEvent.params.subscription.metadata
-        ).to.deep.equal(gmDappMetadata);
-        expect(notifySubscriptionEvent.params.subscription.topic).toBeDefined();
+        await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
 
         // Check that wallet is in expected state.
-        expect(
-          wallet.subscriptions.keys.includes(
-            notifySubscriptionEvent.params.subscription.topic
-          )
-        ).toBe(true);
-        expect(
-          wallet.messages.keys.includes(
-            notifySubscriptionEvent.params.subscription.topic
-          )
-        ).toBe(true);
-        expect(wallet.requests.length).toBe(0);
+        expect(wallet.subscriptions.keys.length).toBe(1);
+        expect(wallet.subscriptions.keys[0]).toBe(
+          changedSubscriptions[0].topic
+        );
+        expect(wallet.messages.keys.length).toBe(1);
       });
     });
 
@@ -115,66 +125,91 @@ describe("Notify", () => {
           notifyMessageEvent = event;
         });
 
-        await sendNotifyMessage(projectId, account, "Test");
+        const sendResponse = await sendNotifyMessage(account, "Test");
+
+        expect(sendResponse.status).toBe(200);
 
         await waitForEvent(() => gotNotifyMessageResponse);
 
         expect(notifyMessageEvent.params.message.body).toBe("Test");
       });
+
+      it.skip("reads the dapp's did.json from memory after the initial fetch", async () => {
+        let incomingMessageCount = 0;
+        await createNotifySubscription(wallet, account, onSign);
+
+        wallet = await NotifyClient.init({
+          name: "testNotifyClient",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core,
+          projectId,
+        });
+
+        wallet.on("notify_message", (event) => {
+          incomingMessageCount += 1;
+        });
+
+        const axiosSpy = vi.spyOn(axios, "get");
+
+        await sendNotifyMessage(account, "Test");
+        await sendNotifyMessage(account, "Test");
+
+        await waitForEvent(() => incomingMessageCount === 2);
+
+        // Ensure `axios.get` was only called once to resolve the dapp's did.json
+        expect(axiosSpy).toHaveBeenCalledTimes(1);
+      });
     });
 
     describe("update", () => {
       it("can update an existing notify subscription with a new scope", async () => {
-        let gotNotifySubscriptionResponse = false;
-        let initialNotifySubscription =
-          {} as NotifyClientTypes.NotifySubscription;
-
-        wallet.once("notify_subscription", (event) => {
-          gotNotifySubscriptionResponse = true;
-          initialNotifySubscription = cloneDeep(event.params.subscription!);
-        });
-
-        await wallet.register({
-          account,
-          onSign,
-        });
-
-        await wallet.subscribe({
-          metadata: gmDappMetadata,
-          account,
-        });
-
-        await waitForEvent(() => gotNotifySubscriptionResponse);
-
-        expect(initialNotifySubscription.metadata).to.deep.equal(
-          gmDappMetadata
-        );
-        expect(initialNotifySubscription.topic).toBeDefined();
+        await createNotifySubscription(wallet, account, onSign);
 
         let gotNotifyUpdateResponse = false;
         let notifyUpdateEvent: any;
+        let gotNotifySubscriptionsChangedRequest = false;
+        let lastChangedSubscriptions: NotifyClientTypes.NotifySubscription[] =
+          [];
 
         wallet.once("notify_update", (event) => {
           gotNotifyUpdateResponse = true;
           notifyUpdateEvent = { ...event };
         });
+        wallet.on("notify_subscriptions_changed", (event) => {
+          console.log("notify_subscriptions_changed", event);
+          gotNotifySubscriptionsChangedRequest = true;
+          lastChangedSubscriptions = event.params.subscriptions;
+        });
+
+        const subscriptions = wallet.subscriptions.getAll();
+
+        // Ensure all scopes are enabled in the initial subscription.
+        expect(
+          Object.values(subscriptions[0].scope)
+            .map((scp) => scp.enabled)
+            .every((enabled) => enabled === true)
+        ).toBe(true);
 
         await wallet.update({
-          topic: initialNotifySubscription.topic,
-          scope: [""],
+          topic: subscriptions[0].topic,
+          scope: [],
         });
 
         await waitForEvent(() => gotNotifyUpdateResponse);
+        await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
 
-        expect(notifyUpdateEvent.params.subscription.topic).toBe(
-          initialNotifySubscription.topic
+        expect(gotNotifyUpdateResponse).toBe(true);
+        expect(wallet.subscriptions.keys[0]).toBe(
+          lastChangedSubscriptions[0].topic
         );
-        expect(notifyUpdateEvent.params.subscription.metadata).to.deep.equal(
-          initialNotifySubscription.metadata
-        );
-        expect(notifyUpdateEvent.params.subscription.scope).not.to.deep.equal(
-          initialNotifySubscription.scope
-        );
+        // Ensure all scopes have been disabled in the updated subscription.
+        expect(
+          Object.values(lastChangedSubscriptions[0].scope)
+            .map((scp) => scp.enabled)
+            .every((enabled) => enabled === false)
+        ).toBe(true);
       });
     });
 
@@ -221,13 +256,7 @@ describe("Notify", () => {
 
     describe("getActiveSubscriptions", () => {
       it("can query currently active notify subscriptions", async () => {
-        const { notifySubscriptionEvent } = await createNotifySubscription(
-          wallet,
-          account,
-          onSign
-        );
-
-        expect(notifySubscriptionEvent.params.subscription.topic).toBeDefined();
+        await createNotifySubscription(wallet, account, onSign);
 
         const walletSubscriptions = wallet.getActiveSubscriptions();
 
@@ -316,6 +345,9 @@ describe("Notify", () => {
 
     describe("deleteSubscription", () => {
       it("can delete a currently active notify subscription", async () => {
+        let gotNotifySubscriptionsChanged = false;
+        let gotNotifySubscriptionsChangedEvent: any;
+
         await createNotifySubscription(wallet, account, onSign);
 
         expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(1);
@@ -324,7 +356,16 @@ describe("Notify", () => {
           wallet.getActiveSubscriptions()
         )[0];
 
+        wallet.once("notify_subscriptions_changed", (event) => {
+          gotNotifySubscriptionsChanged = true;
+          gotNotifySubscriptionsChangedEvent = event;
+        });
+
         await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
+
+        await waitForEvent(() => gotNotifySubscriptionsChanged);
+
+        console.log(gotNotifySubscriptionsChangedEvent);
 
         // Check that wallet is in expected state.
         expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
@@ -367,6 +408,39 @@ describe("Notify", () => {
         expect(Object.values(wallet.messages.get(topic).messages).length).toBe(
           0
         );
+      });
+    });
+
+    describe("watchSubscriptions", () => {
+      it("fires correct event update", async () => {
+        let updateEvent: any = {};
+        let gotNotifyUpdateResponse = false;
+        let updatedCount = 0;
+
+        wallet.on("notify_subscriptions_changed", (event) => {
+          updatedCount += 1;
+        });
+
+        await createNotifySubscription(wallet, account, onSign);
+
+        expect(wallet.subscriptions.keys.length).toBe(1);
+
+        const subscriptions = wallet.subscriptions.getAll();
+
+        wallet.once("notify_update", (event) => {
+          gotNotifyUpdateResponse = true;
+          updateEvent = event;
+        });
+
+        await wallet.update({
+          topic: subscriptions[0].topic,
+          scope: [""],
+        });
+
+        await waitForEvent(() => gotNotifyUpdateResponse);
+        await waitForEvent(() => updatedCount === 3);
+
+        expect(updateEvent.topic).toBe(subscriptions[0].topic);
       });
     });
   });

@@ -6,7 +6,6 @@ import {
 import {
   JwtPayload,
   composeDidPkh,
-  decodeEd25519Key,
   encodeEd25519Key,
 } from "@walletconnect/did-jwt";
 import {
@@ -19,30 +18,37 @@ import {
   isJsonRpcResponse,
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
-import { ExpirerTypes, RelayerTypes } from "@walletconnect/types";
+import {
+  ExpirerTypes,
+  JsonRpcRecord,
+  RelayerTypes,
+} from "@walletconnect/types";
 import {
   TYPE_1,
   calcExpiry,
+  deriveSymKey,
   getInternalError,
   hashKey,
-  hashMessage,
   parseExpirerTarget,
 } from "@walletconnect/utils";
 import axios from "axios";
 import jwtDecode, { InvalidTokenError } from "jwt-decode";
 
 import {
+  DID_WEB_PREFIX,
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
-  NOTIFY_SUBSCRIPTION_EXPIRY,
-  SDK_ERRORS,
+  LIMITED_IDENTITY_STATEMENT,
+  UNLIMITED_IDENTITY_STATEMENT,
 } from "../constants";
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
-import { convertUint8ArrayToHex } from "../utils/formats";
+import { getDappUrl } from "../utils/formats";
 
 export class NotifyEngine extends INotifyEngine {
   public name = "notifyEngine";
   private initialized = false;
+
+  private didDocMap = new Map<string, NotifyClientTypes.NotifyDidDocument>();
 
   constructor(client: INotifyEngine["client"]) {
     super(client);
@@ -62,26 +68,47 @@ export class NotifyEngine extends INotifyEngine {
 
   // ---------- Public --------------------------------------- //
 
-  public register: INotifyEngine["register"] = async ({ account, onSign }) => {
+  public register: INotifyEngine["register"] = async ({
+    account,
+    onSign,
+    isLimited,
+    domain,
+  }) => {
+    const statement = isLimited
+      ? LIMITED_IDENTITY_STATEMENT
+      : UNLIMITED_IDENTITY_STATEMENT;
+
     // Retrieve existing identity or register a new one for this account on this device.
-    const identity = await this.registerIdentity(account, onSign);
+    const identity = await this.registerIdentity(
+      account,
+      onSign,
+      statement,
+      domain
+    );
+
+    try {
+      await this.watchSubscriptions(account);
+    } catch (error: any) {
+      this.client.logger.error(
+        `[Notify] Engine.register > watching subscriptions failed > ${error.message}`
+      );
+    }
 
     return identity;
   };
 
   public subscribe: INotifyEngine["subscribe"] = async ({
-    metadata,
+    appDomain,
     account,
   }) => {
     this.isInitialized();
 
-    const { dappPublicKey, dappIdentityKey } = await this.resolveDappKeys(
-      metadata.url
-    );
-    const notifyConfig = await this.resolveNotifyConfig(metadata.url);
+    const dappUrl = getDappUrl(appDomain);
+    const { dappPublicKey, dappIdentityKey } = await this.resolveKeys(dappUrl);
+    const notifyConfig = await this.resolveNotifyConfig(dappUrl);
 
     this.client.logger.info(
-      `[Notify] subscribe > publicKey for ${metadata.url} is: ${dappPublicKey}`
+      `[Notify] subscribe > publicKey for ${dappUrl} is: ${dappPublicKey}`
     );
 
     // SPEC: Wallet derives subscribe topic, which is the sha256 hash of public key X
@@ -114,7 +141,7 @@ export class NotifyEngine extends INotifyEngine {
       ksu: this.client.keyserverUrl,
       scp,
       act: "notify_subscription",
-      app: metadata.url,
+      app: `${DID_WEB_PREFIX}${appDomain}`,
     };
 
     this.client.logger.info(
@@ -177,7 +204,12 @@ export class NotifyEngine extends INotifyEngine {
       topic: responseTopic,
       request: {
         account,
-        metadata,
+        metadata: {
+          name: notifyConfig.name,
+          description: notifyConfig.description,
+          icons: notifyConfig.icons,
+          appDomain,
+        },
         publicKey: selfPublicKey,
         scope: scopeMap,
       },
@@ -292,7 +324,9 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    return this.client.messages.get(topic).messages;
+    return this.client.messages.keys.includes(topic)
+      ? this.client.messages.get(topic).messages
+      : {};
   };
 
   public deleteSubscription: INotifyEngine["deleteSubscription"] = async ({
@@ -302,11 +336,9 @@ export class NotifyEngine extends INotifyEngine {
 
     const deleteAuth = await this.generateDeleteAuth({
       topic,
-      reason: SDK_ERRORS["USER_UNSUBSCRIBED"].message,
     });
 
     await this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
-    await this.cleanupSubscription(topic);
 
     this.client.logger.info(
       `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
@@ -368,7 +400,7 @@ export class NotifyEngine extends INotifyEngine {
     );
     const rpcOpts = ENGINE_RPC_OPTS[method].req;
     this.client.core.history.set(topic, payload);
-    this.client.core.relayer.publish(topic, message, rpcOpts);
+    await this.client.core.relayer.publish(topic, message, rpcOpts);
 
     return payload.id;
   };
@@ -388,8 +420,9 @@ export class NotifyEngine extends INotifyEngine {
     const record = await this.client.core.history.get(topic, id);
     const rpcOpts = ENGINE_RPC_OPTS[record.request.method].res;
 
-    this.client.core.relayer.publish(topic, message, rpcOpts);
+    await this.client.core.relayer.publish(topic, message, rpcOpts);
     await this.client.core.history.resolve(payload);
+    this.client.core.history.delete(topic, payload.id);
 
     return payload.id;
   };
@@ -411,6 +444,7 @@ export class NotifyEngine extends INotifyEngine {
 
     await this.client.core.relayer.publish(topic, message, rpcOpts);
     await this.client.core.history.resolve(payload);
+    this.client.core.history.delete(topic, payload.id);
 
     return payload.id;
   };
@@ -434,11 +468,12 @@ export class NotifyEngine extends INotifyEngine {
           });
         } else if (isJsonRpcResponse(payload)) {
           await this.client.core.history.resolve(payload);
-          this.onRelayEventResponse({
+          await this.onRelayEventResponse({
             topic,
             payload,
             publishedAt,
           });
+          this.client.core.history.delete(topic, payload.id);
         }
       }
     );
@@ -455,6 +490,8 @@ export class NotifyEngine extends INotifyEngine {
         return this.onNotifyMessageRequest(topic, payload, publishedAt);
       case "wc_notifyDelete":
         return this.onNotifyDeleteRequest(topic, payload);
+      case "wc_notifySubscriptionsChanged":
+        return this.onNotifySubscriptionsChangedRequest(topic, payload);
       default:
         return this.client.logger.info(
           `[Notify] Unsupported request method ${reqMethod}`
@@ -465,7 +502,17 @@ export class NotifyEngine extends INotifyEngine {
   protected onRelayEventResponse: INotifyEngine["onRelayEventResponse"] =
     async (event) => {
       const { topic, payload } = event;
-      const record = await this.client.core.history.get(topic, payload.id);
+      let record: JsonRpcRecord;
+
+      if (this.client.core.history.keys.includes(payload.id)) {
+        record = await this.client.core.history.get(topic, payload.id);
+      } else {
+        this.client.logger.info(
+          "[Notify] Engine.onRelayEventResponse > ignoring response for unknown request without history record."
+        );
+        return;
+      }
+
       const resMethod = record.request.method as JsonRpcTypes.WcMethod;
 
       switch (resMethod) {
@@ -477,6 +524,8 @@ export class NotifyEngine extends INotifyEngine {
           return this.onNotifyDeleteResponse(topic, payload);
         case "wc_notifyUpdate":
           return this.onNotifyUpdateResponse(topic, payload);
+        case "wc_notifyWatchSubscription":
+          return this.onNotifyWatchSubscriptionsResponse(topic, payload);
         default:
           return this.client.logger.info(
             `[Notify] Unsupported response method ${resMethod}`
@@ -502,64 +551,11 @@ export class NotifyEngine extends INotifyEngine {
           response,
         });
 
-        const { request } = this.client.requests.get(id);
-
-        const subscriptionResponseClaims =
-          this.decodeAndValidateJwtAuth<NotifyClientTypes.SubscriptionResponseJWTClaims>(
-            response.result.responseAuth,
-            "notify_subscription_response"
-          );
-
-        // SPEC: `sub` is a did:key of the public key used for key agreement on the Notify topic
-        // TODO: this conversion should be done automatically by the did-jwt package's
-        // `decodeEd25519Key` fn, which currently returns a plain Uint8Array.
-        const resultPublicKey = convertUint8ArrayToHex(
-          decodeEd25519Key(subscriptionResponseClaims.sub)
-        );
-
-        // SPEC: Wallet derives symmetric key P with keys Y and Z.
-        // SPEC: Notify topic is derived from the sha256 hash of the symmetric key P
-        const notifyTopic = await this.client.core.crypto.generateSharedKey(
-          request.publicKey,
-          resultPublicKey
-        );
-
-        this.client.logger.info(
-          `onNotifySubscribeResponse > derived notifyTopic ${notifyTopic} from selfPublicKey ${request.publicKey} and Cast publicKey ${resultPublicKey}`
-        );
-
-        const notifySubscription = {
-          topic: notifyTopic,
-          account: request.account,
-          relay: { protocol: RELAYER_DEFAULT_PROTOCOL },
-          metadata: request.metadata,
-          scope: request.scope,
-          expiry: calcExpiry(NOTIFY_SUBSCRIPTION_EXPIRY),
-          symKey: this.client.core.crypto.keychain.get(notifyTopic),
-        };
-
-        // Store the new NotifySubscription.
-        await this.client.subscriptions.set(notifyTopic, notifySubscription);
-
-        // Set up a store for messages sent to this notify topic.
-        await this.client.messages.set(notifyTopic, {
-          topic: notifyTopic,
-          messages: {},
-        });
-
-        // SPEC: Wallet subscribes to derived notifyTopic.
-        await this.client.core.relayer.subscribe(notifyTopic);
-
-        // Wallet unsubscribes from response topic.
-        await this.client.core.relayer.unsubscribe(responseTopic);
-
         // Emit the NotifySubscription at client level.
         this.client.emit("notify_subscription", {
           id: response.id,
-          topic: notifyTopic,
-          params: {
-            subscription: notifySubscription,
-          },
+          topic: responseTopic,
+          params: {},
         });
       } else if (isJsonRpcError(response)) {
         // Emit the error response at client level.
@@ -625,21 +621,20 @@ export class NotifyEngine extends INotifyEngine {
       });
 
       try {
-        const receiptAuth = await this.generateMessageReceiptAuth({
+        const responseAuth = await this.generateMessageResponseAuth({
           topic,
-          message: messageClaims.msg,
         });
 
         this.client.logger.info(
-          `[Notify] Engine.onNotifyMessageRequest > generated receiptAuth JWT: ${receiptAuth}`
+          `[Notify] Engine.onNotifyMessageRequest > generated responseAuth JWT: ${responseAuth}`
         );
 
         await this.sendResult<"wc_notifyMessage">(payload.id, topic, {
-          receiptAuth,
+          responseAuth,
         });
       } catch (error: any) {
         this.client.logger.error(
-          `[Notify] Engine.onNotifyMessageRequest > generating receiptAuth failed: ${error.message}`
+          `[Notify] Engine.onNotifyMessageRequest > generating responseAuth failed: ${error.message}`
         );
         await this.sendError(payload.id, topic, {
           code: -1,
@@ -679,11 +674,6 @@ export class NotifyEngine extends INotifyEngine {
         payload
       );
       try {
-        // TODO: Using a placeholder responseAuth for now since this handler may be removed from the engine.
-        await this.sendResult<"wc_notifyDelete">(id, topic, {
-          responseAuth: "",
-        });
-        await this.cleanupSubscription(topic);
         this.client.events.emit("notify_delete", { id, topic });
       } catch (err: any) {
         this.client.logger.error(err);
@@ -699,11 +689,6 @@ export class NotifyEngine extends INotifyEngine {
           topic,
           payload
         );
-
-        this.decodeAndValidateJwtAuth<NotifyClientTypes.DeleteResponseJWTClaims>(
-          payload.result.responseAuth,
-          "notify_delete_response"
-        );
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error(
           "[Notify] Engine.onNotifyDeleteResponse > error:",
@@ -711,6 +696,72 @@ export class NotifyEngine extends INotifyEngine {
           payload.error
         );
       }
+    };
+
+  protected onNotifyWatchSubscriptionsResponse: INotifyEngine["onNotifyWatchSubscriptionsResponse"] =
+    async (topic, payload) => {
+      this.client.logger.info(
+        "onNotifyWatchSubscriptionsResponse",
+        topic,
+        payload
+      );
+
+      if (isJsonRpcResult(payload)) {
+        const subscriptions = await this.updateSubscriptionsUsingJwt(
+          payload.result.responseAuth,
+          "notify_watch_subscriptions_response"
+        );
+
+        this.client.logger.info({
+          event: "notify_subscriptions_changed",
+          topic,
+          id: payload.id,
+          subscriptions,
+        });
+
+        this.client.emit("notify_subscriptions_changed", {
+          id: payload.id,
+          topic,
+          params: {
+            subscriptions,
+          },
+        });
+      } else if (isJsonRpcError(payload)) {
+        this.client.logger.error({
+          event: "onNotifyWatchSubscriptionsResponse",
+          topic,
+          error: payload.error,
+        });
+      }
+    };
+
+  protected onNotifySubscriptionsChangedRequest: INotifyEngine["onNotifySubscriptionsChangedRequest"] =
+    async (topic, payload) => {
+      this.client.logger.info(
+        "onNotifySubscriptionsChangedRequest",
+        topic,
+        payload
+      );
+
+      const subscriptions = await this.updateSubscriptionsUsingJwt(
+        payload.params.subscriptionsChangedAuth,
+        "notify_subscriptions_changed"
+      );
+
+      this.client.logger.info({
+        event: "notify_subscriptions_changed",
+        topic,
+        id: payload.id,
+        subscriptions,
+      });
+
+      this.client.emit("notify_subscriptions_changed", {
+        id: payload.id,
+        topic,
+        params: {
+          subscriptions,
+        },
+      });
     };
 
   protected onNotifyUpdateResponse: INotifyEngine["onNotifyUpdateResponse"] =
@@ -722,52 +773,10 @@ export class NotifyEngine extends INotifyEngine {
           result: payload,
         });
 
-        const { id, result } = payload;
-
-        // TODO: Perform further validations on the updateResponse JWT claims.
-        this.decodeAndValidateJwtAuth<NotifyClientTypes.UpdateResponseJWTClaims>(
-          result.responseAuth,
-          "notify_update_response"
-        );
-
-        const { request } = this.client.requests.get(id);
-        const existingSubscription = this.client.subscriptions.get(topic);
-
-        if (!request.scopeUpdate) {
-          throw new Error(
-            `No scope update found in request for notify update: ${JSON.stringify(
-              request
-            )}`
-          );
-        }
-
-        const updatedScope = Object.entries(existingSubscription.scope).reduce(
-          (map, [scope, setting]) => {
-            map[scope] = setting;
-            if (request.scopeUpdate?.includes(scope)) {
-              map[scope].enabled = true;
-            } else {
-              map[scope].enabled = false;
-            }
-            return map;
-          },
-          {} as NotifyClientTypes.NotifySubscription["scope"]
-        );
-
-        const updatedSubscription: NotifyClientTypes.NotifySubscription = {
-          ...existingSubscription,
-          scope: updatedScope,
-          expiry: calcExpiry(NOTIFY_SUBSCRIPTION_EXPIRY),
-        };
-
-        await this.client.subscriptions.set(topic, updatedSubscription);
-
         this.client.events.emit("notify_update", {
-          id,
+          id: payload.id,
           topic,
-          params: {
-            subscription: updatedSubscription,
-          },
+          params: {},
         });
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error({
@@ -814,6 +823,193 @@ export class NotifyEngine extends INotifyEngine {
     }
   }
 
+  private async getNotifyServerWatchTopic(notifyId: string) {
+    return hashKey(notifyId);
+  }
+
+  private async watchSubscriptions(accountId: string) {
+    const notifyKeys = await this.resolveKeys(this.client.notifyServerUrl);
+
+    // Derive req topic from did.json
+    const notifyServerWatchTopic = await this.getNotifyServerWatchTopic(
+      notifyKeys.dappPublicKey
+    );
+
+    this.client.logger.info(
+      "watchSubscriptions >",
+      "notifyServerWatchTopic >",
+      notifyServerWatchTopic
+    );
+
+    const issuedAt = Math.round(Date.now() / 1000);
+    const expiry =
+      issuedAt + ENGINE_RPC_OPTS["wc_notifyWatchSubscription"].res.ttl;
+
+    // Generate persistent key kY
+    const pubKeyY = await this.client.core.crypto.generateKeyPair();
+    const privKeyY = this.client.core.crypto.keychain.get(pubKeyY);
+    // Generate res topic from persistent key kY
+    const resTopic = hashKey(deriveSymKey(privKeyY, notifyKeys.dappPublicKey));
+    // Subscribe to res topic
+    await this.client.core.relayer.subscriber.subscribe(resTopic);
+
+    const claims: NotifyClientTypes.NotifyWatchSubscriptionsClaims = {
+      act: "notify_watch_subscriptions",
+      iss: encodeEd25519Key(
+        await this.client.identityKeys.getIdentity({ account: accountId })
+      ),
+      exp: expiry,
+      iat: issuedAt,
+      aud: encodeEd25519Key(notifyKeys.dappIdentityKey),
+      ksu: this.client.keyserverUrl,
+      sub: composeDidPkh(accountId),
+    };
+
+    const generatedAuth = await this.client.identityKeys.generateIdAuth(
+      accountId,
+      claims
+    );
+
+    this.client.logger.info(
+      "watchSubscriptions >",
+      "subscriptionAuth >",
+      generatedAuth
+    );
+
+    const id = await this.sendRequest(
+      notifyServerWatchTopic,
+      "wc_notifyWatchSubscription",
+      {
+        watchSubscriptionsAuth: generatedAuth,
+      },
+      {
+        type: TYPE_1,
+        senderPublicKey: pubKeyY,
+        receiverPublicKey: notifyKeys.dappPublicKey,
+      }
+    );
+
+    this.client.logger.info("watchSubscriptions >", "requestId >", id);
+  }
+
+  private updateSubscriptionsUsingJwt = async (
+    jwt: string,
+    act:
+      | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims["act"]
+      | NotifyClientTypes.NotifySubscriptionsChangedClaims["act"]
+  ) => {
+    const claims = this.decodeAndValidateJwtAuth<
+      | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims
+      | NotifyClientTypes.NotifySubscriptionsChangedClaims
+    >(jwt, act);
+
+    this.client.logger.info("updateSubscriptionsUsingJwt > claims", claims);
+
+    // Clean up any subscriptions that are no longer valid.
+    const newStateSubsTopics = claims.sbs.map((sb) => hashKey(sb.symKey));
+    for (const currentSubTopic of this.client.subscriptions
+      .getAll()
+      .map((sub) => sub.topic)) {
+      if (!newStateSubsTopics.includes(currentSubTopic)) {
+        // We only want to clean up the subscription if it was created by the current account.
+        if (this.client.subscriptions.keys.includes(currentSubTopic)) {
+          const existingSub = this.client.subscriptions.get(currentSubTopic);
+          if (
+            existingSub.account === claims.sub.split(":").slice(2).join(":")
+          ) {
+            this.client.logger.info(
+              `[Notify] updateSubscriptionsUsingJwt > cleanupSubscription on topic ${currentSubTopic}`
+            );
+            await this.cleanupSubscription(currentSubTopic);
+          }
+        }
+      }
+    }
+
+    // Update all subscriptions to account for any changes in scope.
+    const updateSubscriptionsPromises = claims.sbs.map(async (sub) => {
+      const sbTopic = hashKey(sub.symKey);
+      const dappUrl = getDappUrl(sub.appDomain);
+      const dappConfig = await this.resolveNotifyConfig(dappUrl);
+      // TODO: use `generateScopeMapFromConfig` here instead.
+      const scopeMap: NotifyClientTypes.ScopeMap = Object.fromEntries(
+        dappConfig.types.map((type) => {
+          if (sub.scope.includes(type.name)) {
+            return [
+              type.name,
+              {
+                ...type,
+                enabled: true,
+              },
+            ];
+          }
+
+          return [
+            type.name,
+            {
+              ...type,
+              enabled: false,
+            },
+          ];
+        })
+      );
+
+      await this.client.subscriptions.set(sbTopic, {
+        account: sub.account,
+        expiry: sub.expiry,
+        topic: sbTopic,
+        scope: scopeMap,
+        symKey: sub.symKey,
+        metadata: {
+          name: dappConfig.name,
+          description: dappConfig.description,
+          icons: dappConfig.icons,
+          appDomain: sub.appDomain,
+        },
+        relay: {
+          protocol: RELAYER_DEFAULT_PROTOCOL,
+        },
+      });
+
+      await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
+    });
+
+    // Only set messages and symKeys for new subscriptions.
+    const newSubscriptions = claims.sbs.filter(
+      (sb) => !this.client.subscriptions.keys.includes(hashKey(sb.symKey))
+    );
+
+    this.client.logger.info(
+      "updateSubscriptionsUsingJwt > newSubscriptions",
+      newSubscriptions
+    );
+
+    const setupNewSubscriptionsPromises = newSubscriptions.map(async (sub) => {
+      const sbTopic = hashKey(sub.symKey);
+
+      try {
+        await this.client.core.relayer.subscribe(sbTopic);
+      } catch (e) {
+        this.client.logger.error("Failed to subscribe from claims.sbs", e);
+      }
+
+      // Set up a store for messages sent to this notify topic.
+      await this.client.messages.set(sbTopic, {
+        topic: sbTopic,
+        messages: {},
+      });
+      // Set the symKey in the keychain for the new subscription.
+      await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
+    });
+
+    await Promise.all([
+      ...updateSubscriptionsPromises,
+      ...setupNewSubscriptionsPromises,
+    ]);
+
+    return this.client.subscriptions.getAll();
+  };
+
   private cleanupRequest = async (id: number, expirerHasDeleted?: boolean) => {
     await Promise.all([
       this.client.requests.delete(id, {
@@ -825,6 +1021,7 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   private cleanupSubscription = async (topic: string) => {
+    this.client.logger.info(`[Notify] cleanupSubscription > topic: ${topic}`);
     // Await the unsubscribe first to avoid deleting the symKey too early below.
     await this.client.core.relayer.unsubscribe(topic);
     await Promise.all([
@@ -847,64 +1044,54 @@ export class NotifyEngine extends INotifyEngine {
     return this.client.identityKeys.generateIdAuth(accountId, payload);
   };
 
-  private generateMessageReceiptAuth = async ({
+  private generateMessageResponseAuth = async ({
     topic,
-    message,
   }: {
     topic: string;
-    message: NotifyClientTypes.NotifyMessage;
   }) => {
     try {
       const subscription = this.client.subscriptions.get(topic);
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const { dappIdentityKey } = await this.resolveDappKeys(
-        subscription.metadata.url
-      );
+      const dappUrl = getDappUrl(subscription.metadata.appDomain);
+      const { dappIdentityKey } = await this.resolveKeys(dappUrl);
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyMessage"].res.ttl;
-      const payload: NotifyClientTypes.MessageReceiptJWTClaims = {
-        act: "notify_receipt",
+      const payload: NotifyClientTypes.MessageResponseJWTClaims = {
+        act: "notify_message_response",
         iat: issuedAt,
         exp: expiry,
         iss: encodeEd25519Key(identityKeyPub),
         aud: encodeEd25519Key(dappIdentityKey),
-        sub: hashMessage(JSON.stringify(message)),
-        app: subscription.metadata.url,
+        sub: composeDidPkh(subscription.account),
+        app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
         ksu: this.client.keyserverUrl,
       };
 
-      const receiptAuth = await this.client.identityKeys.generateIdAuth(
+      const responseAuth = await this.client.identityKeys.generateIdAuth(
         subscription.account,
         payload
       );
 
-      return receiptAuth;
+      return responseAuth;
     } catch (error: any) {
       throw new Error(
-        `generateMessageReceiptAuth failed for message on topic ${topic}: ${
+        `generateMessageResponseAuth failed for message on topic ${topic}: ${
           error.message || error
         }`
       );
     }
   };
 
-  private generateDeleteAuth = async ({
-    topic,
-    reason,
-  }: {
-    topic: string;
-    reason: string;
-  }) => {
+  private generateDeleteAuth = async ({ topic }: { topic: string }) => {
     try {
       const subscription = this.client.subscriptions.get(topic);
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const { dappIdentityKey } = await this.resolveDappKeys(
-        subscription.metadata.url
-      );
+      const dappUrl = getDappUrl(subscription.metadata.appDomain);
+      const { dappIdentityKey } = await this.resolveKeys(dappUrl);
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyDelete"].req.ttl;
       const payload: NotifyClientTypes.DeleteJWTClaims = {
@@ -913,9 +1100,9 @@ export class NotifyEngine extends INotifyEngine {
         exp: expiry,
         iss: encodeEd25519Key(identityKeyPub),
         aud: encodeEd25519Key(dappIdentityKey),
-        sub: reason,
+        sub: composeDidPkh(subscription.account),
         ksu: this.client.keyserverUrl,
-        app: subscription.metadata.url,
+        app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
       };
 
       const deleteAuth = await this.client.identityKeys.generateIdAuth(
@@ -944,9 +1131,8 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
-      const { dappIdentityKey } = await this.resolveDappKeys(
-        subscription.metadata.url
-      );
+      const dappUrl = getDappUrl(subscription.metadata.appDomain);
+      const { dappIdentityKey } = await this.resolveKeys(dappUrl);
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyUpdate"].req.ttl;
       const payload: NotifyClientTypes.UpdateJWTClaims = {
@@ -956,7 +1142,7 @@ export class NotifyEngine extends INotifyEngine {
         iss: encodeEd25519Key(identityKeyPub),
         aud: encodeEd25519Key(dappIdentityKey),
         sub: composeDidPkh(subscription.account),
-        app: subscription.metadata.url,
+        app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
         ksu: this.client.keyserverUrl,
         scp: scope.join(JWT_SCP_SEPARATOR),
       };
@@ -1006,34 +1192,66 @@ export class NotifyEngine extends INotifyEngine {
 
   private registerIdentity = async (
     accountId: string,
-    onSign: (message: string) => Promise<string>
+    onSign: (message: string) => Promise<string>,
+    statement: string,
+    domain: string
   ): Promise<string> => {
     return this.client.identityKeys.registerIdentity({
       accountId,
       onSign,
+      statement,
+      domain,
     });
   };
 
-  private resolveDappKeys = async (
+  private resolveKeys = async (
     dappUrl: string
   ): Promise<{ dappPublicKey: string; dappIdentityKey: string }> => {
     let didDoc: NotifyClientTypes.NotifyDidDocument;
 
-    try {
-      // Fetch dapp's public key from its hosted DID doc.
-      const didDocResp = await axios.get(`${dappUrl}/.well-known/did.json`);
-      didDoc = didDocResp.data;
-    } catch (error: any) {
+    this.client.logger.debug("didDocMap: ", this.didDocMap);
+
+    // Check if we've already fetched the dapp's DID doc.
+    if (this.didDocMap.has(dappUrl)) {
+      didDoc = this.didDocMap.get(dappUrl)!;
+    } else {
+      // If not, fetch dapp's public key from its hosted DID doc.
+      try {
+        const didDocResp = await axios.get(`${dappUrl}/.well-known/did.json`);
+        didDoc = didDocResp.data;
+        this.didDocMap.set(dappUrl, didDoc);
+      } catch (error: any) {
+        throw new Error(
+          `Failed to fetch dapp's DID doc from ${dappUrl}/.well-known/did.json. Error: ${error.message}`
+        );
+      }
+    }
+
+    // Look up the required keys for keyAgreement and authentication in the didDoc.
+    const keyAgreementVerificationMethod = didDoc.verificationMethod.find(
+      (vm) => vm.id === didDoc.keyAgreement[0]
+    );
+    const authenticationVerificationMethod = didDoc.verificationMethod.find(
+      (vm) => vm.id === didDoc.authentication[0]
+    );
+
+    if (!keyAgreementVerificationMethod) {
       throw new Error(
-        `Failed to fetch dapp's DID doc from ${dappUrl}/.well-known/did.json. Error: ${error.message}`
+        `No keyAgreement verification method found in DID doc for ${dappUrl}`
+      );
+    }
+    if (!authenticationVerificationMethod) {
+      throw new Error(
+        `No authentication verification method found in DID doc for ${dappUrl}`
       );
     }
 
-    const { publicKeyJwk } = didDoc.verificationMethod[0];
+    // Derive the dappPublicKey and dappIdentityKey from the JWKs.
+    const { publicKeyJwk } = keyAgreementVerificationMethod;
     const base64Jwk = publicKeyJwk.x.replace(/-/g, "+").replace(/_/g, "/");
     const dappPublicKey = Buffer.from(base64Jwk, "base64").toString("hex");
 
-    const { publicKeyJwk: identityKeyJwk } = didDoc.verificationMethod[1];
+    const { publicKeyJwk: identityKeyJwk } = authenticationVerificationMethod;
     const base64IdentityJwk = identityKeyJwk.x
       .replace(/-/g, "+")
       .replace(/_/g, "/");
@@ -1042,7 +1260,7 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     this.client.logger.info(
-      `[Notify] subscribe > publicKey for ${dappUrl} is: ${dappPublicKey}`
+      `[Notify] resolveKeys > publicKey for ${dappUrl} is: ${dappPublicKey}`
     );
 
     return { dappPublicKey, dappIdentityKey };

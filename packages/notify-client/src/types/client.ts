@@ -1,4 +1,3 @@
-import { HistoryClient } from "@walletconnect/history";
 import { IdentityKeys } from "@walletconnect/identity-keys";
 import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
 import { CoreTypes, ICore, IStore, RelayerTypes } from "@walletconnect/types";
@@ -13,12 +12,14 @@ export declare namespace NotifyClientTypes {
     | "notify_message"
     | "notify_delete"
     | "notify_update"
-    // JS Implementation specific event, used to indicate stores are done initializing
-    | "sync_stores_initialized";
+    | "notify_subscriptions_changed";
 
   type NotifyResponseEventArgs = {
     error?: ErrorResponse;
-    subscription?: NotifyClientTypes.NotifySubscription;
+  };
+
+  type NotifySubscriptionsChangedEventArgs = {
+    subscriptions: NotifySubscription[];
   };
 
   type NotifyMessageRequestEventArgs = {
@@ -38,7 +39,7 @@ export declare namespace NotifyClientTypes {
     notify_message: BaseEventArgs<NotifyMessageRequestEventArgs>;
     notify_delete: BaseEventArgs<NotifyDeleteRequestEventArgs>;
     notify_update: BaseEventArgs<NotifyResponseEventArgs>;
-    sync_stores_initialized: Record<string, never>; // empty object
+    notify_subscriptions_changed: BaseEventArgs<NotifySubscriptionsChangedEventArgs>;
   }
 
   interface BaseJwtClaims {
@@ -57,12 +58,8 @@ export declare namespace NotifyClientTypes {
   interface Metadata {
     name: string;
     description: string;
-    url: string;
     icons: string[];
-    redirect?: {
-      native?: string;
-      universal?: string;
-    };
+    appDomain: string;
   }
 
   type ScopeMap = Record<string, { description: string; enabled: boolean }>;
@@ -85,6 +82,14 @@ export declare namespace NotifyClientTypes {
     symKey: string;
   }
 
+  interface NotifyServerSubscription {
+    appDomain: string;
+    scope: string[];
+    account: string;
+    symKey: string;
+    expiry: number;
+  }
+
   interface NotifyMessage {
     title: string;
     body: string;
@@ -102,27 +107,27 @@ export declare namespace NotifyClientTypes {
 
   interface SubscriptionJWTClaims extends BaseJwtClaims {
     act: "notify_subscription"; // action intent (must be "notify_subscription")
-    iss: string;
-    sub: string;
-    aud: string;
-    scp: string;
-    app: string;
+    iss: string; // did:key of client identity key
+    ksu: string; // key server for identity key verification
+    aud: string; // did:key of client identity key
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
+    scp: string; // scope of notification types authorized by the user
+    app: string; // dapp's domain URL
   }
 
   interface MessageJWTClaims extends BaseJwtClaims {
     act: "notify_message"; // action intent (must be "notify_message")
     iss: string; // public key of cast server (did:key)
-    aud: string; // blockchain account (did:pkh)
-    sub: string; // subscriptionId (sha256 hash of subscriptionAuth)
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     app: string; // dapp domain url,
     msg: NotifyMessage;
   }
 
-  interface MessageReceiptJWTClaims extends BaseJwtClaims {
-    act: "notify_receipt"; // description of action intent. Must be equal to "notify_receipt"
+  interface MessageResponseJWTClaims extends BaseJwtClaims {
+    act: "notify_message_response"; // description of action intent. Must be equal to "notify_message_response"
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
     aud: string; // did:key of an identity key. Enables to resolve associated Dapp domain used.
-    sub: string; // hash of the stringified notify message object received
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     app: string; // dapp's domain url
   }
 
@@ -139,24 +144,59 @@ export declare namespace NotifyClientTypes {
     act: "notify_delete"; // description of action intent. Must be equal to "notify_delete"
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
     aud: string; //did:key of an identity key. Enables to resolve associated Dapp domain used.
-    sub: string; // reason for deleting the subscription
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     app: string; // dapp's domain url
+  }
+
+  interface NotifyWatchSubscriptionsClaims extends BaseJwtClaims {
+    act: "notify_watch_subscriptions";
+    iss: string; // did:key of client identity key
+    ksu: string; // keyserver url
+    aud: string; // did:key of notify server identity key
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
+  }
+
+  interface NotifySubscriptionsChangedClaims extends BaseJwtClaims {
+    act: "notify_subscriptions_changed";
+    iss: string; // did:key of notify server identity key
+    aud: string; // did:pkh blockchain account that notify subscription is associated with
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
+    sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
   }
 
   interface CommonResponseJWTClaims extends BaseJwtClaims {
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
     aud: string; //did:key of an identity key. Enables to resolve associated Dapp domain used.
-    sub: string; // reason for deleting the subscription
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     app: string; // dapp's domain url
   }
+
   interface SubscriptionResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_subscription_response";
   }
+
   interface UpdateResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_update_response";
   }
+
   interface DeleteResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_delete_response";
+  }
+
+  interface NotifyWatchSubscriptionsResponseClaims extends BaseJwtClaims {
+    act: "notify_watch_subscriptions_response";
+    iss: string; // did:key of notify server identity key
+    aud: string; // did:key of client identity key
+    sub: string; // did:key of the public key used for key agreement on the Notify topic
+    sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
+  }
+
+  interface NotifySubscriptionsChangedResponseClaims extends BaseJwtClaims {
+    act: "notify_subscriptions_changed_response";
+    iss: string; // did:key of notify server identity key
+    aud: string; // did:key of client identity key
+    sub: string; // did:key of the public key used for key agreement on the Notify topic
+    sbs: Omit<NotifySubscription, "relay">[]; // array of [Notify Server Subscriptions]
   }
 
   interface NotifyDidDocument {
@@ -173,22 +213,19 @@ export declare namespace NotifyClientTypes {
       };
     }>;
     keyAgreement: string[];
+    authentication: string[];
   }
 
   interface NotifyConfigDocument {
-    version: number;
-    lastModified: number;
+    schemaVersion: number;
     types: Array<{
       name: string;
       description: string;
     }>;
+    name: Metadata["name"];
+    description: Metadata["description"];
+    icons: Metadata["icons"];
   }
-}
-
-export interface IdentityKeychain {
-  accountId: string;
-  identityKeyPub: string;
-  identityKeyPriv: string;
 }
 
 export abstract class INotifyClient {
@@ -196,13 +233,12 @@ export abstract class INotifyClient {
   public abstract readonly version: number;
   public abstract readonly name: string;
   public abstract readonly keyserverUrl: string;
+  public abstract readonly notifyServerUrl: string;
 
   public abstract core: ICore;
   public abstract events: EventEmitter;
   public abstract logger: Logger;
   public abstract engine: INotifyEngine;
-
-  public abstract historyClient: HistoryClient;
 
   public abstract requests: IStore<
     number,
@@ -237,10 +273,6 @@ export abstract class INotifyClient {
   public abstract deleteNotifyMessage: INotifyEngine["deleteNotifyMessage"];
   public abstract getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"];
   public abstract deleteSubscription: INotifyEngine["deleteSubscription"];
-
-  // ---------- Helpers  ------------------------------------------------------------- //
-
-  public abstract initHistory: () => Promise<void>;
 
   // ---------- Event Handlers ------------------------------------------------------- //
 

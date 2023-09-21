@@ -1,4 +1,4 @@
-import { Core, RELAYER_DEFAULT_RELAY_URL, Store } from "@walletconnect/core";
+import { Core, Store } from "@walletconnect/core";
 import {
   generateChildLogger,
   getDefaultLoggerOptions,
@@ -7,10 +7,10 @@ import {
 import { EventEmitter } from "events";
 import pino from "pino";
 
-import { HistoryClient } from "@walletconnect/history";
 import { IdentityKeys } from "@walletconnect/identity-keys";
 import {
   DEFAULT_KEYSERVER_URL,
+  DEFAULT_NOTIFY_SERVER_URL,
   NOTIFY_CLIENT_PROTOCOL,
   NOTIFY_CLIENT_STORAGE_PREFIX,
   NOTIFY_CLIENT_VERSION,
@@ -18,7 +18,6 @@ import {
 } from "./constants";
 import { NotifyEngine } from "./controllers";
 import { INotifyClient, NotifyClientTypes } from "./types";
-import { fetchAndInjectHistory } from "./utils/history";
 
 export class NotifyClient extends INotifyClient {
   public readonly protocol = NOTIFY_CLIENT_PROTOCOL;
@@ -26,6 +25,7 @@ export class NotifyClient extends INotifyClient {
   public readonly name: INotifyClient["name"] =
     NOTIFY_WALLET_CLIENT_DEFAULT_NAME;
   public readonly keyserverUrl: INotifyClient["keyserverUrl"];
+  public readonly notifyServerUrl: INotifyClient["notifyServerUrl"];
 
   public core: INotifyClient["core"];
   public logger: INotifyClient["logger"];
@@ -35,8 +35,6 @@ export class NotifyClient extends INotifyClient {
   public subscriptions: INotifyClient["subscriptions"];
   public messages: INotifyClient["messages"];
   public identityKeys: INotifyClient["identityKeys"];
-
-  public historyClient: HistoryClient;
 
   static async init(opts: NotifyClientTypes.ClientOptions) {
     const client = new NotifyClient(opts);
@@ -60,9 +58,8 @@ export class NotifyClient extends INotifyClient {
           );
 
     this.keyserverUrl = opts?.keyserverUrl ?? DEFAULT_KEYSERVER_URL;
+    this.notifyServerUrl = DEFAULT_NOTIFY_SERVER_URL;
     this.core = opts.core || new Core(opts);
-
-    this.historyClient = new HistoryClient(this.core);
 
     this.logger = generateChildLogger(logger, this.name);
     this.requests = new Store(
@@ -83,7 +80,8 @@ export class NotifyClient extends INotifyClient {
       "messages",
       NOTIFY_CLIENT_STORAGE_PREFIX
     );
-    this.identityKeys = opts.identityKeys ?? new IdentityKeys(this.core);
+    this.identityKeys =
+      opts.identityKeys ?? new IdentityKeys(this.core, this.keyserverUrl);
     this.engine = new NotifyEngine(this);
   }
 
@@ -166,9 +164,9 @@ export class NotifyClient extends INotifyClient {
     }
   };
 
-  public register: INotifyClient["register"] = async ({ account, onSign }) => {
+  public register: INotifyClient["register"] = async (params) => {
     try {
-      return await this.engine.register({ account, onSign });
+      return await this.engine.register(params);
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;
@@ -197,19 +195,6 @@ export class NotifyClient extends INotifyClient {
     return this.events.removeListener(name, listener);
   };
 
-  // ---------- Helpers ----------------------------------------------- //
-
-  public initHistory: INotifyClient["initHistory"] = async () => {
-    for (const sub of this.subscriptions.getAll()) {
-      fetchAndInjectHistory(
-        sub.topic,
-        sub.metadata.name,
-        this.core,
-        this.historyClient
-      );
-    }
-  };
-
   // ---------- Private ----------------------------------------------- //
 
   private async initialize() {
@@ -221,13 +206,6 @@ export class NotifyClient extends INotifyClient {
       await this.messages.init();
       await this.identityKeys.init();
       this.engine.init();
-
-      await this.historyClient.registerTags({
-        relayUrl: this.core.relayUrl || RELAYER_DEFAULT_RELAY_URL,
-        tags: ["4002"],
-      });
-
-      this.initHistory();
 
       this.logger.info(`NotifyClient Initialization Success`);
     } catch (error: any) {
