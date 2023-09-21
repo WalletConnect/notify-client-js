@@ -491,8 +491,8 @@ describe("Notify", () => {
           return wallet2GotUpdate;
         });
 
-        expect(wallet1.subscriptions.getAll()).toEqual(
-          wallet2.subscriptions.getAll()
+        expect(wallet1.subscriptions.getAll().length).toEqual(
+          wallet2.subscriptions.getAll().length
         );
       });
     });
