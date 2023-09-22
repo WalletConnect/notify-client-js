@@ -411,6 +411,15 @@ export class NotifyEngine extends INotifyEngine {
     result,
     encodeOpts
   ) => {
+    // If the initial request is not in the history, do not attempt to send a result.
+    // E.g. receiving a `wc_notifyMessage` res sent by another client before this client
+    // processes/receives the initial req.
+    if (!this.client.core.history.keys.includes(id)) {
+      this.client.logger.info(
+        `[Notify] Engine.sendResult > ignoring result for unknown request id ${id} without history record on topic ${topic}.`
+      );
+      return id;
+    }
     const payload = formatJsonRpcResult(id, result);
     const message = await this.client.core.crypto.encode(
       topic,
