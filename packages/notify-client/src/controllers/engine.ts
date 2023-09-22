@@ -416,7 +416,7 @@ export class NotifyEngine extends INotifyEngine {
     // processes/receives the initial req.
     if (!this.client.core.history.keys.includes(id)) {
       this.client.logger.info(
-        "[Notify] Engine.sendResult > ignoring result for unknown request without history record."
+        `[Notify] Engine.sendResult > ignoring result for unknown request id ${id} without history record on topic ${topic}.`
       );
       return id;
     }
