@@ -1,9 +1,6 @@
 import { FIVE_MINUTES, THIRTY_DAYS } from "@walletconnect/time";
 import { JsonRpcTypes, RpcOpts } from "../types";
 
-// Expiries
-export const NOTIFY_SUBSCRIPTION_EXPIRY = THIRTY_DAYS;
-
 // JWT-related constants
 export const JWT_SCP_SEPARATOR = " ";
 

@@ -92,8 +92,6 @@ export abstract class INotifyEngine {
     opts?: CryptoTypes.EncodeOptions
   ): Promise<number>;
 
-  protected abstract setExpiry(topic: string, expiry: number): Promise<void>;
-
   // ---------- Protected Relay Event Methods ----------------------------------- //
 
   protected abstract onRelayEventRequest(

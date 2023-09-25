@@ -63,7 +63,6 @@ describe("Notify", () => {
       expect(wallet.core).toBeDefined();
       expect(wallet.events).toBeDefined();
       expect(wallet.logger).toBeDefined();
-      expect(wallet.requests).toBeDefined();
       expect(wallet.subscriptions).toBeDefined();
       expect(wallet.core.expirer).toBeDefined();
       expect(wallet.core.history).toBeDefined();
