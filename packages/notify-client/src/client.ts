@@ -31,7 +31,6 @@ export class NotifyClient extends INotifyClient {
   public logger: INotifyClient["logger"];
   public events: INotifyClient["events"] = new EventEmitter();
   public engine: INotifyClient["engine"];
-  public requests: INotifyClient["requests"];
   public subscriptions: INotifyClient["subscriptions"];
   public messages: INotifyClient["messages"];
   public identityKeys: INotifyClient["identityKeys"];
@@ -62,12 +61,6 @@ export class NotifyClient extends INotifyClient {
     this.core = opts.core || new Core(opts);
 
     this.logger = generateChildLogger(logger, this.name);
-    this.requests = new Store(
-      this.core,
-      this.logger,
-      "requests",
-      NOTIFY_CLIENT_STORAGE_PREFIX
-    );
     this.subscriptions = new Store(
       this.core,
       this.logger,
@@ -201,7 +194,6 @@ export class NotifyClient extends INotifyClient {
     this.logger.trace(`Initialized`);
     try {
       await this.core.start();
-      await this.requests.init();
       await this.subscriptions.init();
       await this.messages.init();
       await this.identityKeys.init();

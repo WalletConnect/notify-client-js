@@ -1,8 +1,4 @@
-import {
-  EXPIRER_EVENTS,
-  RELAYER_DEFAULT_PROTOCOL,
-  RELAYER_EVENTS,
-} from "@walletconnect/core";
+import { RELAYER_DEFAULT_PROTOCOL, RELAYER_EVENTS } from "@walletconnect/core";
 import {
   JwtPayload,
   composeDidPkh,
@@ -18,18 +14,12 @@ import {
   isJsonRpcResponse,
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
-import {
-  ExpirerTypes,
-  JsonRpcRecord,
-  RelayerTypes,
-} from "@walletconnect/types";
+import { JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
-  calcExpiry,
   deriveSymKey,
   getInternalError,
   hashKey,
-  parseExpirerTarget,
 } from "@walletconnect/utils";
 import axios from "axios";
 import jwtDecode, { InvalidTokenError } from "jwt-decode";
@@ -57,7 +47,6 @@ export class NotifyEngine extends INotifyEngine {
   public init: INotifyEngine["init"] = () => {
     if (!this.initialized) {
       this.registerRelayerEvents();
-      this.registerExpirerEvents();
       this.client.core.pairing.register({
         methods: Object.keys(ENGINE_RPC_OPTS),
       });
@@ -197,30 +186,6 @@ export class NotifyEngine extends INotifyEngine {
       },
     });
 
-    const scopeMap = this.generateScopeMapFromConfig(notifyConfig.types);
-
-    // Store the pending subscription request.
-    this.client.requests.set(id, {
-      topic: responseTopic,
-      request: {
-        account,
-        metadata: {
-          name: notifyConfig.name,
-          description: notifyConfig.description,
-          icons: notifyConfig.icons,
-          appDomain,
-        },
-        publicKey: selfPublicKey,
-        scope: scopeMap,
-      },
-    });
-
-    // Set the expiry for the notify subscription request.
-    this.client.core.expirer.set(
-      id,
-      calcExpiry(ENGINE_RPC_OPTS["wc_notifySubscribe"].req.ttl)
-    );
-
     return { id, subscriptionAuth };
   };
 
@@ -244,10 +209,6 @@ export class NotifyEngine extends INotifyEngine {
       );
     }
 
-    const identityKeyPub = await this.client.identityKeys.getIdentity({
-      account: subscription.account,
-    });
-
     const updateAuth = await this.generateUpdateAuth({ subscription, scope });
 
     this.client.logger.info(
@@ -264,17 +225,6 @@ export class NotifyEngine extends INotifyEngine {
       id,
       topic,
       updateAuth,
-    });
-
-    await this.client.requests.set(id, {
-      topic,
-      request: {
-        account: subscription.account,
-        metadata: subscription.metadata,
-        publicKey: identityKeyPub,
-        scope: subscription.scope,
-        scopeUpdate: scope,
-      },
     });
 
     return true;
@@ -378,13 +328,6 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   // ---------- Protected Helpers --------------------------------------- //
-
-  protected setExpiry: INotifyEngine["setExpiry"] = async (topic, expiry) => {
-    if (this.client.core.pairing.pairings.keys.includes(topic)) {
-      await this.client.core.pairing.updateExpiry({ topic, expiry });
-    }
-    this.client.core.expirer.set(topic, expiry);
-  };
 
   protected sendRequest: INotifyEngine["sendRequest"] = async (
     topic,
@@ -576,9 +519,6 @@ export class NotifyEngine extends INotifyEngine {
           },
         });
       }
-
-      // Clean up the original request regardless of concrete result.
-      this.cleanupRequest(response.id);
     };
 
   protected onNotifyMessageRequest: INotifyEngine["onNotifyMessageRequest"] =
@@ -803,26 +743,6 @@ export class NotifyEngine extends INotifyEngine {
       }
     };
 
-  // ---------- Expirer Events ---------------------------------------- //
-
-  private registerExpirerEvents() {
-    this.client.core.expirer.on(
-      EXPIRER_EVENTS.expired,
-      async (event: ExpirerTypes.Expiration) => {
-        this.client.logger.info(
-          `[Notify] EXPIRER_EVENTS.expired > target: ${event.target}, expiry: ${event.expiry}`
-        );
-
-        const { id } = parseExpirerTarget(event.target);
-
-        if (id) {
-          await this.cleanupRequest(id, true);
-          this.client.events.emit("request_expire", { id });
-        }
-      }
-    );
-  }
-
   // ---------- Private Helpers --------------------------------- //
 
   private isInitialized() {
@@ -940,28 +860,7 @@ export class NotifyEngine extends INotifyEngine {
       const sbTopic = hashKey(sub.symKey);
       const dappUrl = getDappUrl(sub.appDomain);
       const dappConfig = await this.resolveNotifyConfig(dappUrl);
-      // TODO: use `generateScopeMapFromConfig` here instead.
-      const scopeMap: NotifyClientTypes.ScopeMap = Object.fromEntries(
-        dappConfig.types.map((type) => {
-          if (sub.scope.includes(type.name)) {
-            return [
-              type.name,
-              {
-                ...type,
-                enabled: true,
-              },
-            ];
-          }
-
-          return [
-            type.name,
-            {
-              ...type,
-              enabled: false,
-            },
-          ];
-        })
-      );
+      const scopeMap = this.generateScopeMap(dappConfig, sub);
 
       await this.client.subscriptions.set(sbTopic, {
         account: sub.account,
@@ -1027,16 +926,6 @@ export class NotifyEngine extends INotifyEngine {
     }
 
     return this.client.subscriptions.getAll();
-  };
-
-  private cleanupRequest = async (id: number, expirerHasDeleted?: boolean) => {
-    await Promise.all([
-      this.client.requests.delete(id, {
-        code: -1,
-        message: "Request deleted.",
-      }),
-      expirerHasDeleted ? Promise.resolve() : this.client.core.expirer.del(id),
-    ]);
   };
 
   private cleanupSubscription = async (topic: string) => {
@@ -1308,16 +1197,20 @@ export class NotifyEngine extends INotifyEngine {
     }
   };
 
-  private generateScopeMapFromConfig = (
-    typesConfig: NotifyClientTypes.NotifyConfigDocument["types"],
-    selected?: string[]
+  private generateScopeMap = (
+    dappConfig: NotifyClientTypes.NotifyConfigDocument,
+    serverSub: NotifyClientTypes.NotifyServerSubscription
   ): NotifyClientTypes.ScopeMap => {
-    return typesConfig.reduce((map, type) => {
-      map[type.name] = {
-        description: type.description,
-        enabled: selected?.includes(type.name) ?? true,
-      };
-      return map;
-    }, {});
+    return Object.fromEntries(
+      dappConfig.types.map((type) => {
+        return [
+          type.name,
+          {
+            ...type,
+            enabled: serverSub.scope.includes(type.name),
+          },
+        ];
+      })
+    );
   };
 }

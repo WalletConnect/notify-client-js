@@ -64,14 +64,6 @@ export declare namespace NotifyClientTypes {
 
   type ScopeMap = Record<string, { description: string; enabled: boolean }>;
 
-  interface NotifySubscriptionRequest {
-    publicKey: string;
-    metadata: Metadata;
-    account: string;
-    scope: ScopeMap;
-    scopeUpdate?: string[];
-  }
-
   interface NotifySubscription {
     topic: string;
     account: string;
@@ -240,13 +232,6 @@ export abstract class INotifyClient {
   public abstract logger: Logger;
   public abstract engine: INotifyEngine;
 
-  public abstract requests: IStore<
-    number,
-    {
-      topic: string;
-      request: NotifyClientTypes.NotifySubscriptionRequest;
-    }
-  >;
   public abstract messages: IStore<
     string,
     {
