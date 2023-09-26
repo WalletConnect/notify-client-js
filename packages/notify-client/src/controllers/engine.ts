@@ -860,28 +860,7 @@ export class NotifyEngine extends INotifyEngine {
       const sbTopic = hashKey(sub.symKey);
       const dappUrl = getDappUrl(sub.appDomain);
       const dappConfig = await this.resolveNotifyConfig(dappUrl);
-      // TODO: use `generateScopeMapFromConfig` here instead.
-      const scopeMap: NotifyClientTypes.ScopeMap = Object.fromEntries(
-        dappConfig.types.map((type) => {
-          if (sub.scope.includes(type.name)) {
-            return [
-              type.name,
-              {
-                ...type,
-                enabled: true,
-              },
-            ];
-          }
-
-          return [
-            type.name,
-            {
-              ...type,
-              enabled: false,
-            },
-          ];
-        })
-      );
+      const scopeMap = this.generateScopeMap(dappConfig, sub);
 
       await this.client.subscriptions.set(sbTopic, {
         account: sub.account,
@@ -1218,18 +1197,20 @@ export class NotifyEngine extends INotifyEngine {
     }
   };
 
-  // @ts-expect-error - keeping this so we can repurpose it later
-  // for watched/changed subscriptions handling.
-  private generateScopeMapFromConfig = (
-    typesConfig: NotifyClientTypes.NotifyConfigDocument["types"],
-    selected?: string[]
+  private generateScopeMap = (
+    dappConfig: NotifyClientTypes.NotifyConfigDocument,
+    serverSub: NotifyClientTypes.NotifyServerSubscription
   ): NotifyClientTypes.ScopeMap => {
-    return typesConfig.reduce((map, type) => {
-      map[type.name] = {
-        description: type.description,
-        enabled: selected?.includes(type.name) ?? true,
-      };
-      return map;
-    }, {});
+    return Object.fromEntries(
+      dappConfig.types.map((type) => {
+        return [
+          type.name,
+          {
+            ...type,
+            enabled: serverSub.scope.includes(type.name),
+          },
+        ];
+      })
+    );
   };
 }
