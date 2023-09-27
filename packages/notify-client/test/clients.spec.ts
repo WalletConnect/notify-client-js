@@ -136,6 +136,11 @@ describe("Notify", () => {
 
       it("reads the dapp's did.json from memory after the initial fetch", async () => {
         let incomingMessageCount = 0;
+        // 2 Fetch calls happen on auto-init.
+        // Since this is using an already established core and registered identity
+        // watch subscriptions will be called on init, causing 2 calls to occur.
+        const AUTO_WATCH_SUB_FETCH_ACCOUNT = 2;
+
         await createNotifySubscription(wallet, account, onSign);
 
         wallet = await NotifyClient.init({
@@ -159,7 +164,10 @@ describe("Notify", () => {
         await waitForEvent(() => incomingMessageCount === 2);
 
         // Ensure `axios.get` was only called once to resolve the dapp's did.json
-        expect(axiosSpy).toHaveBeenCalledTimes(1);
+        // We have to account for the initial calls that happened during watchSubscriptions on init
+        expect(axiosSpy).toHaveBeenCalledTimes(
+          1 + AUTO_WATCH_SUB_FETCH_ACCOUNT
+        );
       });
     });
 
