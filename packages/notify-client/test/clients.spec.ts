@@ -451,7 +451,7 @@ describe("Notify", () => {
         expect(updateEvent.topic).toBe(subscriptions[0].topic);
       });
 
-      it("automatically fires watchSubscriptions", async () => {
+      it("automatically fires watchSubscriptions on init", async () => {
         const storageLoc = generateClientDbName("notifyTest");
         const wallet1 = await NotifyClient.init({
           name: "testNotifyClient1",
