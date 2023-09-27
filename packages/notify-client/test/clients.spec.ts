@@ -14,6 +14,7 @@ import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
 import { disconnectSocket } from "./helpers/ws";
 import axios from "axios";
 import { ICore } from "@walletconnect/types";
+import { generateClientDbName } from "./helpers/storage";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
@@ -440,6 +441,56 @@ describe("Notify", () => {
         await waitForEvent(() => updatedCount === 3);
 
         expect(updateEvent.topic).toBe(subscriptions[0].topic);
+      });
+
+      it("automatically fires watchSubscriptions", async () => {
+        const storageLoc = generateClientDbName("notifyTest");
+        const wallet1 = await NotifyClient.init({
+          name: "testNotifyClient1",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core: new Core({
+            projectId,
+            storageOptions: { database: storageLoc },
+          }),
+          projectId,
+        });
+
+        let wallet1ReceivedChangedEvent = false;
+        wallet1.on("notify_subscriptions_changed", () => {
+          wallet1ReceivedChangedEvent = true;
+        });
+
+        await wallet1.register({
+          account,
+          onSign,
+          isLimited: false,
+          domain: "unrelated.domain.com",
+        });
+
+        await waitForEvent(() => wallet1ReceivedChangedEvent);
+
+        const wallet2 = await NotifyClient.init({
+          name: "testNotifyClient2",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core: new Core({
+            projectId,
+            storageOptions: { database: storageLoc },
+          }),
+          projectId,
+        });
+
+        let wallet2ReceivedChangedEvent = false;
+        wallet2.on("notify_subscriptions_changed", () => {
+          wallet2ReceivedChangedEvent = true;
+        });
+
+        await waitForEvent(() => wallet2ReceivedChangedEvent);
+
+        expect(wallet2ReceivedChangedEvent).toEqual(true);
       });
 
       it("handles multiple subscriptions", async () => {

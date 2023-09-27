@@ -79,7 +79,8 @@ export class NotifyClient extends INotifyClient {
       this.core,
       this.logger,
       "lastWatchedAccount",
-      NOTIFY_CLIENT_STORAGE_PREFIX
+      NOTIFY_CLIENT_STORAGE_PREFIX,
+      () => "lastWatched"
     );
 
     this.identityKeys =
