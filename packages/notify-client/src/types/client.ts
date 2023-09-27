@@ -239,6 +239,13 @@ export abstract class INotifyClient {
       messages: Record<number, NotifyClientTypes.NotifyMessageRecord>;
     }
   >;
+
+  public abstract lastWatchedAccount: IStore<
+    "lastWatched",
+    {
+      lastWatched: string;
+    }
+  >;
   public abstract identityKeys: IdentityKeys;
 
   public abstract subscriptions: IStore<

@@ -44,12 +44,18 @@ export class NotifyEngine extends INotifyEngine {
     super(client);
   }
 
-  public init: INotifyEngine["init"] = () => {
+  public init: INotifyEngine["init"] = async () => {
     if (!this.initialized) {
       this.registerRelayerEvents();
       this.client.core.pairing.register({
         methods: Object.keys(ENGINE_RPC_OPTS),
       });
+
+      if (this.client.lastWatchedAccount.keys.length === 1) {
+        await this.watchSubscriptions(
+          this.client.lastWatchedAccount.get("lastWatched").lastWatched
+        );
+      }
 
       this.initialized = true;
     }
@@ -817,6 +823,10 @@ export class NotifyEngine extends INotifyEngine {
         receiverPublicKey: notifyKeys.dappPublicKey,
       }
     );
+
+    this.client.lastWatchedAccount.set("lastWatched", {
+      lastWatched: accountId,
+    });
 
     this.client.logger.info("watchSubscriptions >", "requestId >", id);
   }

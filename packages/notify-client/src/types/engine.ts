@@ -25,7 +25,7 @@ export declare namespace NotifyEngineTypes {
 export abstract class INotifyEngine {
   constructor(public client: INotifyClient) {}
 
-  public abstract init(): void;
+  public abstract init(): Promise<void>;
 
   // ---------- Public Methods ------------------------------------------ //
 
