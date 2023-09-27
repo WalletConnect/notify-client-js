@@ -18,7 +18,6 @@ import {
 } from "./constants";
 import { NotifyEngine } from "./controllers";
 import { INotifyClient, NotifyClientTypes } from "./types";
-import { IStore } from "@walletconnect/types";
 
 export class NotifyClient extends INotifyClient {
   public readonly protocol = NOTIFY_CLIENT_PROTOCOL;
