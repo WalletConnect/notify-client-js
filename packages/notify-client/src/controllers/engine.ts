@@ -1232,7 +1232,7 @@ export class NotifyEngine extends INotifyEngine {
           account,
         });
         if (!identity)
-          throw new Error("No identity key for lastWatchedAccount");
+          throw new Error(`No identity key found for lastWatchedAccount ${account}`);
       } catch (error) {
         this.client.logger.error(
           `[Notify] Engine > watchLastWatchedAccountIfExists failed: ${error}`
