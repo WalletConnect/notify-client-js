@@ -3,6 +3,7 @@ import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
 import { CoreTypes, ICore, IStore, RelayerTypes } from "@walletconnect/types";
 import EventEmitter from "events";
 import { Logger } from "pino";
+import { LAST_WATCHED_KEY } from "../constants";
 
 import { INotifyEngine } from "./engine";
 
@@ -241,9 +242,9 @@ export abstract class INotifyClient {
   >;
 
   public abstract lastWatchedAccount: IStore<
-    "lastWatched",
+    typeof LAST_WATCHED_KEY,
     {
-      lastWatched: string;
+      [LAST_WATCHED_KEY]: string;
     }
   >;
   public abstract identityKeys: IdentityKeys;

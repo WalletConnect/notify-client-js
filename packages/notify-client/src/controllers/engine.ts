@@ -28,6 +28,7 @@ import {
   DID_WEB_PREFIX,
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
+  LAST_WATCHED_KEY,
   LIMITED_IDENTITY_STATEMENT,
   UNLIMITED_IDENTITY_STATEMENT,
 } from "../constants";
@@ -820,8 +821,8 @@ export class NotifyEngine extends INotifyEngine {
       }
     );
 
-    this.client.lastWatchedAccount.set("lastWatched", {
-      lastWatched: accountId,
+    this.client.lastWatchedAccount.set(LAST_WATCHED_KEY, {
+      [LAST_WATCHED_KEY]: accountId,
     });
 
     this.client.logger.info("watchSubscriptions >", "requestId >", id);
@@ -1224,7 +1225,7 @@ export class NotifyEngine extends INotifyEngine {
     // If an account was previously watched
     if (this.client.lastWatchedAccount.keys.length === 1) {
       const { lastWatched: account } =
-        this.client.lastWatchedAccount.get("lastWatched");
+        this.client.lastWatchedAccount.get(LAST_WATCHED_KEY);
 
       try {
         // Account for invalid state where the last watched account does not have an identity.
