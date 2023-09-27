@@ -51,11 +51,7 @@ export class NotifyEngine extends INotifyEngine {
         methods: Object.keys(ENGINE_RPC_OPTS),
       });
 
-      if (this.client.lastWatchedAccount.keys.length === 1) {
-        await this.watchSubscriptions(
-          this.client.lastWatchedAccount.get("lastWatched").lastWatched
-        );
-      }
+      await this.watchLastWatchedAccount();
 
       this.initialized = true;
     }
@@ -1222,5 +1218,34 @@ export class NotifyEngine extends INotifyEngine {
         ];
       })
     );
+  };
+
+  private watchLastWatchedAccount = async () => {
+    if (this.client.lastWatchedAccount.keys.length === 1) {
+      const { lastWatched: account } =
+        this.client.lastWatchedAccount.get("lastWatched");
+
+      try {
+        // Account for invalid state where the last watched account does not have an identity.
+        const identity = await this.client.identityKeys.getIdentity({
+          account,
+        });
+        if (!identity)
+          throw new Error("No identity key for lastWatchedAccount");
+      } catch (error) {
+        this.client.logger.error(
+          `[Notify] Last watched account ${account} has no registered identity. Can not watch subscriptions by default. `
+        );
+        return;
+      }
+
+      try {
+        await this.watchSubscriptions(account);
+      } catch (error: any) {
+        this.client.logger.error(
+          `[Notify] Failed to watch subscriptions for account ${account} > ${error.message}`
+        );
+      }
+    }
   };
 }
