@@ -1235,7 +1235,7 @@ export class NotifyEngine extends INotifyEngine {
           throw new Error("No identity key for lastWatchedAccount");
       } catch (error) {
         this.client.logger.error(
-          `[Notify] Last watched account ${account} has no registered identity. Can not watch subscriptions by default. `
+          `[Notify] Engine > watchLastWatchedAccountIfExists failed: ${error}`
         );
         return;
       }
