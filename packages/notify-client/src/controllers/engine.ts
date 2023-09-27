@@ -51,7 +51,7 @@ export class NotifyEngine extends INotifyEngine {
         methods: Object.keys(ENGINE_RPC_OPTS),
       });
 
-      await this.watchLastWatchedAccount();
+      await this.watchLastWatchedAccountIfExists();
 
       this.initialized = true;
     }
@@ -1220,7 +1220,8 @@ export class NotifyEngine extends INotifyEngine {
     );
   };
 
-  private watchLastWatchedAccount = async () => {
+  private watchLastWatchedAccountIfExists = async () => {
+    // If an account was previously watched
     if (this.client.lastWatchedAccount.keys.length === 1) {
       const { lastWatched: account } =
         this.client.lastWatchedAccount.get("lastWatched");
