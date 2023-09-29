@@ -136,37 +136,46 @@ describe("Notify", () => {
 
       it("reads the dapp's did.json from memory after the initial fetch", async () => {
         let incomingMessageCount = 0;
-        // 2 Fetch calls happen on auto-init.
-        // Since this is using an already established core and registered identity
-        // watch subscriptions will be called on init, causing 2 calls to occur.
-        const AUTO_WATCH_SUB_FETCH_ACCOUNT = 2;
+	// These are calls that occur due to registering.
+	// 1 - NOTIFY_SERVER_URL/.well-known/did.json
+	// 2 - GM_DAPP/.well-known/did.json
+	// 3 - GM_DAPP/.well-known/wc-notify-config.json
+        const INITIAL_CALLS_FETCH_ACCOUNT = 3;
+        const axiosSpy = vi.spyOn(axios, "get");
 
-        await createNotifySubscription(wallet, account, onSign);
+	const ethersWallet2 = EthersWallet.createRandom();
+	const account2 = `eip155:1:${ethersWallet2.address}`;
+        const storageLoc = generateClientDbName("notifyTestDidJson");
+	
 
-        wallet = await NotifyClient.init({
-          name: "testNotifyClient",
+        const wallet1 = await NotifyClient.init({
+          name: "testNotifyClient2",
           logger: "error",
           keyserverUrl: DEFAULT_KEYSERVER_URL,
           relayUrl: DEFAULT_RELAY_URL,
-          core,
+          core: new Core({projectId, storageOptions: {database: storageLoc}}),
           projectId,
         });
 
-        wallet.on("notify_message", (event) => {
+
+        await createNotifySubscription(wallet1, account2, (m) => ethersWallet2.signMessage(m));
+
+        wallet1.on("notify_message", (event) => {
           incomingMessageCount += 1;
         });
 
-        const axiosSpy = vi.spyOn(axios, "get");
+	
+        await sendNotifyMessage(account2, "Test");
+        await sendNotifyMessage(account2, "Test");
 
-        await sendNotifyMessage(account, "Test");
-        await sendNotifyMessage(account, "Test");
-
-        await waitForEvent(() => incomingMessageCount === 2);
+        await waitForEvent(() => {
+	  return incomingMessageCount === 2
+	});
 
         // Ensure `axios.get` was only called once to resolve the dapp's did.json
         // We have to account for the initial calls that happened during watchSubscriptions on init
         expect(axiosSpy).toHaveBeenCalledTimes(
-          1 + AUTO_WATCH_SUB_FETCH_ACCOUNT
+          1 + INITIAL_CALLS_FETCH_ACCOUNT
         );
       });
     });
