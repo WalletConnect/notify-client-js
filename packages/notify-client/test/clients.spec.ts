@@ -14,6 +14,7 @@ import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
 import { disconnectSocket } from "./helpers/ws";
 import axios from "axios";
 import { ICore } from "@walletconnect/types";
+import { generateClientDbName } from "./helpers/storage";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
@@ -135,30 +136,47 @@ describe("Notify", () => {
 
       it("reads the dapp's did.json from memory after the initial fetch", async () => {
         let incomingMessageCount = 0;
-        await createNotifySubscription(wallet, account, onSign);
+        // These are calls that occur due to registering.
+        // 1 - NOTIFY_SERVER_URL/.well-known/did.json
+        // 2 - GM_DAPP/.well-known/did.json
+        // 3 - GM_DAPP/.well-known/wc-notify-config.json
+        const INITIAL_CALLS_FETCH_ACCOUNT = 3;
+        const axiosSpy = vi.spyOn(axios, "get");
 
-        wallet = await NotifyClient.init({
-          name: "testNotifyClient",
+        const ethersWallet2 = EthersWallet.createRandom();
+        const account2 = `eip155:1:${ethersWallet2.address}`;
+        const storageLoc = generateClientDbName("notifyTestDidJson");
+
+        const wallet1 = await NotifyClient.init({
+          name: "testNotifyClient2",
           logger: "error",
           keyserverUrl: DEFAULT_KEYSERVER_URL,
           relayUrl: DEFAULT_RELAY_URL,
-          core,
+          core: new Core({
+            projectId,
+            storageOptions: { database: storageLoc },
+          }),
           projectId,
         });
 
-        wallet.on("notify_message", (event) => {
+        await createNotifySubscription(wallet1, account2, (m) =>
+          ethersWallet2.signMessage(m)
+        );
+
+        wallet1.on("notify_message", (event) => {
           incomingMessageCount += 1;
         });
 
-        const axiosSpy = vi.spyOn(axios, "get");
+        await sendNotifyMessage(account2, "Test");
+        await sendNotifyMessage(account2, "Test");
 
-        await sendNotifyMessage(account, "Test");
-        await sendNotifyMessage(account, "Test");
-
-        await waitForEvent(() => incomingMessageCount === 2);
+        await waitForEvent(() => {
+          return incomingMessageCount === 2;
+        });
 
         // Ensure `axios.get` was only called once to resolve the dapp's did.json
-        expect(axiosSpy).toHaveBeenCalledTimes(1);
+        // We have to account for the initial calls that happened during watchSubscriptions on init
+        expect(axiosSpy).toHaveBeenCalledTimes(1 + INITIAL_CALLS_FETCH_ACCOUNT);
       });
     });
 
@@ -440,6 +458,56 @@ describe("Notify", () => {
         await waitForEvent(() => updatedCount === 3);
 
         expect(updateEvent.topic).toBe(subscriptions[0].topic);
+      });
+
+      it("automatically fires watchSubscriptions on init", async () => {
+        const storageLoc = generateClientDbName("notifyTest");
+        const wallet1 = await NotifyClient.init({
+          name: "testNotifyClient1",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core: new Core({
+            projectId,
+            storageOptions: { database: storageLoc },
+          }),
+          projectId,
+        });
+
+        let wallet1ReceivedChangedEvent = false;
+        wallet1.on("notify_subscriptions_changed", () => {
+          wallet1ReceivedChangedEvent = true;
+        });
+
+        await wallet1.register({
+          account,
+          onSign,
+          isLimited: false,
+          domain: "unrelated.domain.com",
+        });
+
+        await waitForEvent(() => wallet1ReceivedChangedEvent);
+
+        const wallet2 = await NotifyClient.init({
+          name: "testNotifyClient2",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core: new Core({
+            projectId,
+            storageOptions: { database: storageLoc },
+          }),
+          projectId,
+        });
+
+        let wallet2ReceivedChangedEvent = false;
+        wallet2.on("notify_subscriptions_changed", () => {
+          wallet2ReceivedChangedEvent = true;
+        });
+
+        await waitForEvent(() => wallet2ReceivedChangedEvent);
+
+        expect(wallet2ReceivedChangedEvent).toEqual(true);
       });
 
       it("handles multiple subscriptions", async () => {

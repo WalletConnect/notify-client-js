@@ -33,6 +33,7 @@ export class NotifyClient extends INotifyClient {
   public engine: INotifyClient["engine"];
   public subscriptions: INotifyClient["subscriptions"];
   public messages: INotifyClient["messages"];
+  public lastWatchedAccount: INotifyClient["lastWatchedAccount"];
   public identityKeys: INotifyClient["identityKeys"];
 
   static async init(opts: NotifyClientTypes.ClientOptions) {
@@ -73,6 +74,15 @@ export class NotifyClient extends INotifyClient {
       "messages",
       NOTIFY_CLIENT_STORAGE_PREFIX
     );
+
+    this.lastWatchedAccount = new Store(
+      this.core,
+      this.logger,
+      "lastWatchedAccount",
+      NOTIFY_CLIENT_STORAGE_PREFIX,
+      () => "lastWatched"
+    );
+
     this.identityKeys =
       opts.identityKeys ?? new IdentityKeys(this.core, this.keyserverUrl);
     this.engine = new NotifyEngine(this);
@@ -197,7 +207,8 @@ export class NotifyClient extends INotifyClient {
       await this.subscriptions.init();
       await this.messages.init();
       await this.identityKeys.init();
-      this.engine.init();
+      await this.lastWatchedAccount.init();
+      await this.engine.init();
 
       this.logger.info(`NotifyClient Initialization Success`);
     } catch (error: any) {

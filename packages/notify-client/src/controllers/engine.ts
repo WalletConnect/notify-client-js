@@ -28,6 +28,7 @@ import {
   DID_WEB_PREFIX,
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
+  LAST_WATCHED_KEY,
   LIMITED_IDENTITY_STATEMENT,
   UNLIMITED_IDENTITY_STATEMENT,
 } from "../constants";
@@ -44,12 +45,14 @@ export class NotifyEngine extends INotifyEngine {
     super(client);
   }
 
-  public init: INotifyEngine["init"] = () => {
+  public init: INotifyEngine["init"] = async () => {
     if (!this.initialized) {
       this.registerRelayerEvents();
       this.client.core.pairing.register({
         methods: Object.keys(ENGINE_RPC_OPTS),
       });
+
+      await this.watchLastWatchedAccountIfExists();
 
       this.initialized = true;
     }
@@ -818,6 +821,10 @@ export class NotifyEngine extends INotifyEngine {
       }
     );
 
+    this.client.lastWatchedAccount.set(LAST_WATCHED_KEY, {
+      [LAST_WATCHED_KEY]: accountId,
+    });
+
     this.client.logger.info("watchSubscriptions >", "requestId >", id);
   }
 
@@ -1212,5 +1219,38 @@ export class NotifyEngine extends INotifyEngine {
         ];
       })
     );
+  };
+
+  private watchLastWatchedAccountIfExists = async () => {
+    // If an account was previously watched
+    if (this.client.lastWatchedAccount.keys.length === 1) {
+      const { lastWatched: account } =
+        this.client.lastWatchedAccount.get(LAST_WATCHED_KEY);
+
+      try {
+        // Account for invalid state where the last watched account does not have an identity.
+        const identity = await this.client.identityKeys.getIdentity({
+          account,
+        });
+        if (!identity) {
+          throw new Error(
+            `No identity key found for lastWatchedAccount ${account}`
+          );
+        }
+      } catch (error) {
+        this.client.logger.error(
+          `[Notify] Engine > watchLastWatchedAccountIfExists failed: ${error}`
+        );
+        return;
+      }
+
+      try {
+        await this.watchSubscriptions(account);
+      } catch (error: any) {
+        this.client.logger.error(
+          `[Notify] Engine.watchLastWatchedAccountIfExists > Failed to watch subscriptions for account ${account} > ${error.message}`
+        );
+      }
+    }
   };
 }
