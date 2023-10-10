@@ -792,7 +792,7 @@ export class NotifyEngine extends INotifyEngine {
       aud: encodeEd25519Key(notifyKeys.dappIdentityKey),
       ksu: this.client.keyserverUrl,
       sub: composeDidPkh(accountId),
-      app: null
+      app: null,
     };
 
     const generatedAuth = await this.client.identityKeys.generateIdAuth(
