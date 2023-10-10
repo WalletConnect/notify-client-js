@@ -30,7 +30,7 @@ import {
   JWT_SCP_SEPARATOR,
   LAST_WATCHED_KEY,
   LIMITED_IDENTITY_STATEMENT,
-  UNLIMITED_IDENTITY_STATEMENT,
+  NOTIFY_AUTHORIZATION_STATEMENT,
 } from "../constants";
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
 import { getDappUrl } from "../utils/formats";
@@ -63,12 +63,9 @@ export class NotifyEngine extends INotifyEngine {
   public register: INotifyEngine["register"] = async ({
     account,
     onSign,
-    isLimited,
     domain,
   }) => {
-    const statement = isLimited
-      ? LIMITED_IDENTITY_STATEMENT
-      : UNLIMITED_IDENTITY_STATEMENT;
+    const statement = NOTIFY_AUTHORIZATION_STATEMENT;
 
     // Retrieve existing identity or register a new one for this account on this device.
     const identity = await this.registerIdentity(
