@@ -73,13 +73,11 @@ describe("Notify", () => {
     describe("subscribe", () => {
       it("can issue a `notify_subscription` request and handle the response", async () => {
         let gotNotifySubscriptionResponse = false;
-        let notifySubscriptionEvent: any;
         let gotNotifySubscriptionsChangedRequest = false;
         let changedSubscriptions: NotifyClientTypes.NotifySubscription[] = [];
 
-        wallet.once("notify_subscription", (event) => {
+        wallet.once("notify_subscription", () => {
           gotNotifySubscriptionResponse = true;
-          notifySubscriptionEvent = event;
         });
         wallet.on("notify_subscriptions_changed", (event) => {
           console.log("notify_subscriptions_changed", event);
@@ -93,7 +91,6 @@ describe("Notify", () => {
           account,
           onSign,
           domain: gmDappMetadata.appDomain,
-          isLimited: false,
         });
 
         await wallet.subscribe({
@@ -163,7 +160,7 @@ describe("Notify", () => {
           ethersWallet2.signMessage(m)
         );
 
-        wallet1.on("notify_message", (event) => {
+        wallet1.on("notify_message", () => {
           incomingMessageCount += 1;
         });
 
@@ -185,14 +182,12 @@ describe("Notify", () => {
         await createNotifySubscription(wallet, account, onSign);
 
         let gotNotifyUpdateResponse = false;
-        let notifyUpdateEvent: any;
         let gotNotifySubscriptionsChangedRequest = false;
         let lastChangedSubscriptions: NotifyClientTypes.NotifySubscription[] =
           [];
 
-        wallet.once("notify_update", (event) => {
+        wallet.once("notify_update", () => {
           gotNotifyUpdateResponse = true;
-          notifyUpdateEvent = { ...event };
         });
         wallet.on("notify_subscriptions_changed", (event) => {
           console.log("notify_subscriptions_changed", event);
@@ -434,7 +429,7 @@ describe("Notify", () => {
         let gotNotifyUpdateResponse = false;
         let updatedCount = 0;
 
-        wallet.on("notify_subscriptions_changed", (event) => {
+        wallet.on("notify_subscriptions_changed", () => {
           updatedCount += 1;
         });
 
@@ -482,7 +477,6 @@ describe("Notify", () => {
         await wallet1.register({
           account,
           onSign,
-          isLimited: false,
           domain: "unrelated.domain.com",
         });
 
@@ -522,7 +516,7 @@ describe("Notify", () => {
 
         let wallet1UpdateCount = 0;
 
-        wallet1.on("notify_subscriptions_changed", (params) => {
+        wallet1.on("notify_subscriptions_changed", () => {
           wallet1UpdateCount++;
         });
         await createNotifySubscription(wallet, account, onSign);
@@ -550,7 +544,6 @@ describe("Notify", () => {
         await wallet2.register({
           account,
           onSign,
-          isLimited: false,
           domain: "unrelated.domain.com",
         });
 
