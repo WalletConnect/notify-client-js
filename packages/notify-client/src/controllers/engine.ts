@@ -29,7 +29,6 @@ import {
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
   LAST_WATCHED_KEY,
-  LIMITED_IDENTITY_STATEMENT,
   NOTIFY_AUTHORIZATION_STATEMENT,
 } from "../constants";
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
