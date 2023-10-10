@@ -147,6 +147,7 @@ export declare namespace NotifyClientTypes {
     ksu: string; // keyserver url
     aud: string; // did:key of notify server identity key
     sub: string; // did:pkh of blockchain account that this notify subscription is associated with
+    app: string | null; // did:web of app domain to watch, or `null` for all domains
   }
 
   interface NotifySubscriptionsChangedClaims extends BaseJwtClaims {
