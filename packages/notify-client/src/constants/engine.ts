@@ -4,10 +4,8 @@ import { JsonRpcTypes, RpcOpts } from "../types";
 // JWT-related constants
 export const JWT_SCP_SEPARATOR = " ";
 
-export const LIMITED_IDENTITY_STATEMENT =
-  "I further authorize this DAPP to send and receive messages on my behalf for this domain using my WalletConnect identity.";
-export const UNLIMITED_IDENTITY_STATEMENT =
-  "I further authorize this WALLET to send and receive messages on my behalf for ALL domains using my WalletConnect identity.";
+export const NOTIFY_AUTHORIZATION_STATEMENT =
+  "I further authorize this app to send and receive messages on my behalf using my WalletConnect identity. Read more at https://walletconnect.com/identity";
 
 export const DID_WEB_PREFIX = "did:web:";
 
