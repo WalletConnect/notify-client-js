@@ -1108,19 +1108,8 @@ export class NotifyEngine extends INotifyEngine {
     statement: string,
     domain: string
   ): Promise<string> => {
-    let existingIdentity = false;
 
-    try {
-      // TODO: Add "hasIdentity" method in identityKeys utils
-      // since `getIdentity` throws if no identity key is present
-      if (await this.client.identityKeys.getIdentity({ account: accountId })) {
-        existingIdentity = true;
-      }
-    } catch (e) {
-      existingIdentity = false;
-    }
-
-    if (existingIdentity) {
+    if (await this.client.identityKeys.hasIdentity({account: accountId})) {
       if (
         this.checkIfSignedStatementIsStale(
           accountId,
