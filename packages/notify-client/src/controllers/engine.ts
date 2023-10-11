@@ -1218,6 +1218,25 @@ export class NotifyEngine extends INotifyEngine {
     );
   };
 
+  // returns true if statement is stale, false otherwise.
+  private checkIfSignedStatementIsStale = (account: string, currentStatement: string) => {
+    const hasSignedStatement = this.client.signedStatements.keys.includes(account);
+    if(!hasSignedStatement) {
+      // if there is no signed statement, then this account's statement was signed
+      // previous to this function (and thus the latest statement) being introduced
+      // therefore, it is stale.
+      return true;
+    }
+
+    const signedStatement = this.client.signedStatements.get(account);
+
+    if(signedStatement.statement !== currentStatement) {
+      return true;
+    }
+
+    return false;
+  }
+
   private watchLastWatchedAccountIfExists = async () => {
     // If an account was previously watched
     if (this.client.lastWatchedAccount.keys.length === 1) {
