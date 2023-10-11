@@ -62,14 +62,15 @@ export class NotifyClient extends INotifyClient {
     this.notifyServerUrl = DEFAULT_NOTIFY_SERVER_URL;
     this.core = opts.core || new Core(opts);
 
-
     this.logger = generateChildLogger(logger, this.name);
 
     this.signedStatements = new Store(
       this.core,
       this.logger,
       "signedStatements",
-      NOTIFY_CLIENT_STORAGE_PREFIX
+      NOTIFY_CLIENT_STORAGE_PREFIX,
+      ({account}: {account: string}) => account
+
     );
 
     this.subscriptions = new Store(
