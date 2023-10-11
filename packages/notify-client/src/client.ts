@@ -216,6 +216,7 @@ export class NotifyClient extends INotifyClient {
       await this.core.start();
       await this.subscriptions.init();
       await this.messages.init();
+      await this.signedStatements.init();
       await this.identityKeys.init();
       await this.lastWatchedAccount.init();
       await this.engine.init();
