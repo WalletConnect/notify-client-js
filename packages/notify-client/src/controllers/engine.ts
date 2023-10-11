@@ -1139,17 +1139,19 @@ export class NotifyEngine extends INotifyEngine {
       }
     }
 
-    this.client.signedStatements.set(accountId, {
-      account: accountId,
-      statement,
-    });
-
-    return this.client.identityKeys.registerIdentity({
+    const registeredIdentity = await this.client.identityKeys.registerIdentity({
       accountId,
       onSign,
       statement,
       domain,
     });
+
+    this.client.signedStatements.set(accountId, {
+      account: accountId,
+      statement,
+    });
+
+    return registeredIdentity;
   };
 
   private resolveKeys = async (
