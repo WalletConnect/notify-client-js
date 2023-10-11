@@ -69,8 +69,7 @@ export class NotifyClient extends INotifyClient {
       this.logger,
       "signedStatements",
       NOTIFY_CLIENT_STORAGE_PREFIX,
-      ({account}: {account: string}) => account
-
+      ({ account }: { account: string }) => account
     );
 
     this.subscriptions = new Store(
