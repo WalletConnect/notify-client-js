@@ -1108,8 +1108,7 @@ export class NotifyEngine extends INotifyEngine {
     statement: string,
     domain: string
   ): Promise<string> => {
-
-    if (await this.client.identityKeys.hasIdentity({account: accountId})) {
+    if (await this.client.identityKeys.hasIdentity({ account: accountId })) {
       if (
         this.checkIfSignedStatementIsStale(
           accountId,
