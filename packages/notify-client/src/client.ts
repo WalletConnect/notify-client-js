@@ -34,6 +34,7 @@ export class NotifyClient extends INotifyClient {
   public subscriptions: INotifyClient["subscriptions"];
   public messages: INotifyClient["messages"];
   public lastWatchedAccount: INotifyClient["lastWatchedAccount"];
+  public signedStatements: INotifyClient["signedStatements"];
   public identityKeys: INotifyClient["identityKeys"];
 
   static async init(opts: NotifyClientTypes.ClientOptions) {
@@ -61,7 +62,16 @@ export class NotifyClient extends INotifyClient {
     this.notifyServerUrl = DEFAULT_NOTIFY_SERVER_URL;
     this.core = opts.core || new Core(opts);
 
+
     this.logger = generateChildLogger(logger, this.name);
+
+    this.signedStatements = new Store(
+      this.core,
+      this.logger,
+      "signedStatements",
+      NOTIFY_CLIENT_STORAGE_PREFIX
+    );
+
     this.subscriptions = new Store(
       this.core,
       this.logger,
