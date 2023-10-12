@@ -29,7 +29,8 @@ import {
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
   LAST_WATCHED_KEY,
-  NOTIFY_AUTHORIZATION_STATEMENT,
+  NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS,
+  NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
 } from "../constants";
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
 import { getDappUrl } from "../utils/formats";
@@ -61,10 +62,13 @@ export class NotifyEngine extends INotifyEngine {
 
   public register: INotifyEngine["register"] = async ({
     account,
+    isLimited,
     onSign,
     domain,
   }) => {
-    const statement = NOTIFY_AUTHORIZATION_STATEMENT;
+    const statement = isLimited
+      ? NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN
+      : NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS;
 
     // Retrieve existing identity or register a new one for this account on this device.
     const identity = await this.registerIdentity(
