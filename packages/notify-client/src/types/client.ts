@@ -242,6 +242,11 @@ export abstract class INotifyClient {
     }
   >;
 
+  public abstract signedStatements: IStore<
+    string,
+    { statement: string; account: string }
+  >;
+
   public abstract lastWatchedAccount: IStore<
     typeof LAST_WATCHED_KEY,
     {

@@ -1108,12 +1108,33 @@ export class NotifyEngine extends INotifyEngine {
     statement: string,
     domain: string
   ): Promise<string> => {
-    return this.client.identityKeys.registerIdentity({
+    if (await this.client.identityKeys.hasIdentity({ account: accountId })) {
+      if (this.checkIfSignedStatementIsStale(accountId, statement)) {
+        try {
+          await this.client.identityKeys.unregisterIdentity({
+            account: accountId,
+          });
+        } catch {
+          throw new Error(
+            `Failed to unregister ${accountId} which has a stale signature`
+          );
+        }
+      }
+    }
+
+    const registeredIdentity = await this.client.identityKeys.registerIdentity({
       accountId,
       onSign,
       statement,
       domain,
     });
+
+    this.client.signedStatements.set(accountId, {
+      account: accountId,
+      statement,
+    });
+
+    return registeredIdentity;
   };
 
   private resolveKeys = async (
@@ -1216,6 +1237,25 @@ export class NotifyEngine extends INotifyEngine {
         ];
       })
     );
+  };
+
+  // returns true if statement is stale, false otherwise.
+  private checkIfSignedStatementIsStale = (
+    account: string,
+    currentStatement: string
+  ) => {
+    const hasSignedStatement =
+      this.client.signedStatements.keys.includes(account);
+    if (!hasSignedStatement) {
+      // if there is no signed statement, then this account's statement was signed
+      // previous to this function (and thus the latest statement) being introduced
+      // therefore, it is stale.
+      return true;
+    }
+
+    const signedStatement = this.client.signedStatements.get(account);
+
+    return signedStatement.statement !== currentStatement;
   };
 
   private watchLastWatchedAccountIfExists = async () => {

@@ -70,6 +70,47 @@ describe("Notify", () => {
       expect(wallet.core.pairing).toBeDefined();
     });
 
+    describe("register", () => {
+      it("can handle stale statements", async () => {
+        let onSignCalledTimes = 0;
+        const countedOnSign = async (message: string) => {
+          onSignCalledTimes += 1;
+          return onSign(message);
+        };
+
+        const identityKey1 = await wallet.register({
+          account,
+          onSign: countedOnSign,
+          domain: gmDappMetadata.appDomain,
+        });
+
+        await wallet.signedStatements.set(account, {
+          statement: "false statement",
+          account,
+        });
+
+        const identityKey2 = await wallet.register({
+          account,
+          onSign: countedOnSign,
+          domain: gmDappMetadata.appDomain,
+        });
+
+        await waitForEvent(() => onSignCalledTimes === 2);
+
+        expect(identityKey1).not.to.equal(identityKey2);
+
+        const identityKey3 = await wallet.register({
+          account,
+          onSign: countedOnSign,
+          domain: gmDappMetadata.appDomain,
+        });
+
+        expect(identityKey3).toEqual(identityKey2);
+
+        expect(onSignCalledTimes).toEqual(2);
+      });
+    });
+
     describe("subscribe", () => {
       it("can issue a `notify_subscription` request and handle the response", async () => {
         let gotNotifySubscriptionResponse = false;
