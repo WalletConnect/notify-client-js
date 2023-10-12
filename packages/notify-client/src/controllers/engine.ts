@@ -83,7 +83,7 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     try {
-      await this.watchSubscriptions(account);
+      await this.watchSubscriptions(account, domain, isLimited ?? true);
     } catch (error: any) {
       this.client.logger.error(
         `[Notify] Engine.register > watching subscriptions failed > ${error.message}`
@@ -763,7 +763,7 @@ export class NotifyEngine extends INotifyEngine {
     return hashKey(notifyId);
   }
 
-  private async watchSubscriptions(accountId: string) {
+  private async watchSubscriptions(accountId: string, appDomain: string, isLimited: boolean) {
     const notifyKeys = await this.resolveKeys(this.client.notifyServerUrl);
 
     // Derive req topic from did.json
@@ -799,7 +799,7 @@ export class NotifyEngine extends INotifyEngine {
       aud: encodeEd25519Key(notifyKeys.dappIdentityKey),
       ksu: this.client.keyserverUrl,
       sub: composeDidPkh(accountId),
-      app: null,
+      app: isLimited? `did:web:${appDomain}` : null,
     };
 
     const generatedAuth = await this.client.identityKeys.generateIdAuth(
@@ -828,6 +828,8 @@ export class NotifyEngine extends INotifyEngine {
 
     this.client.lastWatchedAccount.set(LAST_WATCHED_KEY, {
       [LAST_WATCHED_KEY]: accountId,
+      appDomain,
+      isLimited
     });
 
     this.client.logger.info("watchSubscriptions >", "requestId >", id);
@@ -1269,7 +1271,7 @@ export class NotifyEngine extends INotifyEngine {
   private watchLastWatchedAccountIfExists = async () => {
     // If an account was previously watched
     if (this.client.lastWatchedAccount.keys.length === 1) {
-      const { lastWatched: account } =
+      const { lastWatched: account, appDomain, isLimited } =
         this.client.lastWatchedAccount.get(LAST_WATCHED_KEY);
 
       try {
@@ -1290,7 +1292,7 @@ export class NotifyEngine extends INotifyEngine {
       }
 
       try {
-        await this.watchSubscriptions(account);
+        await this.watchSubscriptions(account, appDomain, isLimited);
       } catch (error: any) {
         this.client.logger.error(
           `[Notify] Engine.watchLastWatchedAccountIfExists > Failed to watch subscriptions for account ${account} > ${error.message}`
