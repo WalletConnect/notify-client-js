@@ -1109,12 +1109,7 @@ export class NotifyEngine extends INotifyEngine {
     domain: string
   ): Promise<string> => {
     if (await this.client.identityKeys.hasIdentity({ account: accountId })) {
-      if (
-        this.checkIfSignedStatementIsStale(
-          accountId,
-          statement
-        )
-      ) {
+      if (this.checkIfSignedStatementIsStale(accountId, statement)) {
         try {
           await this.client.identityKeys.unregisterIdentity({
             account: accountId,
@@ -1260,7 +1255,7 @@ export class NotifyEngine extends INotifyEngine {
 
     const signedStatement = this.client.signedStatements.get(account);
 
-    return signedStatement.statement !== currentStatement
+    return signedStatement.statement !== currentStatement;
   };
 
   private watchLastWatchedAccountIfExists = async () => {
