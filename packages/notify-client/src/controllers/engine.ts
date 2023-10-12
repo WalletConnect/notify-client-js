@@ -66,9 +66,12 @@ export class NotifyEngine extends INotifyEngine {
     onSign,
     domain,
   }) => {
-    const statement = isLimited
-      ? NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN
-      : NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS;
+    // explicity check if it was set to false because null/undefined should count as
+    // as "true" since by default it should be limited. The default of `isLimited` is
+    // true.
+    const statement = isLimited === false
+      ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
+      : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
 
     // Retrieve existing identity or register a new one for this account on this device.
     const identity = await this.registerIdentity(
