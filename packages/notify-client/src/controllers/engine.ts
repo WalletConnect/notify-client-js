@@ -1112,13 +1112,15 @@ export class NotifyEngine extends INotifyEngine {
       if (
         this.checkIfSignedStatementIsStale(
           accountId,
-          NOTIFY_AUTHORIZATION_STATEMENT
+          statement
         )
       ) {
+	console.log("statement is stale.")
         try {
           await this.client.identityKeys.unregisterIdentity({
             account: accountId,
           });
+	  console.log("removed identity key")
         } catch {
           throw new Error(
             `Failed to unregister ${accountId} which has a stale signature`
