@@ -763,7 +763,11 @@ export class NotifyEngine extends INotifyEngine {
     return hashKey(notifyId);
   }
 
-  private async watchSubscriptions(accountId: string, appDomain: string, isLimited: boolean) {
+  private async watchSubscriptions(
+    accountId: string,
+    appDomain: string,
+    isLimited: boolean
+  ) {
     const notifyKeys = await this.resolveKeys(this.client.notifyServerUrl);
 
     // Derive req topic from did.json
@@ -799,7 +803,7 @@ export class NotifyEngine extends INotifyEngine {
       aud: encodeEd25519Key(notifyKeys.dappIdentityKey),
       ksu: this.client.keyserverUrl,
       sub: composeDidPkh(accountId),
-      app: isLimited? `did:web:${appDomain}` : null,
+      app: isLimited ? `did:web:${appDomain}` : null,
     };
 
     const generatedAuth = await this.client.identityKeys.generateIdAuth(
@@ -829,7 +833,7 @@ export class NotifyEngine extends INotifyEngine {
     this.client.lastWatchedAccount.set(LAST_WATCHED_KEY, {
       [LAST_WATCHED_KEY]: accountId,
       appDomain,
-      isLimited
+      isLimited,
     });
 
     this.client.logger.info("watchSubscriptions >", "requestId >", id);
@@ -1271,8 +1275,11 @@ export class NotifyEngine extends INotifyEngine {
   private watchLastWatchedAccountIfExists = async () => {
     // If an account was previously watched
     if (this.client.lastWatchedAccount.keys.length === 1) {
-      const { lastWatched: account, appDomain, isLimited } =
-        this.client.lastWatchedAccount.get(LAST_WATCHED_KEY);
+      const {
+        lastWatched: account,
+        appDomain,
+        isLimited,
+      } = this.client.lastWatchedAccount.get(LAST_WATCHED_KEY);
 
       try {
         // Account for invalid state where the last watched account does not have an identity.

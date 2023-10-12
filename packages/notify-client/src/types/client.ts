@@ -250,8 +250,8 @@ export abstract class INotifyClient {
   public abstract lastWatchedAccount: IStore<
     typeof LAST_WATCHED_KEY,
     {
-      isLimited: boolean,
-      appDomain: string,
+      isLimited: boolean;
+      appDomain: string;
       [LAST_WATCHED_KEY]: string;
     }
   >;
