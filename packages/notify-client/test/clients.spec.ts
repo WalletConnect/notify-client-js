@@ -197,6 +197,8 @@ describe("Notify", () => {
 
         const subscriptions = wallet.subscriptions.getAll();
 
+	console.log({vals: Object.values(subscriptions[0].scope)})
+
         // Ensure all scopes are enabled in the initial subscription.
         expect(
           Object.values(subscriptions[0].scope)

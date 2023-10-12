@@ -25,6 +25,7 @@ import axios from "axios";
 import jwtDecode, { InvalidTokenError } from "jwt-decode";
 
 import {
+    DEFAULT_EXPLORER_API_URL,
   DID_WEB_PREFIX,
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
@@ -93,7 +94,7 @@ export class NotifyEngine extends INotifyEngine {
 
     const dappUrl = getDappUrl(appDomain);
     const { dappPublicKey, dappIdentityKey } = await this.resolveKeys(dappUrl);
-    const notifyConfig = await this.resolveNotifyConfig(dappUrl);
+    const notifyConfig = await this.resolveNotifyConfig(appDomain);
 
     this.client.logger.info(
       `[Notify] subscribe > publicKey for ${dappUrl} is: ${dappPublicKey}`
@@ -117,8 +118,9 @@ export class NotifyEngine extends INotifyEngine {
     });
     const issuedAt = Math.round(Date.now() / 1000);
     const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifySubscribe"].req.ttl;
-    const scp = notifyConfig.types
-      .map((type) => type.name)
+    console.log({notifyConfig})
+    const scp = notifyConfig.notificationTypes
+      .map((type) => type.id)
       .join(JWT_SCP_SEPARATOR);
     const payload: NotifyClientTypes.SubscriptionJWTClaims = {
       iat: issuedAt,
@@ -862,9 +864,8 @@ export class NotifyEngine extends INotifyEngine {
     // Update all subscriptions to account for any changes in scope.
     const updateSubscriptionsPromises = claims.sbs.map(async (sub) => {
       const sbTopic = hashKey(sub.symKey);
-      const dappUrl = getDappUrl(sub.appDomain);
-      const dappConfig = await this.resolveNotifyConfig(dappUrl);
-      const scopeMap = this.generateScopeMap(dappConfig, sub);
+      const notifyConfig = await this.resolveNotifyConfig(sub.appDomain);
+      const scopeMap = this.generateScopeMap(notifyConfig, sub);
 
       await this.client.subscriptions.set(sbTopic, {
         account: sub.account,
@@ -873,9 +874,9 @@ export class NotifyEngine extends INotifyEngine {
         scope: scopeMap,
         symKey: sub.symKey,
         metadata: {
-          name: dappConfig.name,
-          description: dappConfig.description,
-          icons: dappConfig.icons,
+          name: notifyConfig.name,
+          description: notifyConfig.description,
+          icons: notifyConfig.image_url,
           appDomain: sub.appDomain,
         },
         relay: {
@@ -1179,14 +1180,13 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   private resolveNotifyConfig = async (
-    dappUrl: string
+    dappDomain: string
   ): Promise<NotifyClientTypes.NotifyConfigDocument> => {
+    const dappConfigUrl = `${DEFAULT_EXPLORER_API_URL}/notify-config?projectId=${this.client.core.projectId}&appDomain=${dappDomain}`
     try {
       // Fetch dapp's Notify config from its hosted wc-notify-config.
-      const notifyConfigResp = await axios.get(
-        `${dappUrl}/.well-known/wc-notify-config.json`
-      );
-      const notifyConfig = notifyConfigResp.data;
+      const notifyConfigResp = await axios.get(dappConfigUrl);
+      const notifyConfig = notifyConfigResp.data.data;
 
       this.client.logger.info(
         `[Notify] subscribe > got notify config: ${JSON.stringify(
@@ -1196,7 +1196,7 @@ export class NotifyEngine extends INotifyEngine {
       return notifyConfig;
     } catch (error: any) {
       throw new Error(
-        `Failed to fetch dapp's Notify config from ${dappUrl}/.well-known/wc-notify-config.json. Error: ${error.message}`
+        `Failed to fetch dapp's Notify config from ${dappConfigUrl}. Error: ${error.message}`
       );
     }
   };
@@ -1205,13 +1205,18 @@ export class NotifyEngine extends INotifyEngine {
     dappConfig: NotifyClientTypes.NotifyConfigDocument,
     serverSub: NotifyClientTypes.NotifyServerSubscription
   ): NotifyClientTypes.ScopeMap => {
+
+    console.log("--- generating scope map")
+    console.log("server scopes", serverSub.scope)
+    console.log("dappConnfig", dappConfig.notificationTypes.map(t => t.id))
+    console.log("--- finished generating scope map")
     return Object.fromEntries(
-      dappConfig.types.map((type) => {
+      dappConfig.notificationTypes.map((type) => {
         return [
-          type.name,
+          type.id,
           {
             ...type,
-            enabled: serverSub.scope.includes(type.name),
+            enabled: serverSub.scope.includes(type.id),
           },
         ];
       })

@@ -211,14 +211,15 @@ export declare namespace NotifyClientTypes {
   }
 
   interface NotifyConfigDocument {
-    schemaVersion: number;
-    types: Array<{
+    id: string
+    name: Metadata["name"];
+    notificationTypes: Array<{
+      id: string
       name: string;
       description: string;
     }>;
-    name: Metadata["name"];
     description: Metadata["description"];
-    icons: Metadata["icons"];
+    image_url: Metadata["icons"];
   }
 }
 
