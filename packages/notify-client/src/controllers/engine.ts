@@ -1115,12 +1115,10 @@ export class NotifyEngine extends INotifyEngine {
           statement
         )
       ) {
-	console.log("statement is stale.")
         try {
           await this.client.identityKeys.unregisterIdentity({
             account: accountId,
           });
-	  console.log("removed identity key")
         } catch {
           throw new Error(
             `Failed to unregister ${accountId} which has a stale signature`
@@ -1262,11 +1260,7 @@ export class NotifyEngine extends INotifyEngine {
 
     const signedStatement = this.client.signedStatements.get(account);
 
-    if (signedStatement.statement !== currentStatement) {
-      return true;
-    }
-
-    return false;
+    return signedStatement.statement !== currentStatement
   };
 
   private watchLastWatchedAccountIfExists = async () => {

@@ -74,19 +74,15 @@ describe("Notify", () => {
       it("can handle stale statements", async () => {
 	let onSignCalledTimes = 0;
 	const countedOnSign = async (message: string) => {
-	  console.log("Calling sign")
 	  onSignCalledTimes += 1;
 	  return onSign(message);
 	}
 	
-	console.log("registering 1")
 	const identityKey1 = await wallet.register({account, onSign: countedOnSign, domain: gmDappMetadata.appDomain})
 
 	await wallet.signedStatements.set(account, { statement: "false statement", account });
 
-	console.log("registering 2")
 	const identityKey2 = await wallet.register({account, onSign: countedOnSign, domain: gmDappMetadata.appDomain})
-	console.log("finished registering 2")
 
 	await waitForEvent(() => onSignCalledTimes === 2);
 
