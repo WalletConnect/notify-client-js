@@ -211,10 +211,10 @@ export declare namespace NotifyClientTypes {
   }
 
   interface NotifyConfigDocument {
-    id: string
+    id: string;
     name: Metadata["name"];
     notificationTypes: Array<{
-      id: string
+      id: string;
       name: string;
       description: string;
     }>;

@@ -7,7 +7,8 @@ export const NOTIFY_CLIENT_STORAGE_PREFIX = `${NOTIFY_CLIENT_PROTOCOL}@${NOTIFY_
 
 export const DEFAULT_RELAY_SERVER_URL = "wss://relay.walletconnect.com";
 export const DEFAULT_NOTIFY_SERVER_URL = "https://notify.walletconnect.com";
-export const DEFAULT_EXPLORER_API_URL = "https://explorer-api.walletconnect.com/w3i/v1";
+export const DEFAULT_EXPLORER_API_URL =
+  "https://explorer-api.walletconnect.com/w3i/v1";
 export const DEFAULT_KEYSERVER_URL = "https://keys.walletconnect.com";
 
 export const LAST_WATCHED_KEY = "lastWatched";

@@ -25,7 +25,7 @@ import axios from "axios";
 import jwtDecode, { InvalidTokenError } from "jwt-decode";
 
 import {
-    DEFAULT_EXPLORER_API_URL,
+  DEFAULT_EXPLORER_API_URL,
   DID_WEB_PREFIX,
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
@@ -118,7 +118,7 @@ export class NotifyEngine extends INotifyEngine {
     });
     const issuedAt = Math.round(Date.now() / 1000);
     const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifySubscribe"].req.ttl;
-    console.log({notifyConfig})
+    console.log({ notifyConfig });
     const scp = notifyConfig.notificationTypes
       .map((type) => type.id)
       .join(JWT_SCP_SEPARATOR);
@@ -1182,7 +1182,7 @@ export class NotifyEngine extends INotifyEngine {
   private resolveNotifyConfig = async (
     dappDomain: string
   ): Promise<NotifyClientTypes.NotifyConfigDocument> => {
-    const dappConfigUrl = `${DEFAULT_EXPLORER_API_URL}/notify-config?projectId=${this.client.core.projectId}&appDomain=${dappDomain}`
+    const dappConfigUrl = `${DEFAULT_EXPLORER_API_URL}/notify-config?projectId=${this.client.core.projectId}&appDomain=${dappDomain}`;
     try {
       // Fetch dapp's Notify config from its hosted wc-notify-config.
       const notifyConfigResp = await axios.get(dappConfigUrl);
@@ -1205,11 +1205,6 @@ export class NotifyEngine extends INotifyEngine {
     dappConfig: NotifyClientTypes.NotifyConfigDocument,
     serverSub: NotifyClientTypes.NotifyServerSubscription
   ): NotifyClientTypes.ScopeMap => {
-
-    console.log("--- generating scope map")
-    console.log("server scopes", serverSub.scope)
-    console.log("dappConnfig", dappConfig.notificationTypes.map(t => t.id))
-    console.log("--- finished generating scope map")
     return Object.fromEntries(
       dappConfig.notificationTypes.map((type) => {
         return [
