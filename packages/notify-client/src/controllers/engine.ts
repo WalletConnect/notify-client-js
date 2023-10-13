@@ -118,7 +118,6 @@ export class NotifyEngine extends INotifyEngine {
     });
     const issuedAt = Math.round(Date.now() / 1000);
     const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifySubscribe"].req.ttl;
-    console.log({ notifyConfig });
     const scp = notifyConfig.notificationTypes
       .map((type) => type.id)
       .join(JWT_SCP_SEPARATOR);
