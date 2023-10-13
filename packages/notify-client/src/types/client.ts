@@ -67,7 +67,8 @@ export declare namespace NotifyClientTypes {
     appDomain: string;
   }
 
-  type ScopeMap = Record<string, { description: string; enabled: boolean }>;
+  type ScopeMap = Record<string, { name: string, id: string, 
+    description: string; enabled: boolean }>;
 
   interface NotifySubscription {
     topic: string;
