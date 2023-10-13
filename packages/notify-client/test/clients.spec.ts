@@ -501,7 +501,7 @@ describe("Notify", () => {
       });
 
       it("automatically fires watchSubscriptions on init", async () => {
-        const storageLoc = generateClientDbName("notifyTest");
+        const storageLoc = generateClientDbName("notifyTestAutomatic");
         const wallet1 = await NotifyClient.init({
           name: "testNotifyClient1",
           logger: "error",
@@ -528,7 +528,6 @@ describe("Notify", () => {
 
         await waitForEvent(() => wallet1ReceivedChangedEvent);
 
-        const storageLoc2 = generateClientDbName("notifyTest2");
         const wallet2 = await NotifyClient.init({
           name: "testNotifyClient2",
           logger: "error",
@@ -536,7 +535,7 @@ describe("Notify", () => {
           relayUrl: DEFAULT_RELAY_URL,
           core: new Core({
             projectId,
-            storageOptions: { database: storageLoc2 },
+            storageOptions: { database: storageLoc },
           }),
           projectId,
         });
