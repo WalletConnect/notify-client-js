@@ -604,7 +604,7 @@ describe("Notify", () => {
       });
 
       it("correctly uses limit", async () => {
-        const storageLoc1 = generateClientDbName("notifyTest1");
+        const storageLoc1 = generateClientDbName("notifyTestLimit1");
         const wallet1 = await NotifyClient.init({
           name: "testNotifyClient1",
           logger: "error",
@@ -631,7 +631,7 @@ describe("Notify", () => {
 
         await waitForEvent(() => wallet1ReceivedChangedEvent);
 
-        const storageLoc2 = generateClientDbName("notifyTest2");
+        const storageLoc2 = generateClientDbName("notifyTestLimit2");
         const wallet2 = await NotifyClient.init({
           name: "testNotifyClient2",
           logger: "error",
@@ -664,7 +664,7 @@ describe("Notify", () => {
           Object.keys(wallet1.getActiveSubscriptions()).sort()
         );
 
-        const storageLoc3 = generateClientDbName("notifyTest3");
+        const storageLoc3 = generateClientDbName("notifyTestLimit3");
         const wallet3 = await NotifyClient.init({
           name: "testNotifyClient3",
           logger: "error",
