@@ -66,7 +66,7 @@ export class NotifyEngine extends INotifyEngine {
     onSign,
     domain,
   }) => {
-    // explicity check if it was set to false because null/undefined should count as
+    // Explicitly check if it was set to false because null/undefined should count as
     // as "true" since by default it should be limited. The default of `isLimited` is
     // true.
     const statement =
