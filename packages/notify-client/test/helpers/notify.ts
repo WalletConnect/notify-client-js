@@ -39,7 +39,6 @@ export const createNotifySubscription = async (
 
   await wallet.register({
     domain,
-    isLimited: false,
     account,
     onSign,
   });
@@ -77,7 +76,7 @@ export const sendNotifyMessage = async (
       title: "Test Message",
       icon: "",
       url: "https://test.coms",
-      type: "gm_hourly",
+      type: "cad9a52d-9b0f-4aed-9cca-3e9568a079f9",
     },
     accounts: [account],
   };
