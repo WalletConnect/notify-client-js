@@ -603,7 +603,7 @@ describe("Notify", () => {
         );
       });
 
-      it("correctly uses limit", async () => {
+      it("correctly handles limited access via `isLimited`", async () => {
         const storageLoc1 = generateClientDbName("notifyTestLimit1");
         const wallet1 = await NotifyClient.init({
           name: "testNotifyClient1",
