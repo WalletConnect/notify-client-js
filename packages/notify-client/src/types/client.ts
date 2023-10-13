@@ -60,9 +60,9 @@ export declare namespace NotifyClientTypes {
     name: string;
     description: string;
     icons: {
-      sm: string
-      md: string
-      lg: string
+      sm: string;
+      md: string;
+      lg: string;
     };
     appDomain: string;
   }
