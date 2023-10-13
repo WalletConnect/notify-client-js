@@ -40,6 +40,7 @@ export const createNotifySubscription = async (
   await wallet.register({
     domain,
     account,
+    isLimited: false,
     onSign,
   });
 
