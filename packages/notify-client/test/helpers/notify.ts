@@ -77,7 +77,7 @@ export const sendNotifyMessage = async (
       title: "Test Message",
       icon: "",
       url: "https://test.coms",
-      // gm_hourly notifiation ID, comes from Cloud.
+      // gm_hourly notification ID, taken from `gm-dapp` project on Cloud.
       type: "cad9a52d-9b0f-4aed-9cca-3e9568a079f9",
     },
     accounts: [account],
