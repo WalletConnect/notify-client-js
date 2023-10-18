@@ -59,11 +59,7 @@ export declare namespace NotifyClientTypes {
   interface Metadata {
     name: string;
     description: string;
-    icons: {
-      sm: string;
-      md: string;
-      lg: string;
-    };
+    icons: string[];
     appDomain: string;
   }
 
@@ -226,7 +222,11 @@ export declare namespace NotifyClientTypes {
       description: string;
     }>;
     description: Metadata["description"];
-    image_url: Metadata["icons"];
+    image_url: {
+      sm: string
+      md: string
+      lg: string
+    };
   }
 }
 
