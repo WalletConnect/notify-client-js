@@ -223,9 +223,9 @@ export declare namespace NotifyClientTypes {
     }>;
     description: Metadata["description"];
     image_url: {
-      sm: string
-      md: string
-      lg: string
+      sm: string;
+      md: string;
+      lg: string;
     };
   }
 }
