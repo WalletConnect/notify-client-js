@@ -80,6 +80,7 @@ describe("Notify", () => {
 
         const identityKey1 = await wallet.register({
           account,
+          isLimited: false,
           onSign: countedOnSign,
           domain: gmDappMetadata.appDomain,
         });
@@ -91,6 +92,7 @@ describe("Notify", () => {
 
         const identityKey2 = await wallet.register({
           account,
+          isLimited: false,
           onSign: countedOnSign,
           domain: gmDappMetadata.appDomain,
         });
@@ -101,6 +103,7 @@ describe("Notify", () => {
 
         const identityKey3 = await wallet.register({
           account,
+          isLimited: false,
           onSign: countedOnSign,
           domain: gmDappMetadata.appDomain,
         });
@@ -129,6 +132,7 @@ describe("Notify", () => {
         });
 
         await wallet.register({
+          isLimited: false,
           account,
           onSign,
           domain: gmDappMetadata.appDomain,
@@ -497,7 +501,7 @@ describe("Notify", () => {
       });
 
       it("automatically fires watchSubscriptions on init", async () => {
-        const storageLoc = generateClientDbName("notifyTest");
+        const storageLoc = generateClientDbName("notifyTestAutomatic");
         const wallet1 = await NotifyClient.init({
           name: "testNotifyClient1",
           logger: "error",
@@ -516,6 +520,7 @@ describe("Notify", () => {
         });
 
         await wallet1.register({
+          isLimited: false,
           account,
           onSign,
           domain: "unrelated.domain.com",
@@ -583,6 +588,7 @@ describe("Notify", () => {
         });
 
         await wallet2.register({
+          isLimited: false,
           account,
           onSign,
           domain: "unrelated.domain.com",
@@ -595,6 +601,99 @@ describe("Notify", () => {
         expect(wallet1.subscriptions.getAll().length).toEqual(
           wallet2.subscriptions.getAll().length
         );
+      });
+
+      it("correctly handles limited access via `isLimited`", async () => {
+        const storageLoc1 = generateClientDbName("notifyTestLimit1");
+        const wallet1 = await NotifyClient.init({
+          name: "testNotifyClient1",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core: new Core({
+            projectId,
+            storageOptions: { database: storageLoc1 },
+          }),
+          projectId,
+        });
+
+        let wallet1ReceivedChangedEvent = false;
+        wallet1.on("notify_subscriptions_changed", () => {
+          wallet1ReceivedChangedEvent = true;
+        });
+
+        await wallet1.register({
+          isLimited: true,
+          account,
+          onSign,
+          domain: gmDappMetadata.appDomain,
+        });
+
+        await waitForEvent(() => wallet1ReceivedChangedEvent);
+
+        const storageLoc2 = generateClientDbName("notifyTestLimit2");
+        const wallet2 = await NotifyClient.init({
+          name: "testNotifyClient2",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core: new Core({
+            projectId,
+            storageOptions: { database: storageLoc2 },
+          }),
+          projectId,
+        });
+
+        let wallet2ReceivedChangedEvent = false;
+        wallet2.on("notify_subscriptions_changed", () => {
+          wallet2ReceivedChangedEvent = true;
+        });
+
+        await wallet2.register({
+          isLimited: true,
+          account,
+          onSign,
+          domain: gmDappMetadata.appDomain,
+        });
+
+        await waitForEvent(() => wallet2ReceivedChangedEvent);
+
+        expect(wallet2ReceivedChangedEvent).toEqual(true);
+
+        expect(Object.keys(wallet2.getActiveSubscriptions()).sort()).toEqual(
+          Object.keys(wallet1.getActiveSubscriptions()).sort()
+        );
+
+        const storageLoc3 = generateClientDbName("notifyTestLimit3");
+        const wallet3 = await NotifyClient.init({
+          name: "testNotifyClient3",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core: new Core({
+            projectId,
+            storageOptions: { database: storageLoc3 },
+          }),
+          projectId,
+        });
+
+        let wallet3ReceivedChangedEvent = false;
+        wallet3.on("notify_subscriptions_changed", () => {
+          wallet3ReceivedChangedEvent = true;
+        });
+
+        await wallet3.register({
+          isLimited: true,
+          account,
+          onSign,
+          domain: "unrelated.domain",
+        });
+
+        await waitForEvent(() => wallet3ReceivedChangedEvent);
+
+        expect(wallet3ReceivedChangedEvent).toEqual(true);
+
+        expect(Object.keys(wallet3.getActiveSubscriptions()).length).toEqual(0);
       });
     });
   });

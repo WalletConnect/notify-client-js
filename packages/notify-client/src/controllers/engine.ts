@@ -25,11 +25,13 @@ import axios from "axios";
 import jwtDecode, { InvalidTokenError } from "jwt-decode";
 
 import {
+  DEFAULT_EXPLORER_API_URL,
   DID_WEB_PREFIX,
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
   LAST_WATCHED_KEY,
-  NOTIFY_AUTHORIZATION_STATEMENT,
+  NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS,
+  NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
 } from "../constants";
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
 import { getDappUrl } from "../utils/formats";
@@ -61,10 +63,17 @@ export class NotifyEngine extends INotifyEngine {
 
   public register: INotifyEngine["register"] = async ({
     account,
+    isLimited,
     onSign,
     domain,
   }) => {
-    const statement = NOTIFY_AUTHORIZATION_STATEMENT;
+    // Explicitly check if it was set to false because null/undefined should count as
+    // as "true" since by default it should be limited. The default of `isLimited` is
+    // true.
+    const statement =
+      isLimited === false
+        ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
+        : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
 
     // Retrieve existing identity or register a new one for this account on this device.
     const identity = await this.registerIdentity(
@@ -75,7 +84,7 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     try {
-      await this.watchSubscriptions(account);
+      await this.watchSubscriptions(account, domain, isLimited ?? true);
     } catch (error: any) {
       this.client.logger.error(
         `[Notify] Engine.register > watching subscriptions failed > ${error.message}`
@@ -93,7 +102,7 @@ export class NotifyEngine extends INotifyEngine {
 
     const dappUrl = getDappUrl(appDomain);
     const { dappPublicKey, dappIdentityKey } = await this.resolveKeys(dappUrl);
-    const notifyConfig = await this.resolveNotifyConfig(dappUrl);
+    const notifyConfig = await this.resolveNotifyConfig(appDomain);
 
     this.client.logger.info(
       `[Notify] subscribe > publicKey for ${dappUrl} is: ${dappPublicKey}`
@@ -117,8 +126,8 @@ export class NotifyEngine extends INotifyEngine {
     });
     const issuedAt = Math.round(Date.now() / 1000);
     const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifySubscribe"].req.ttl;
-    const scp = notifyConfig.types
-      .map((type) => type.name)
+    const scp = notifyConfig.notificationTypes
+      .map((type) => type.id)
       .join(JWT_SCP_SEPARATOR);
     const payload: NotifyClientTypes.SubscriptionJWTClaims = {
       iat: issuedAt,
@@ -755,7 +764,11 @@ export class NotifyEngine extends INotifyEngine {
     return hashKey(notifyId);
   }
 
-  private async watchSubscriptions(accountId: string) {
+  private async watchSubscriptions(
+    accountId: string,
+    appDomain: string,
+    isLimited: boolean
+  ) {
     const notifyKeys = await this.resolveKeys(this.client.notifyServerUrl);
 
     // Derive req topic from did.json
@@ -791,7 +804,7 @@ export class NotifyEngine extends INotifyEngine {
       aud: encodeEd25519Key(notifyKeys.dappIdentityKey),
       ksu: this.client.keyserverUrl,
       sub: composeDidPkh(accountId),
-      app: null,
+      app: isLimited ? `did:web:${appDomain}` : null,
     };
 
     const generatedAuth = await this.client.identityKeys.generateIdAuth(
@@ -820,6 +833,8 @@ export class NotifyEngine extends INotifyEngine {
 
     this.client.lastWatchedAccount.set(LAST_WATCHED_KEY, {
       [LAST_WATCHED_KEY]: accountId,
+      appDomain,
+      isLimited,
     });
 
     this.client.logger.info("watchSubscriptions >", "requestId >", id);
@@ -862,9 +877,8 @@ export class NotifyEngine extends INotifyEngine {
     // Update all subscriptions to account for any changes in scope.
     const updateSubscriptionsPromises = claims.sbs.map(async (sub) => {
       const sbTopic = hashKey(sub.symKey);
-      const dappUrl = getDappUrl(sub.appDomain);
-      const dappConfig = await this.resolveNotifyConfig(dappUrl);
-      const scopeMap = this.generateScopeMap(dappConfig, sub);
+      const notifyConfig = await this.resolveNotifyConfig(sub.appDomain);
+      const scopeMap = this.generateScopeMap(notifyConfig, sub);
 
       await this.client.subscriptions.set(sbTopic, {
         account: sub.account,
@@ -873,9 +887,9 @@ export class NotifyEngine extends INotifyEngine {
         scope: scopeMap,
         symKey: sub.symKey,
         metadata: {
-          name: dappConfig.name,
-          description: dappConfig.description,
-          icons: dappConfig.icons,
+          name: notifyConfig.name,
+          description: notifyConfig.description,
+          icons: notifyConfig.image_url,
           appDomain: sub.appDomain,
         },
         relay: {
@@ -1200,14 +1214,13 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   private resolveNotifyConfig = async (
-    dappUrl: string
+    dappDomain: string
   ): Promise<NotifyClientTypes.NotifyConfigDocument> => {
+    const dappConfigUrl = `${DEFAULT_EXPLORER_API_URL}/notify-config?projectId=${this.client.core.projectId}&appDomain=${dappDomain}`;
     try {
       // Fetch dapp's Notify config from its hosted wc-notify-config.
-      const notifyConfigResp = await axios.get(
-        `${dappUrl}/.well-known/wc-notify-config.json`
-      );
-      const notifyConfig = notifyConfigResp.data;
+      const notifyConfigResp = await axios.get(dappConfigUrl);
+      const notifyConfig = notifyConfigResp.data.data;
 
       this.client.logger.info(
         `[Notify] subscribe > got notify config: ${JSON.stringify(
@@ -1217,7 +1230,7 @@ export class NotifyEngine extends INotifyEngine {
       return notifyConfig;
     } catch (error: any) {
       throw new Error(
-        `Failed to fetch dapp's Notify config from ${dappUrl}/.well-known/wc-notify-config.json. Error: ${error.message}`
+        `Failed to fetch dapp's Notify config from ${dappConfigUrl}. Error: ${error.message}`
       );
     }
   };
@@ -1227,12 +1240,12 @@ export class NotifyEngine extends INotifyEngine {
     serverSub: NotifyClientTypes.NotifyServerSubscription
   ): NotifyClientTypes.ScopeMap => {
     return Object.fromEntries(
-      dappConfig.types.map((type) => {
+      dappConfig.notificationTypes.map((type) => {
         return [
-          type.name,
+          type.id,
           {
             ...type,
-            enabled: serverSub.scope.includes(type.name),
+            enabled: serverSub.scope.includes(type.id),
           },
         ];
       })
@@ -1261,8 +1274,11 @@ export class NotifyEngine extends INotifyEngine {
   private watchLastWatchedAccountIfExists = async () => {
     // If an account was previously watched
     if (this.client.lastWatchedAccount.keys.length === 1) {
-      const { lastWatched: account } =
-        this.client.lastWatchedAccount.get(LAST_WATCHED_KEY);
+      const {
+        lastWatched: account,
+        appDomain,
+        isLimited,
+      } = this.client.lastWatchedAccount.get(LAST_WATCHED_KEY);
 
       try {
         // Account for invalid state where the last watched account does not have an identity.
@@ -1282,7 +1298,7 @@ export class NotifyEngine extends INotifyEngine {
       }
 
       try {
-        await this.watchSubscriptions(account);
+        await this.watchSubscriptions(account, appDomain, isLimited);
       } catch (error: any) {
         this.client.logger.error(
           `[Notify] Engine.watchLastWatchedAccountIfExists > Failed to watch subscriptions for account ${account} > ${error.message}`

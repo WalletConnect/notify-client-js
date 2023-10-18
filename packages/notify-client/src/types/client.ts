@@ -59,11 +59,18 @@ export declare namespace NotifyClientTypes {
   interface Metadata {
     name: string;
     description: string;
-    icons: string[];
+    icons: {
+      sm: string;
+      md: string;
+      lg: string;
+    };
     appDomain: string;
   }
 
-  type ScopeMap = Record<string, { description: string; enabled: boolean }>;
+  type ScopeMap = Record<
+    string,
+    { name: string; id: string; description: string; enabled: boolean }
+  >;
 
   interface NotifySubscription {
     topic: string;
@@ -211,14 +218,15 @@ export declare namespace NotifyClientTypes {
   }
 
   interface NotifyConfigDocument {
-    schemaVersion: number;
-    types: Array<{
+    id: string;
+    name: Metadata["name"];
+    notificationTypes: Array<{
+      id: string;
       name: string;
       description: string;
     }>;
-    name: Metadata["name"];
     description: Metadata["description"];
-    icons: Metadata["icons"];
+    image_url: Metadata["icons"];
   }
 }
 
@@ -250,6 +258,8 @@ export abstract class INotifyClient {
   public abstract lastWatchedAccount: IStore<
     typeof LAST_WATCHED_KEY,
     {
+      isLimited: boolean;
+      appDomain: string;
       [LAST_WATCHED_KEY]: string;
     }
   >;

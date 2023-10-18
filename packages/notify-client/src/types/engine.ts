@@ -32,6 +32,7 @@ export abstract class INotifyEngine {
   public abstract register(params: {
     account: string;
     onSign: (message: string) => Promise<string>;
+    isLimited?: boolean;
     domain: string;
   }): Promise<string>;
 
