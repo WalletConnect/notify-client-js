@@ -126,9 +126,9 @@ export class NotifyEngine extends INotifyEngine {
     });
     const issuedAt = Math.round(Date.now() / 1000);
     const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifySubscribe"].req.ttl;
-    const scp = notifyConfig.notificationTypes
+    const scp = notifyConfig?.notificationTypes
       .map((type) => type.id)
-      .join(JWT_SCP_SEPARATOR);
+      .join(JWT_SCP_SEPARATOR) ?? '';
     const payload: NotifyClientTypes.SubscriptionJWTClaims = {
       iat: issuedAt,
       exp: expiry,
@@ -878,7 +878,7 @@ export class NotifyEngine extends INotifyEngine {
     const updateSubscriptionsPromises = claims.sbs.map(async (sub) => {
       const sbTopic = hashKey(sub.symKey);
       const notifyConfig = await this.resolveNotifyConfig(sub.appDomain);
-      const scopeMap = this.generateScopeMap(notifyConfig, sub);
+      const scopeMap = notifyConfig? this.generateScopeMap(notifyConfig, sub) : {};
 
       await this.client.subscriptions.set(sbTopic, {
         account: sub.account,
@@ -887,9 +887,9 @@ export class NotifyEngine extends INotifyEngine {
         scope: scopeMap,
         symKey: sub.symKey,
         metadata: {
-          name: notifyConfig.name,
-          description: notifyConfig.description,
-          icons: Object.values(notifyConfig.image_url),
+          name: notifyConfig?.name ?? sub.appDomain,
+          description: notifyConfig?.description ?? sub.appDomain,
+          icons: notifyConfig? Object.values(notifyConfig.image_url) : [],
           appDomain: sub.appDomain,
         },
         relay: {
@@ -1215,7 +1215,7 @@ export class NotifyEngine extends INotifyEngine {
 
   private resolveNotifyConfig = async (
     dappDomain: string
-  ): Promise<NotifyClientTypes.NotifyConfigDocument> => {
+  ): Promise<NotifyClientTypes.NotifyConfigDocument | null> => {
     const dappConfigUrl = `${DEFAULT_EXPLORER_API_URL}/notify-config?projectId=${this.client.core.projectId}&appDomain=${dappDomain}`;
     try {
       // Fetch dapp's Notify config from its hosted wc-notify-config.
@@ -1229,9 +1229,10 @@ export class NotifyEngine extends INotifyEngine {
       );
       return notifyConfig;
     } catch (error: any) {
-      throw new Error(
+      this.client.logger.error(
         `Failed to fetch dapp's Notify config from ${dappConfigUrl}. Error: ${error.message}`
       );
+      return null;
     }
   };
 
