@@ -126,9 +126,10 @@ export class NotifyEngine extends INotifyEngine {
     });
     const issuedAt = Math.round(Date.now() / 1000);
     const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifySubscribe"].req.ttl;
-    const scp = notifyConfig?.notificationTypes
-      .map((type) => type.id)
-      .join(JWT_SCP_SEPARATOR) ?? '';
+    const scp =
+      notifyConfig?.notificationTypes
+        .map((type) => type.id)
+        .join(JWT_SCP_SEPARATOR) ?? "";
     const payload: NotifyClientTypes.SubscriptionJWTClaims = {
       iat: issuedAt,
       exp: expiry,
@@ -878,7 +879,9 @@ export class NotifyEngine extends INotifyEngine {
     const updateSubscriptionsPromises = claims.sbs.map(async (sub) => {
       const sbTopic = hashKey(sub.symKey);
       const notifyConfig = await this.resolveNotifyConfig(sub.appDomain);
-      const scopeMap = notifyConfig? this.generateScopeMap(notifyConfig, sub) : {};
+      const scopeMap = notifyConfig
+        ? this.generateScopeMap(notifyConfig, sub)
+        : {};
 
       await this.client.subscriptions.set(sbTopic, {
         account: sub.account,
@@ -889,7 +892,7 @@ export class NotifyEngine extends INotifyEngine {
         metadata: {
           name: notifyConfig?.name ?? sub.appDomain,
           description: notifyConfig?.description ?? sub.appDomain,
-          icons: notifyConfig? Object.values(notifyConfig.image_url) : [],
+          icons: notifyConfig ? Object.values(notifyConfig.image_url) : [],
           appDomain: sub.appDomain,
         },
         relay: {
