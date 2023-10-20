@@ -42,6 +42,9 @@ export class NotifyEngine extends INotifyEngine {
 
   private didDocMap = new Map<string, NotifyClientTypes.NotifyDidDocument>();
 
+  // this should NOT be presisted in a store. Watched Keys are transient and generated every session.
+  private watchedAccountTopics = new Map<string, { reqTopic: string, resTopic: string }>
+
   constructor(client: INotifyEngine["client"]) {
     super(client);
   }
@@ -96,6 +99,20 @@ export class NotifyEngine extends INotifyEngine {
 
   public unregister: INotifyEngine["unregister"] = async ({ account }) => {
     try {
+      // Unsubscribe from topics related to watching subscriptions
+      const topics = this.watchedAccountTopics.get(account);
+
+      if(topics) {
+	await this.client.core.relayer.unsubscribe(topics.reqTopic);
+	await this.client.core.relayer.unsubscribe(topics.resTopic);
+      }
+
+      // Unsubscribe from subscription topics
+      for(const sub of Object.values(this.getActiveSubscriptions({account}))) {
+	await this.client.core.relayer.unsubscribe(sub.topic);
+      }
+
+      // unregister from identity server
       await this.client.identityKeys.unregisterIdentity({ account });
     } catch (error: any) {
       this.client.logger.error(
@@ -848,6 +865,8 @@ export class NotifyEngine extends INotifyEngine {
       isLimited,
     });
 
+    this.watchedAccountTopics.set(accountId, { reqTopic: notifyServerWatchTopic, resTopic});
+
     this.client.logger.info("watchSubscriptions >", "requestId >", id);
   }
 
@@ -1138,6 +1157,7 @@ export class NotifyEngine extends INotifyEngine {
     if (await this.client.identityKeys.hasIdentity({ account: accountId })) {
       if (this.checkIfSignedStatementIsStale(accountId, statement)) {
         try {
+
           await this.client.identityKeys.unregisterIdentity({
             account: accountId,
           });
