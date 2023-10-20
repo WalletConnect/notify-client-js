@@ -15,6 +15,7 @@ import { disconnectSocket } from "./helpers/ws";
 import axios from "axios";
 import { ICore } from "@walletconnect/types";
 import { generateClientDbName } from "./helpers/storage";
+import { encodeEd25519Key } from "@walletconnect/did-jwt";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
@@ -111,6 +112,34 @@ describe("Notify", () => {
         expect(identityKey3).toEqual(identityKey2);
 
         expect(onSignCalledTimes).toEqual(2);
+      });
+    });
+
+    describe("unregister", () => {
+      it("can unregister", async () => {
+        const identity = await wallet.register({
+          account,
+          onSign,
+          isLimited: false,
+          domain: "unrelated.domain",
+        });
+
+        const encodedIdentity = encodeEd25519Key(identity);
+
+        // key server expects identity key in this format.
+        const identityKeyFetchFormat = encodedIdentity.split(":").pop();
+
+        const fetchUrl = `${DEFAULT_KEYSERVER_URL}/identity?publicKey=${identityKeyFetchFormat}`;
+
+        const responsePreUnregister = await fetch(fetchUrl);
+
+        expect(responsePreUnregister.status).toEqual(200);
+
+        await wallet.unregister({ account });
+
+        const responsePostUnregister = await fetch(fetchUrl);
+
+        expect(responsePostUnregister.status).toEqual(404);
       });
     });
 
