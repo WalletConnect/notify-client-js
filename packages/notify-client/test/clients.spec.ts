@@ -138,8 +138,8 @@ describe("Notify", () => {
         await wallet.unregister({ account });
 
         const responsePostUnregister = await axios(fetchUrl, {
-	  validateStatus: () => true
-	});
+          validateStatus: () => true,
+        });
 
         expect(responsePostUnregister.status).toEqual(404);
       });
