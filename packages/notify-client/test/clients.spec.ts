@@ -131,13 +131,15 @@ describe("Notify", () => {
 
         const fetchUrl = `${DEFAULT_KEYSERVER_URL}/identity?publicKey=${identityKeyFetchFormat}`;
 
-        const responsePreUnregister = await fetch(fetchUrl);
+        const responsePreUnregister = await axios(fetchUrl);
 
         expect(responsePreUnregister.status).toEqual(200);
 
         await wallet.unregister({ account });
 
-        const responsePostUnregister = await fetch(fetchUrl);
+        const responsePostUnregister = await axios(fetchUrl, {
+	  validateStatus: () => true
+	});
 
         expect(responsePostUnregister.status).toEqual(404);
       });
