@@ -94,6 +94,16 @@ export class NotifyEngine extends INotifyEngine {
     return identity;
   };
 
+  public unregister: INotifyEngine["unregister"] = async ({ account }) => {
+    try {
+      await this.client.identityKeys.unregisterIdentity({ account });
+    } catch (error: any) {
+      this.client.logger.error(
+        `[Notify] Engine.unregister > failed to unregister > ${error.message}`
+      );
+    }
+  };
+
   public subscribe: INotifyEngine["subscribe"] = async ({
     appDomain,
     account,

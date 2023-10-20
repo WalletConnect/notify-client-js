@@ -275,6 +275,7 @@ export abstract class INotifyClient {
   // ---------- Public Methods ------------------------------------------------------- //
 
   public abstract register: INotifyEngine["register"];
+  public abstract unregister: INotifyEngine["unregister"];
   public abstract subscribe: INotifyEngine["subscribe"];
   public abstract update: INotifyEngine["update"];
   public abstract decryptMessage: INotifyEngine["decryptMessage"];

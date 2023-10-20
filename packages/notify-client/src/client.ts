@@ -186,6 +186,15 @@ export class NotifyClient extends INotifyClient {
     }
   };
 
+  public unregister: INotifyClient["unregister"] = async (params) => {
+    try {
+      return await this.engine.unregister(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   // ---------- Events ----------------------------------------------- //
 
   public emit: INotifyClient["emit"] = (name, listener) => {

@@ -36,6 +36,8 @@ export abstract class INotifyEngine {
     domain: string;
   }): Promise<string>;
 
+  public abstract unregister(params: { account: string }): Promise<void>;
+
   public abstract subscribe(params: {
     appDomain: string;
     account: string;
