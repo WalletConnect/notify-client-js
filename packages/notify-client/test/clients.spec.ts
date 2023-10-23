@@ -154,11 +154,17 @@ describe("Notify", () => {
 
         expect(responsePreUnregister.status).toEqual(200);
 
+	let gotSub = false;
+	newClient.on('notify_subscriptions_changed', () => {
+	  gotSub = true;
+	})
+
         await newClient.subscribe({
           account: newAccount,
           appDomain: gmDappMetadata.appDomain,
         });
-
+	
+	await waitForEvent(() => gotSub);
         expect(newClient.subscriptions.getAll().length).toEqual(1);
 
         const subTopic = newClient.subscriptions.getAll()[0].topic;
