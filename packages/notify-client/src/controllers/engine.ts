@@ -817,9 +817,8 @@ export class NotifyEngine extends INotifyEngine {
 
     try {
       const existingWatchEntry = this.client.watchedAccounts.get(accountId);
-	pubKeyY = existingWatchEntry.publicKeyY
-	privKeyY = existingWatchEntry.privateKeyY
-
+      pubKeyY = existingWatchEntry.publicKeyY;
+      privKeyY = existingWatchEntry.privateKeyY;
     } catch {
       pubKeyY = await this.client.core.crypto.generateKeyPair();
       privKeyY = this.client.core.crypto.keychain.get(pubKeyY);
@@ -1329,14 +1328,12 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   private watchLastWatchedAccountIfExists = async () => {
-    const lastWatched = this.client.watchedAccounts.getAll().find(acc => acc.lastWatched);
+    const lastWatched = this.client.watchedAccounts
+      .getAll()
+      .find((acc) => acc.lastWatched);
     // If an account was previously watched
     if (lastWatched) {
-      const {
-        account,
-        appDomain,
-        isLimited,
-      } = lastWatched;
+      const { account, appDomain, isLimited } = lastWatched;
 
       try {
         // Account for invalid state where the last watched account does not have an identity.
