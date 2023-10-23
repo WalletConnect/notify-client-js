@@ -29,7 +29,6 @@ import {
   DID_WEB_PREFIX,
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
-  LAST_WATCHED_KEY,
   NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS,
   NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
 } from "../constants";
@@ -876,7 +875,7 @@ export class NotifyEngine extends INotifyEngine {
       .getAll()
       .filter((account) => account.lastWatched);
     for (const watchedAccount of currentlastWatchedAccounts) {
-      await this.client.watchedAccounts.update(accountId, {
+      await this.client.watchedAccounts.update(watchedAccount.account, {
         lastWatched: false,
       });
     }
@@ -1330,13 +1329,14 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   private watchLastWatchedAccountIfExists = async () => {
+    const lastWatched = this.client.watchedAccounts.getAll().find(acc => acc.lastWatched);
     // If an account was previously watched
-    if (this.client.lastWatchedAccount.keys.length === 1) {
+    if (lastWatched) {
       const {
-        lastWatched: account,
+        account,
         appDomain,
         isLimited,
-      } = this.client.lastWatchedAccount.get(LAST_WATCHED_KEY);
+      } = lastWatched;
 
       try {
         // Account for invalid state where the last watched account does not have an identity.
