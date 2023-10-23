@@ -16,6 +16,7 @@ import axios from "axios";
 import { ICore } from "@walletconnect/types";
 import { generateClientDbName } from "./helpers/storage";
 import { encodeEd25519Key } from "@walletconnect/did-jwt";
+import { getChainFromAccount } from "@walletconnect/utils";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
@@ -117,9 +118,27 @@ describe("Notify", () => {
 
     describe("unregister", () => {
       it("can unregister", async () => {
-        const identity = await wallet.register({
-          account,
-          onSign,
+        // using newly generated account to ensure clean slate for tests
+        // as this tests interacts with keys server
+        const newWallet = EthersWallet.createRandom();
+        const newAccount = `eip155:1:${newWallet.address}`;
+
+        const storageLoc = generateClientDbName("notifyTestUnregister");
+        const newClient = await NotifyClient.init({
+          name: "testNotifyClientForUnregister",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core: new Core({
+            projectId,
+            storageOptions: { database: storageLoc },
+          }),
+          projectId,
+        });
+
+        const identity = await newClient.register({
+          account: newAccount,
+          onSign: (m) => newWallet.signMessage(m),
           isLimited: false,
           domain: "unrelated.domain",
         });
@@ -135,7 +154,31 @@ describe("Notify", () => {
 
         expect(responsePreUnregister.status).toEqual(200);
 
-        await wallet.unregister({ account });
+        await newClient.subscribe({
+          account: newAccount,
+          appDomain: gmDappMetadata.appDomain,
+        });
+
+        expect(newClient.subscriptions.getAll().length).toEqual(1);
+
+        const subTopic = newClient.subscriptions.getAll()[0].topic;
+
+        expect(
+          Array.from(
+            newClient.core.relayer.subscriber.subscriptions.values()
+          ).some((sub) => sub.topic === subTopic)
+        ).toEqual(true);
+
+        await newClient.unregister({ account: newAccount });
+
+        // Notify_Subscription should stay but should not be subscribed to the relay topic
+        expect(newClient.subscriptions.getAll().length).toEqual(1);
+
+        expect(
+          Array.from(
+            newClient.core.relayer.subscriber.subscriptions.values()
+          ).some((sub) => sub.topic === subTopic)
+        ).toEqual(false);
 
         const responsePostUnregister = await axios(fetchUrl, {
           validateStatus: () => true,

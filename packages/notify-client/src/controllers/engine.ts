@@ -42,12 +42,6 @@ export class NotifyEngine extends INotifyEngine {
 
   private didDocMap = new Map<string, NotifyClientTypes.NotifyDidDocument>();
 
-  // this should NOT be presisted in a store. Watched Keys are transient and generated every session.
-  private watchedAccountTopics = new Map<
-    string,
-    { reqTopic: string; resTopic: string }
-  >();
-
   constructor(client: INotifyEngine["client"]) {
     super(client);
   }
@@ -103,7 +97,7 @@ export class NotifyEngine extends INotifyEngine {
   public unregister: INotifyEngine["unregister"] = async ({ account }) => {
     try {
       // Unsubscribe from topics related to watching subscriptions
-      const topics = this.watchedAccountTopics.get(account);
+      const topics = this.client.watchedAccounts.get(account);
 
       if (topics) {
         await this.client.core.relayer.unsubscribe(topics.reqTopic);
@@ -819,9 +813,20 @@ export class NotifyEngine extends INotifyEngine {
     const expiry =
       issuedAt + ENGINE_RPC_OPTS["wc_notifyWatchSubscription"].res.ttl;
 
+    let pubKeyY: string;
+    let privKeyY: string;
+
+    try {
+      const existingWatchEntry = this.client.watchedAccounts.get(accountId);
+	pubKeyY = existingWatchEntry.publicKeyY
+	privKeyY = existingWatchEntry.privateKeyY
+
+    } catch {
+      pubKeyY = await this.client.core.crypto.generateKeyPair();
+      privKeyY = this.client.core.crypto.keychain.get(pubKeyY);
+    }
+
     // Generate persistent key kY
-    const pubKeyY = await this.client.core.crypto.generateKeyPair();
-    const privKeyY = this.client.core.crypto.keychain.get(pubKeyY);
     // Generate res topic from persistent key kY
     const resTopic = hashKey(deriveSymKey(privKeyY, notifyKeys.dappPublicKey));
     // Subscribe to res topic
@@ -864,13 +869,25 @@ export class NotifyEngine extends INotifyEngine {
       }
     );
 
-    this.client.lastWatchedAccount.set(LAST_WATCHED_KEY, {
-      [LAST_WATCHED_KEY]: accountId,
-      appDomain,
-      isLimited,
-    });
+    // Use an array to account for the slim chance to account for
+    // incorrect state where there is more than one account marked as
+    // lastWatched.
+    const currentlastWatchedAccounts = this.client.watchedAccounts
+      .getAll()
+      .filter((account) => account.lastWatched);
+    for (const watchedAccount of currentlastWatchedAccounts) {
+      await this.client.watchedAccounts.update(accountId, {
+        lastWatched: false,
+      });
+    }
 
-    this.watchedAccountTopics.set(accountId, {
+    await this.client.watchedAccounts.set(accountId, {
+      appDomain,
+      account: accountId,
+      isLimited,
+      lastWatched: true,
+      privateKeyY: privKeyY,
+      publicKeyY: pubKeyY,
       reqTopic: notifyServerWatchTopic,
       resTopic,
     });
