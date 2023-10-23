@@ -99,8 +99,13 @@ export class NotifyEngine extends INotifyEngine {
       const topics = this.client.watchedAccounts.get(account);
 
       if (topics) {
-        await this.client.core.relayer.unsubscribe(topics.reqTopic);
-        await this.client.core.relayer.unsubscribe(topics.resTopic);
+        if (
+          this.client.core.relayer.subscriber.topicMap.topics.includes(
+            topics.resTopic
+          )
+        ) {
+          await this.client.core.relayer.unsubscribe(topics.resTopic);
+        }
       }
 
       // Unsubscribe from subscription topics
@@ -798,14 +803,14 @@ export class NotifyEngine extends INotifyEngine {
     const notifyKeys = await this.resolveKeys(this.client.notifyServerUrl);
 
     // Derive req topic from did.json
-    const notifyServerWatchTopic = await this.getNotifyServerWatchTopic(
+    const notifyServerWatchReqTopic = await this.getNotifyServerWatchTopic(
       notifyKeys.dappPublicKey
     );
 
     this.client.logger.info(
       "watchSubscriptions >",
       "notifyServerWatchTopic >",
-      notifyServerWatchTopic
+      notifyServerWatchReqTopic
     );
 
     const issuedAt = Math.round(Date.now() / 1000);
@@ -815,6 +820,7 @@ export class NotifyEngine extends INotifyEngine {
     let pubKeyY: string;
     let privKeyY: string;
 
+    // Generate (or use existing) persistent key kY
     try {
       const existingWatchEntry = this.client.watchedAccounts.get(accountId);
       pubKeyY = existingWatchEntry.publicKeyY;
@@ -824,11 +830,17 @@ export class NotifyEngine extends INotifyEngine {
       privKeyY = this.client.core.crypto.keychain.get(pubKeyY);
     }
 
-    // Generate persistent key kY
     // Generate res topic from persistent key kY
-    const resTopic = hashKey(deriveSymKey(privKeyY, notifyKeys.dappPublicKey));
+    const notifyServerWatchResTopic = hashKey(
+      deriveSymKey(privKeyY, notifyKeys.dappPublicKey)
+    );
     // Subscribe to res topic
-    await this.client.core.relayer.subscriber.subscribe(resTopic);
+    await this.client.core.relayer.subscriber.subscribe(
+      notifyServerWatchResTopic
+    );
+
+    // req topic is not needed after subscription is successful
+    await this.client.core.relayer.unsubscribe(notifyServerWatchReqTopic);
 
     const claims: NotifyClientTypes.NotifyWatchSubscriptionsClaims = {
       act: "notify_watch_subscriptions",
@@ -855,7 +867,7 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     const id = await this.sendRequest(
-      notifyServerWatchTopic,
+      notifyServerWatchReqTopic,
       "wc_notifyWatchSubscription",
       {
         watchSubscriptionsAuth: generatedAuth,
@@ -886,8 +898,7 @@ export class NotifyEngine extends INotifyEngine {
       lastWatched: true,
       privateKeyY: privKeyY,
       publicKeyY: pubKeyY,
-      reqTopic: notifyServerWatchTopic,
-      resTopic,
+      resTopic: notifyServerWatchResTopic,
     });
 
     this.client.logger.info("watchSubscriptions >", "requestId >", id);

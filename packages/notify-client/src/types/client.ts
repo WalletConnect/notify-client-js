@@ -259,7 +259,6 @@ export abstract class INotifyClient {
     {
       isLimited: boolean;
       appDomain: string;
-      reqTopic: string;
       resTopic: string;
       account: string;
       privateKeyY: string;
