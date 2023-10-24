@@ -119,7 +119,7 @@ describe("Notify", () => {
     describe("unregister", () => {
       it("can unregister", async () => {
         // using newly generated account to ensure clean slate for tests
-        // as this tests interacts with keys server
+        // as this test interacts with keys server
         const newWallet = EthersWallet.createRandom();
         const newAccount = `eip155:1:${newWallet.address}`;
 
@@ -170,9 +170,7 @@ describe("Notify", () => {
         const subTopic = newClient.subscriptions.getAll()[0].topic;
 
         expect(
-          Array.from(
-            newClient.core.relayer.subscriber.subscriptions.values()
-          ).some((sub) => sub.topic === subTopic)
+          newClient.core.relayer.subscriber.isSubscribed(subTopic)
         ).toEqual(true);
 
         await newClient.unregister({ account: newAccount });
@@ -181,9 +179,7 @@ describe("Notify", () => {
         expect(newClient.subscriptions.getAll().length).toEqual(1);
 
         expect(
-          Array.from(
-            newClient.core.relayer.subscriber.subscriptions.values()
-          ).some((sub) => sub.topic === subTopic)
+          newClient.core.relayer.subscriber.isSubscribed(subTopic)
         ).toEqual(false);
 
         const responsePostUnregister = await axios(fetchUrl, {

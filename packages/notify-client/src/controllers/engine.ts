@@ -100,9 +100,12 @@ export class NotifyEngine extends INotifyEngine {
 
       // If account was watched
       if (watchedAccount) {
+        this.client.logger.info(
+          `[Notify] unregister > account ${watchedAccount.account} was previously watched. Unsubscribing from watch topics`
+        );
         // and subscribed to a notify server watch topic
         if (
-          this.client.core.relayer.subscriber.topicMap.topics.includes(
+          await this.client.core.relayer.subscriber.isSubscribed(
             watchedAccount.resTopic
           )
         ) {
@@ -112,12 +115,19 @@ export class NotifyEngine extends INotifyEngine {
 
         // If account was the last to be watched
         if (watchedAccount.lastWatched) {
+          this.client.logger.info(
+            `[Notify] unregister > account ${watchedAccount.account} was last to be watched. Unmarking as last watched`
+          );
           // Remove last watched flag, to prevent watching on next init.
           await this.client.watchedAccounts.update(watchedAccount.account, {
             lastWatched: false,
           });
         }
       }
+
+      this.client.logger.info(
+        `[Notify] unregister > account ${watchedAccount.account} was last to be watched. Unmarking as last watched`
+      );
 
       // Unsubscribe from subscription topics
       for (const sub of Object.values(
@@ -126,8 +136,15 @@ export class NotifyEngine extends INotifyEngine {
         await this.client.core.relayer.unsubscribe(sub.topic);
       }
 
+      this.client.logger.info(
+        `[Notify] unregister > account ${watchedAccount.account} was last to be watched. Unmarking as last watched`
+      );
       // unregister from identity server
       await this.client.identityKeys.unregisterIdentity({ account });
+
+      this.client.logger.info(
+        `Engine.unregister > Successfully unregistered account ${account}`
+      );
     } catch (error: any) {
       this.client.logger.error(
         `[Notify] Engine.unregister > failed to unregister > ${error.message}`
@@ -820,7 +837,7 @@ export class NotifyEngine extends INotifyEngine {
 
     this.client.logger.info(
       "watchSubscriptions >",
-      "notifyServerWatchTopic >",
+      "notifyServerWatchReqTopic >",
       notifyServerWatchReqTopic
     );
 
@@ -832,11 +849,11 @@ export class NotifyEngine extends INotifyEngine {
     let privKeyY: string;
 
     // Generate (or use existing) persistent key kY
-    try {
+    if (this.client.watchedAccounts.keys.includes(accountId)) {
       const existingWatchEntry = this.client.watchedAccounts.get(accountId);
       pubKeyY = existingWatchEntry.publicKeyY;
       privKeyY = existingWatchEntry.privateKeyY;
-    } catch {
+    } else {
       pubKeyY = await this.client.core.crypto.generateKeyPair();
       privKeyY = this.client.core.crypto.keychain.get(pubKeyY);
     }
@@ -849,9 +866,6 @@ export class NotifyEngine extends INotifyEngine {
     await this.client.core.relayer.subscriber.subscribe(
       notifyServerWatchResTopic
     );
-
-    // req topic is not needed after subscription is successful
-    await this.client.core.relayer.unsubscribe(notifyServerWatchReqTopic);
 
     const claims: NotifyClientTypes.NotifyWatchSubscriptionsClaims = {
       act: "notify_watch_subscriptions",
@@ -890,13 +904,14 @@ export class NotifyEngine extends INotifyEngine {
       }
     );
 
-    // Use an array to account for the slim chance to account for
+    // Use an array to account for the slim chance of an
     // incorrect state where there is more than one account marked as
     // lastWatched.
-    const currentlastWatchedAccounts = this.client.watchedAccounts
+    const currentLastWatchedAccounts = this.client.watchedAccounts
       .getAll()
       .filter((account) => account.lastWatched);
-    for (const watchedAccount of currentlastWatchedAccounts) {
+
+    for (const watchedAccount of currentLastWatchedAccounts) {
       await this.client.watchedAccounts.update(watchedAccount.account, {
         lastWatched: false,
       });
