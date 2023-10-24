@@ -100,22 +100,23 @@ export class NotifyEngine extends INotifyEngine {
 
       // If account was watched
       if (watchedAccount) {
-	// and subscribed to a notify server watch topic
+        // and subscribed to a notify server watch topic
         if (
           this.client.core.relayer.subscriber.topicMap.topics.includes(
             watchedAccount.resTopic
           )
         ) {
-	  // unsubscribe from watch topic
+          // unsubscribe from watch topic
           await this.client.core.relayer.unsubscribe(watchedAccount.resTopic);
         }
 
-
-	// If account was the last to be watched
-	if(watchedAccount.lastWatched) {
-	  // Remove last watched flag, to prevent watching on next init.
-	  await this.client.watchedAccounts.update(watchedAccount.account, { lastWatched: false })
-	}
+        // If account was the last to be watched
+        if (watchedAccount.lastWatched) {
+          // Remove last watched flag, to prevent watching on next init.
+          await this.client.watchedAccounts.update(watchedAccount.account, {
+            lastWatched: false,
+          });
+        }
       }
 
       // Unsubscribe from subscription topics
