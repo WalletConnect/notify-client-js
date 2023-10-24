@@ -96,16 +96,20 @@ export class NotifyEngine extends INotifyEngine {
   public unregister: INotifyEngine["unregister"] = async ({ account }) => {
     try {
       // Unsubscribe from topics related to watching subscriptions
-      const topics = this.client.watchedAccounts.get(account);
+      const watchedAccount = this.client.watchedAccounts.get(account);
 
-      if (topics) {
+      if (watchedAccount) {
         if (
           this.client.core.relayer.subscriber.topicMap.topics.includes(
-            topics.resTopic
+            watchedAccount.resTopic
           )
         ) {
-          await this.client.core.relayer.unsubscribe(topics.resTopic);
+          await this.client.core.relayer.unsubscribe(watchedAccount.resTopic);
         }
+
+	if(watchedAccount.lastWatched) {
+	  await this.client.watchedAccounts.update(watchedAccount.account, { lastWatched: false })
+	}
       }
 
       // Unsubscribe from subscription topics
