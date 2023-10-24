@@ -33,7 +33,7 @@ export class NotifyClient extends INotifyClient {
   public engine: INotifyClient["engine"];
   public subscriptions: INotifyClient["subscriptions"];
   public messages: INotifyClient["messages"];
-  public lastWatchedAccount: INotifyClient["lastWatchedAccount"];
+  public watchedAccounts: INotifyClient["watchedAccounts"];
   public signedStatements: INotifyClient["signedStatements"];
   public identityKeys: INotifyClient["identityKeys"];
 
@@ -85,12 +85,12 @@ export class NotifyClient extends INotifyClient {
       NOTIFY_CLIENT_STORAGE_PREFIX
     );
 
-    this.lastWatchedAccount = new Store(
+    this.watchedAccounts = new Store(
       this.core,
       this.logger,
-      "lastWatchedAccount",
+      "watchedAccounts",
       NOTIFY_CLIENT_STORAGE_PREFIX,
-      () => "lastWatched"
+      ({ account }: { account: string }) => account
     );
 
     this.identityKeys =
@@ -186,6 +186,15 @@ export class NotifyClient extends INotifyClient {
     }
   };
 
+  public unregister: INotifyClient["unregister"] = async (params) => {
+    try {
+      return await this.engine.unregister(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   // ---------- Events ----------------------------------------------- //
 
   public emit: INotifyClient["emit"] = (name, listener) => {
@@ -218,7 +227,7 @@ export class NotifyClient extends INotifyClient {
       await this.messages.init();
       await this.signedStatements.init();
       await this.identityKeys.init();
-      await this.lastWatchedAccount.init();
+      await this.watchedAccounts.init();
       await this.engine.init();
 
       this.logger.info(`NotifyClient Initialization Success`);

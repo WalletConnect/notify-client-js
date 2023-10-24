@@ -15,6 +15,8 @@ import { disconnectSocket } from "./helpers/ws";
 import axios from "axios";
 import { ICore } from "@walletconnect/types";
 import { generateClientDbName } from "./helpers/storage";
+import { encodeEd25519Key } from "@walletconnect/did-jwt";
+import { getChainFromAccount } from "@walletconnect/utils";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
@@ -111,6 +113,80 @@ describe("Notify", () => {
         expect(identityKey3).toEqual(identityKey2);
 
         expect(onSignCalledTimes).toEqual(2);
+      });
+    });
+
+    describe("unregister", () => {
+      it("can unregister", async () => {
+        // using newly generated account to ensure clean slate for tests
+        // as this test interacts with keys server
+        const newWallet = EthersWallet.createRandom();
+        const newAccount = `eip155:1:${newWallet.address}`;
+
+        const storageLoc = generateClientDbName("notifyTestUnregister");
+        const newClient = await NotifyClient.init({
+          name: "testNotifyClientForUnregister",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core: new Core({
+            projectId,
+            storageOptions: { database: storageLoc },
+          }),
+          projectId,
+        });
+
+        const identity = await newClient.register({
+          account: newAccount,
+          onSign: (m) => newWallet.signMessage(m),
+          isLimited: false,
+          domain: "unrelated.domain",
+        });
+
+        const encodedIdentity = encodeEd25519Key(identity);
+
+        // key server expects identity key in this format.
+        const identityKeyFetchFormat = encodedIdentity.split(":").pop();
+
+        const fetchUrl = `${DEFAULT_KEYSERVER_URL}/identity?publicKey=${identityKeyFetchFormat}`;
+
+        const responsePreUnregister = await axios(fetchUrl);
+
+        expect(responsePreUnregister.status).toEqual(200);
+
+        let gotSub = false;
+        newClient.on("notify_subscriptions_changed", () => {
+          gotSub = true;
+        });
+
+        await newClient.subscribe({
+          account: newAccount,
+          appDomain: gmDappMetadata.appDomain,
+        });
+
+        await waitForEvent(() => gotSub);
+        expect(newClient.subscriptions.getAll().length).toEqual(1);
+
+        const subTopic = newClient.subscriptions.getAll()[0].topic;
+
+        expect(
+          await newClient.core.relayer.subscriber.isSubscribed(subTopic)
+        ).toEqual(true);
+
+        await newClient.unregister({ account: newAccount });
+
+        // Notify_Subscription should stay but should not be subscribed to the relay topic
+        expect(newClient.subscriptions.getAll().length).toEqual(1);
+
+        expect(
+          await newClient.core.relayer.subscriber.isSubscribed(subTopic)
+        ).toEqual(false);
+
+        const responsePostUnregister = await axios(fetchUrl, {
+          validateStatus: () => true,
+        });
+
+        expect(responsePostUnregister.status).toEqual(404);
       });
     });
 

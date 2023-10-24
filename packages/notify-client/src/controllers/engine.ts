@@ -29,7 +29,6 @@ import {
   DID_WEB_PREFIX,
   ENGINE_RPC_OPTS,
   JWT_SCP_SEPARATOR,
-  LAST_WATCHED_KEY,
   NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS,
   NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
 } from "../constants";
@@ -92,6 +91,65 @@ export class NotifyEngine extends INotifyEngine {
     }
 
     return identity;
+  };
+
+  public unregister: INotifyEngine["unregister"] = async ({ account }) => {
+    try {
+      // Get information about watching subscriptions of account
+      const watchedAccount = this.client.watchedAccounts.get(account);
+
+      // If account was watched
+      if (watchedAccount) {
+        this.client.logger.info(
+          `[Notify] unregister > account ${watchedAccount.account} was previously watched. Unsubscribing from watch topics`
+        );
+        // and subscribed to a notify server watch topic
+        if (
+          await this.client.core.relayer.subscriber.isSubscribed(
+            watchedAccount.resTopic
+          )
+        ) {
+          // unsubscribe from watch topic
+          await this.client.core.relayer.unsubscribe(watchedAccount.resTopic);
+        }
+
+        // If account was the last to be watched
+        if (watchedAccount.lastWatched) {
+          this.client.logger.info(
+            `[Notify] unregister > account ${watchedAccount.account} was last to be watched. Unmarking as last watched`
+          );
+          // Remove last watched flag, to prevent watching on next init.
+          await this.client.watchedAccounts.update(watchedAccount.account, {
+            lastWatched: false,
+          });
+        }
+      }
+
+      this.client.logger.info(
+        `[Notify] unregister > account ${watchedAccount.account} was last to be watched. Unmarking as last watched`
+      );
+
+      // Unsubscribe from subscription topics
+      for (const sub of Object.values(
+        this.getActiveSubscriptions({ account })
+      )) {
+        await this.client.core.relayer.unsubscribe(sub.topic);
+      }
+
+      this.client.logger.info(
+        `[Notify] unregister > account ${watchedAccount.account} was last to be watched. Unmarking as last watched`
+      );
+      // unregister from identity server
+      await this.client.identityKeys.unregisterIdentity({ account });
+
+      this.client.logger.info(
+        `Engine.unregister > Successfully unregistered account ${account}`
+      );
+    } catch (error: any) {
+      this.client.logger.error(
+        `[Notify] Engine.unregister > failed to unregister > ${error.message}`
+      );
+    }
   };
 
   public subscribe: INotifyEngine["subscribe"] = async ({
@@ -773,27 +831,41 @@ export class NotifyEngine extends INotifyEngine {
     const notifyKeys = await this.resolveKeys(this.client.notifyServerUrl);
 
     // Derive req topic from did.json
-    const notifyServerWatchTopic = await this.getNotifyServerWatchTopic(
+    const notifyServerWatchReqTopic = await this.getNotifyServerWatchTopic(
       notifyKeys.dappPublicKey
     );
 
     this.client.logger.info(
       "watchSubscriptions >",
-      "notifyServerWatchTopic >",
-      notifyServerWatchTopic
+      "notifyServerWatchReqTopic >",
+      notifyServerWatchReqTopic
     );
 
     const issuedAt = Math.round(Date.now() / 1000);
     const expiry =
       issuedAt + ENGINE_RPC_OPTS["wc_notifyWatchSubscription"].res.ttl;
 
-    // Generate persistent key kY
-    const pubKeyY = await this.client.core.crypto.generateKeyPair();
-    const privKeyY = this.client.core.crypto.keychain.get(pubKeyY);
+    let pubKeyY: string;
+    let privKeyY: string;
+
+    // Generate (or use existing) persistent key kY
+    if (this.client.watchedAccounts.keys.includes(accountId)) {
+      const existingWatchEntry = this.client.watchedAccounts.get(accountId);
+      pubKeyY = existingWatchEntry.publicKeyY;
+      privKeyY = existingWatchEntry.privateKeyY;
+    } else {
+      pubKeyY = await this.client.core.crypto.generateKeyPair();
+      privKeyY = this.client.core.crypto.keychain.get(pubKeyY);
+    }
+
     // Generate res topic from persistent key kY
-    const resTopic = hashKey(deriveSymKey(privKeyY, notifyKeys.dappPublicKey));
+    const notifyServerWatchResTopic = hashKey(
+      deriveSymKey(privKeyY, notifyKeys.dappPublicKey)
+    );
     // Subscribe to res topic
-    await this.client.core.relayer.subscriber.subscribe(resTopic);
+    await this.client.core.relayer.subscriber.subscribe(
+      notifyServerWatchResTopic
+    );
 
     const claims: NotifyClientTypes.NotifyWatchSubscriptionsClaims = {
       act: "notify_watch_subscriptions",
@@ -820,7 +892,7 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     const id = await this.sendRequest(
-      notifyServerWatchTopic,
+      notifyServerWatchReqTopic,
       "wc_notifyWatchSubscription",
       {
         watchSubscriptionsAuth: generatedAuth,
@@ -832,10 +904,28 @@ export class NotifyEngine extends INotifyEngine {
       }
     );
 
-    this.client.lastWatchedAccount.set(LAST_WATCHED_KEY, {
-      [LAST_WATCHED_KEY]: accountId,
+    // Use an array to account for the slim chance of an
+    // incorrect state where there is more than one account marked as
+    // lastWatched.
+    const currentLastWatchedAccounts = this.client.watchedAccounts
+      .getAll()
+      .filter((account) => account.lastWatched);
+
+    for (const watchedAccount of currentLastWatchedAccounts) {
+      await this.client.watchedAccounts.update(watchedAccount.account, {
+        lastWatched: false,
+      });
+    }
+
+    // Set new or overwrite existing account watch data.
+    await this.client.watchedAccounts.set(accountId, {
       appDomain,
+      account: accountId,
       isLimited,
+      lastWatched: true,
+      privateKeyY: privKeyY,
+      publicKeyY: pubKeyY,
+      resTopic: notifyServerWatchResTopic,
     });
 
     this.client.logger.info("watchSubscriptions >", "requestId >", id);
@@ -1276,13 +1366,13 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   private watchLastWatchedAccountIfExists = async () => {
+    // Get account that was watched
+    const lastWatched = this.client.watchedAccounts
+      .getAll()
+      .find((acc) => acc.lastWatched);
     // If an account was previously watched
-    if (this.client.lastWatchedAccount.keys.length === 1) {
-      const {
-        lastWatched: account,
-        appDomain,
-        isLimited,
-      } = this.client.lastWatchedAccount.get(LAST_WATCHED_KEY);
+    if (lastWatched) {
+      const { account, appDomain, isLimited } = lastWatched;
 
       try {
         // Account for invalid state where the last watched account does not have an identity.
