@@ -170,7 +170,7 @@ describe("Notify", () => {
         const subTopic = newClient.subscriptions.getAll()[0].topic;
 
         expect(
-          newClient.core.relayer.subscriber.isSubscribed(subTopic)
+          await newClient.core.relayer.subscriber.isSubscribed(subTopic)
         ).toEqual(true);
 
         await newClient.unregister({ account: newAccount });
@@ -179,7 +179,7 @@ describe("Notify", () => {
         expect(newClient.subscriptions.getAll().length).toEqual(1);
 
         expect(
-          newClient.core.relayer.subscriber.isSubscribed(subTopic)
+          await newClient.core.relayer.subscriber.isSubscribed(subTopic)
         ).toEqual(false);
 
         const responsePostUnregister = await axios(fetchUrl, {
