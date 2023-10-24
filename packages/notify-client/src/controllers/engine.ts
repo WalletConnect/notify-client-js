@@ -95,19 +95,25 @@ export class NotifyEngine extends INotifyEngine {
 
   public unregister: INotifyEngine["unregister"] = async ({ account }) => {
     try {
-      // Unsubscribe from topics related to watching subscriptions
+      // Get information about watching subscriptions of account
       const watchedAccount = this.client.watchedAccounts.get(account);
 
+      // If account was watched
       if (watchedAccount) {
+	// and subscribed to a notify server watch topic
         if (
           this.client.core.relayer.subscriber.topicMap.topics.includes(
             watchedAccount.resTopic
           )
         ) {
+	  // unsubscribe from watch topic
           await this.client.core.relayer.unsubscribe(watchedAccount.resTopic);
         }
 
+
+	// If account was the last to be watched
 	if(watchedAccount.lastWatched) {
+	  // Remove last watched flag, to prevent watching on next init.
 	  await this.client.watchedAccounts.update(watchedAccount.account, { lastWatched: false })
 	}
       }
@@ -895,6 +901,7 @@ export class NotifyEngine extends INotifyEngine {
       });
     }
 
+    // Set new or overwrite existing account watch data.
     await this.client.watchedAccounts.set(accountId, {
       appDomain,
       account: accountId,
@@ -1343,6 +1350,7 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   private watchLastWatchedAccountIfExists = async () => {
+    // Get account that was watched
     const lastWatched = this.client.watchedAccounts
       .getAll()
       .find((acc) => acc.lastWatched);
