@@ -982,7 +982,9 @@ export class NotifyEngine extends INotifyEngine {
         metadata: {
           name: notifyConfig?.name ?? sub.appDomain,
           description: notifyConfig?.description ?? sub.appDomain,
-          icons: notifyConfig ? Object.values(notifyConfig.image_url) : [],
+          icons: notifyConfig?.image_url
+            ? Object.values(notifyConfig.image_url)
+            : [],
           appDomain: sub.appDomain,
         },
         relay: {
