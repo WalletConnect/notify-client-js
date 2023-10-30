@@ -762,7 +762,7 @@ describe("Notify", () => {
           isLimited: true,
           account,
           onSign,
-          domain: "unrelated.domain",
+          domain: "hackers.gm.walletconnect.com",
         });
 
         await waitForEvent(() => wallet3ReceivedChangedEvent);
