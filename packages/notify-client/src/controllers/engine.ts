@@ -965,8 +965,6 @@ export class NotifyEngine extends INotifyEngine {
       }
     }
 
-    console.log("claims.sbs", claims.sbs.length);
-
     // Update all subscriptions to account for any changes in scope.
     const updateSubscriptionsPromises = claims.sbs.map((sub) => async () => {
       const sbTopic = hashKey(sub.symKey);
@@ -996,7 +994,7 @@ export class NotifyEngine extends INotifyEngine {
 
       await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
 
-      if(!await this.client.core.relayer.subscriber.isSubscribed(sbTopic)) {
+      if (!(await this.client.core.relayer.subscriber.isSubscribed(sbTopic))) {
         try {
           await this.client.core.relayer.subscribe(sbTopic);
         } catch (e) {
@@ -1004,7 +1002,7 @@ export class NotifyEngine extends INotifyEngine {
         }
       }
 
-      if(!this.client.messages.keys.includes(sbTopic)) {
+      if (!this.client.messages.keys.includes(sbTopic)) {
         // Set up a store for messages sent to this notify topic.
         await this.client.messages.set(sbTopic, {
           topic: sbTopic,
@@ -1028,9 +1026,7 @@ export class NotifyEngine extends INotifyEngine {
     // subscriptions and its subscriber.once(SUBSCRIBER_EVENTS.created, ...) will be triggered
     // with a wrong subscription, seeing that the topics of the two subscriptions do not match,
     // it will not resolve.
-    console.log("attempting to subscribe >>", updateSubscriptionsPromises.length)
     for (const updateSubscriptionsPromise of updateSubscriptionsPromises) {
-      console.log("attempting to subscribe to one of them >>")
       await updateSubscriptionsPromise();
     }
 
