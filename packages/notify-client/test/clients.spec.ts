@@ -23,7 +23,8 @@ if (!process.env.TEST_PROJECT_ID) {
   throw new ReferenceError("TEST_PROJECT_ID env variable not set");
 }
 
-const hasTestProjectSecret = typeof process.env.TEST_PROJECT_SECRET !== "undefined";
+const hasTestProjectSecret =
+  typeof process.env.TEST_PROJECT_SECRET !== "undefined";
 
 const projectId = process.env.TEST_PROJECT_ID;
 
@@ -155,7 +156,9 @@ describe("Notify", () => {
 
         let gotSub = false;
         newClient.on("notify_subscriptions_changed", (ev) => {
-          gotSub = ev.params.subscriptions.map(sub => sub.metadata.appDomain).includes(testDappMetadata.appDomain);
+          gotSub = ev.params.subscriptions
+            .map((sub) => sub.metadata.appDomain)
+            .includes(testDappMetadata.appDomain);
         });
 
         await newClient.subscribe({
@@ -230,72 +233,77 @@ describe("Notify", () => {
       });
     });
 
-    describe.skipIf(!hasTestProjectSecret)("handling incoming notifyMessage", () => {
-      it("emits a `notify_message` event when a notifyMessage is received", async () => {
-        await createNotifySubscription(wallet, account, onSign);
+    describe.skipIf(!hasTestProjectSecret)(
+      "handling incoming notifyMessage",
+      () => {
+        it("emits a `notify_message` event when a notifyMessage is received", async () => {
+          await createNotifySubscription(wallet, account, onSign);
 
-        let gotNotifyMessageResponse = false;
-        let notifyMessageEvent: any;
+          let gotNotifyMessageResponse = false;
+          let notifyMessageEvent: any;
 
-        wallet.once("notify_message", (event) => {
-          gotNotifyMessageResponse = true;
-          notifyMessageEvent = event;
+          wallet.once("notify_message", (event) => {
+            gotNotifyMessageResponse = true;
+            notifyMessageEvent = event;
+          });
+
+          const sendResponse = await sendNotifyMessage(account, "Test");
+
+          expect(sendResponse.status).toBe(200);
+
+          await waitForEvent(() => gotNotifyMessageResponse);
+
+          expect(notifyMessageEvent.params.message.body).toBe("Test");
         });
 
-        const sendResponse = await sendNotifyMessage(account, "Test");
+        it("reads the dapp's did.json from memory after the initial fetch", async () => {
+          let incomingMessageCount = 0;
+          // These are calls that occur due to registering.
+          // 1 - NOTIFY_SERVER_URL/.well-known/did.json
+          // 2 - TEST_PROJECT_URL/.well-known/did.json
+          // 3 - TEST_PROJECT_URL/.well-known/wc-notify-config.json
+          const INITIAL_CALLS_FETCH_ACCOUNT = 3;
+          const axiosSpy = vi.spyOn(axios, "get");
 
-        expect(sendResponse.status).toBe(200);
+          const ethersWallet2 = EthersWallet.createRandom();
+          const account2 = `eip155:1:${ethersWallet2.address}`;
+          const storageLoc = generateClientDbName("notifyTestDidJson");
 
-        await waitForEvent(() => gotNotifyMessageResponse);
-
-        expect(notifyMessageEvent.params.message.body).toBe("Test");
-      });
-
-      it("reads the dapp's did.json from memory after the initial fetch", async () => {
-        let incomingMessageCount = 0;
-        // These are calls that occur due to registering.
-        // 1 - NOTIFY_SERVER_URL/.well-known/did.json
-        // 2 - TEST_PROJECT_URL/.well-known/did.json
-        // 3 - TEST_PROJECT_URL/.well-known/wc-notify-config.json
-        const INITIAL_CALLS_FETCH_ACCOUNT = 3;
-        const axiosSpy = vi.spyOn(axios, "get");
-
-        const ethersWallet2 = EthersWallet.createRandom();
-        const account2 = `eip155:1:${ethersWallet2.address}`;
-        const storageLoc = generateClientDbName("notifyTestDidJson");
-
-        const wallet1 = await NotifyClient.init({
-          name: "testNotifyClient2",
-          logger: "error",
-          keyserverUrl: DEFAULT_KEYSERVER_URL,
-          relayUrl: DEFAULT_RELAY_URL,
-          core: new Core({
+          const wallet1 = await NotifyClient.init({
+            name: "testNotifyClient2",
+            logger: "error",
+            keyserverUrl: DEFAULT_KEYSERVER_URL,
+            relayUrl: DEFAULT_RELAY_URL,
+            core: new Core({
+              projectId,
+              storageOptions: { database: storageLoc },
+            }),
             projectId,
-            storageOptions: { database: storageLoc },
-          }),
-          projectId,
+          });
+
+          await createNotifySubscription(wallet1, account2, (m) =>
+            ethersWallet2.signMessage(m)
+          );
+
+          wallet1.on("notify_message", () => {
+            incomingMessageCount += 1;
+          });
+
+          await sendNotifyMessage(account2, "Test");
+          await sendNotifyMessage(account2, "Test");
+
+          await waitForEvent(() => {
+            return incomingMessageCount === 2;
+          });
+
+          // Ensure `axios.get` was only called once to resolve the dapp's did.json
+          // We have to account for the initial calls that happened during watchSubscriptions on init
+          expect(axiosSpy).toHaveBeenCalledTimes(
+            1 + INITIAL_CALLS_FETCH_ACCOUNT
+          );
         });
-
-        await createNotifySubscription(wallet1, account2, (m) =>
-          ethersWallet2.signMessage(m)
-        );
-
-        wallet1.on("notify_message", () => {
-          incomingMessageCount += 1;
-        });
-
-        await sendNotifyMessage(account2, "Test");
-        await sendNotifyMessage(account2, "Test");
-
-        await waitForEvent(() => {
-          return incomingMessageCount === 2;
-        });
-
-        // Ensure `axios.get` was only called once to resolve the dapp's did.json
-        // We have to account for the initial calls that happened during watchSubscriptions on init
-        expect(axiosSpy).toHaveBeenCalledTimes(1 + INITIAL_CALLS_FETCH_ACCOUNT);
-      });
-    });
+      }
+    );
 
     describe("update", () => {
       it("can update an existing notify subscription with a new scope", async () => {
