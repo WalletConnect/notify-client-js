@@ -1011,7 +1011,6 @@ export class NotifyEngine extends INotifyEngine {
       }
     });
 
-    // Only set messages and symKeys for new subscriptions.
     const newSubscriptions = claims.sbs.filter(
       (sb) => !this.client.subscriptions.keys.includes(hashKey(sb.symKey))
     );
