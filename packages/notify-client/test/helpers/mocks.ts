@@ -5,11 +5,11 @@ export const dappMetadata = {
   icons: [],
 };
 
-export const gmDappMetadata = {
-  description: "A simple gm notification dApp",
+export const testDappMetadata = {
+  description: "Test description",
   icons: ["https://i.imgur.com/q9QDRXc.png"],
-  name: "dev-gm-dapp",
-  appDomain: "gm.walletconnect.com",
+  name: "Notify Swift Integration Tests Prod",
+  appDomain: "wc-notify-swift-integration-tests-prod.pages.dev",
 };
 
 export const gmHackersMetadata = {

@@ -9,14 +9,13 @@ import {
   NotifyClientTypes,
 } from "../src/";
 import { waitForEvent } from "./helpers/async";
-import { gmDappMetadata } from "./helpers/mocks";
+import { testDappMetadata } from "./helpers/mocks";
 import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
 import { disconnectSocket } from "./helpers/ws";
 import axios from "axios";
 import { ICore } from "@walletconnect/types";
 import { generateClientDbName } from "./helpers/storage";
 import { encodeEd25519Key } from "@walletconnect/did-jwt";
-import { getChainFromAccount } from "@walletconnect/utils";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
@@ -24,7 +23,7 @@ if (!process.env.TEST_PROJECT_ID) {
   throw new ReferenceError("TEST_PROJECT_ID env variable not set");
 }
 
-const hasGmSecret = typeof process.env.NOTIFY_GM_PROJECT_SECRET !== "undefined";
+const hasTestProjectSecret = typeof process.env.TEST_PROJECT_SECRET !== "undefined";
 
 const projectId = process.env.TEST_PROJECT_ID;
 
@@ -84,7 +83,7 @@ describe("Notify", () => {
           account,
           isLimited: false,
           onSign: countedOnSign,
-          domain: gmDappMetadata.appDomain,
+          domain: testDappMetadata.appDomain,
         });
 
         await wallet.signedStatements.set(account, {
@@ -96,7 +95,7 @@ describe("Notify", () => {
           account,
           isLimited: false,
           onSign: countedOnSign,
-          domain: gmDappMetadata.appDomain,
+          domain: testDappMetadata.appDomain,
         });
 
         await waitForEvent(() => onSignCalledTimes === 2);
@@ -107,7 +106,7 @@ describe("Notify", () => {
           account,
           isLimited: false,
           onSign: countedOnSign,
-          domain: gmDappMetadata.appDomain,
+          domain: testDappMetadata.appDomain,
         });
 
         expect(identityKey3).toEqual(identityKey2);
@@ -140,7 +139,7 @@ describe("Notify", () => {
           account: newAccount,
           onSign: (m) => newWallet.signMessage(m),
           isLimited: false,
-          domain: "unrelated.domain",
+          domain: testDappMetadata.appDomain,
         });
 
         const encodedIdentity = encodeEd25519Key(identity);
@@ -155,13 +154,13 @@ describe("Notify", () => {
         expect(responsePreUnregister.status).toEqual(200);
 
         let gotSub = false;
-        newClient.on("notify_subscriptions_changed", () => {
-          gotSub = true;
+        newClient.on("notify_subscriptions_changed", (ev) => {
+          gotSub = ev.params.subscriptions.map(sub => sub.metadata.appDomain).includes(testDappMetadata.appDomain);
         });
 
         await newClient.subscribe({
           account: newAccount,
-          appDomain: gmDappMetadata.appDomain,
+          appDomain: testDappMetadata.appDomain,
         });
 
         await waitForEvent(() => gotSub);
@@ -211,12 +210,12 @@ describe("Notify", () => {
           isLimited: false,
           account,
           onSign,
-          domain: gmDappMetadata.appDomain,
+          domain: testDappMetadata.appDomain,
         });
 
         await wallet.subscribe({
           account,
-          appDomain: gmDappMetadata.appDomain,
+          appDomain: testDappMetadata.appDomain,
         });
 
         await waitForEvent(() => gotNotifySubscriptionResponse);
@@ -231,7 +230,7 @@ describe("Notify", () => {
       });
     });
 
-    describe.skipIf(!hasGmSecret)("handling incoming notifyMessage", () => {
+    describe.skipIf(!hasTestProjectSecret)("handling incoming notifyMessage", () => {
       it("emits a `notify_message` event when a notifyMessage is received", async () => {
         await createNotifySubscription(wallet, account, onSign);
 
@@ -256,8 +255,8 @@ describe("Notify", () => {
         let incomingMessageCount = 0;
         // These are calls that occur due to registering.
         // 1 - NOTIFY_SERVER_URL/.well-known/did.json
-        // 2 - GM_DAPP/.well-known/did.json
-        // 3 - GM_DAPP/.well-known/wc-notify-config.json
+        // 2 - TEST_PROJECT_URL/.well-known/did.json
+        // 3 - TEST_PROJECT_URL/.well-known/wc-notify-config.json
         const INITIAL_CALLS_FETCH_ACCOUNT = 3;
         const axiosSpy = vi.spyOn(axios, "get");
 
@@ -405,7 +404,7 @@ describe("Notify", () => {
               protocol: RELAYER_DEFAULT_PROTOCOL,
             },
             scope: {},
-            metadata: gmDappMetadata,
+            metadata: testDappMetadata,
             topic: `topic${num}`,
             symKey: "",
           });
@@ -702,7 +701,7 @@ describe("Notify", () => {
           isLimited: true,
           account,
           onSign,
-          domain: gmDappMetadata.appDomain,
+          domain: testDappMetadata.appDomain,
         });
 
         await waitForEvent(() => wallet1ReceivedChangedEvent);
@@ -729,7 +728,7 @@ describe("Notify", () => {
           isLimited: true,
           account,
           onSign,
-          domain: gmDappMetadata.appDomain,
+          domain: testDappMetadata.appDomain,
         });
 
         await waitForEvent(() => wallet2ReceivedChangedEvent);
