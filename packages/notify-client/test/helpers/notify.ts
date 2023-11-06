@@ -61,7 +61,7 @@ export const sendNotifyMessage = async (
 ) => {
   if (!process.env.TEST_PROJECT_ID) {
     throw new ReferenceError(
-      "Cannot send notify message. GM_PROJECT_ID env variable not set"
+      "Cannot send notify message. TEST_PROJECT_ID env variable not set"
     );
   }
   if (!process.env.TEST_PROJECT_SECRET) {
@@ -77,7 +77,7 @@ export const sendNotifyMessage = async (
       title: "Test Message",
       icon: "",
       url: "https://test.coms",
-      // "Notification 1" notification ID, taken from `gm-dapp` project on Cloud.
+      // "Notification 1" notification ID, taken from Notify Test (ec020ad1-89bc-4f0f-b7bc-5602990e79b5) project on Cloud.
       type: "f173f231-a45c-4dc0-aa5d-956eb04f7360",
     },
     accounts: [account],
