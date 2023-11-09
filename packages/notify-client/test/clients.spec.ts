@@ -686,10 +686,9 @@ describe("Notify", () => {
         );
       });
 
-
       // consistent between relay and notifiy subscriptions
       it("maintains a consistent subscription state across stores", async () => {
-	const walletAccount1 = EthersWallet.createRandom()
+        const walletAccount1 = EthersWallet.createRandom();
         const storageLoc1 = generateClientDbName("notifyTestConsistency");
         const wallet1 = await NotifyClient.init({
           name: "testNotifyClient1",
@@ -703,19 +702,20 @@ describe("Notify", () => {
           projectId,
         });
 
+        await createNotifySubscription(wallet1, account, (message) =>
+          walletAccount1.signMessage(message)
+        );
 
-	await createNotifySubscription(wallet1, account, (message) => walletAccount1.signMessage(message))
+        const subs = Object.values(wallet1.getActiveSubscriptions());
 
-	const subs = Object.values(wallet1.getActiveSubscriptions());
+        expect(subs.length).toEqual(1);
 
-	expect(subs.length).toEqual(1);
+        const subTopic = subs[0].topic;
 
-	const subTopic = subs[0].topic;
+        expect(wallet1.core.relayer.subscriber.isSubscribed(subTopic));
 
-	expect(wallet1.core.relayer.subscriber.isSubscribed(subTopic));
-
-	expect(wallet1.messages.get(subTopic).messages).toEqual({})
-      })
+        expect(wallet1.messages.get(subTopic).messages).toEqual({});
+      });
 
       it("correctly handles limited access via `isLimited`", async () => {
         const storageLoc1 = generateClientDbName("notifyTestLimit1");
