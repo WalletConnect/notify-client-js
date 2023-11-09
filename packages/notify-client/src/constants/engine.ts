@@ -5,9 +5,9 @@ import { JsonRpcTypes, RpcOpts } from "../types";
 export const JWT_SCP_SEPARATOR = " ";
 
 export const NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS =
-  "I further authorize this app to send and receive messages on my behalf for ALL domains using my WalletConnect identity. Read more at https://walletconnect.com/identity";
+  "I further authorize this app to view and manage my notifications for ALL apps. Read more at https://walletconnect.com/notifications";
 export const NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN =
-  "I further authorize this app to send and receive messages on my behalf for THIS domain using my WalletConnect identity. Read more at https://walletconnect.com/identity";
+  "I further authorize this app to send me notifications. Read more at https://walletconnect.com/notifications";
 
 export const DID_WEB_PREFIX = "did:web:";
 
