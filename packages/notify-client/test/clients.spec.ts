@@ -19,7 +19,7 @@ import { encodeEd25519Key } from "@walletconnect/did-jwt";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
-const testScopeId = "f173f231-a45c-4dc0-aa5d-956eb04f7360"
+const testScopeId = "f173f231-a45c-4dc0-aa5d-956eb04f7360";
 
 if (!process.env.TEST_PROJECT_ID) {
   throw new ReferenceError("TEST_PROJECT_ID env variable not set");
@@ -245,7 +245,7 @@ describe("Notify", () => {
           let notifyMessageEvent: any;
 
           wallet.once("notify_message", (event) => {
-	    console.log("notify_message", event);
+            console.log("notify_message", event);
             gotNotifyMessageResponse = true;
             notifyMessageEvent = event;
           });
@@ -342,7 +342,6 @@ describe("Notify", () => {
 
         await waitForEvent(() => gotNotifyUpdateResponse);
 
-
         await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
 
         expect(gotNotifyUpdateResponse).toBe(true);
@@ -352,8 +351,9 @@ describe("Notify", () => {
 
         // Ensure all scopes have been disabled in the updated subscription.
         expect(
-          Object.values(lastChangedSubscriptions[0].scope)
-            .find((scp) => scp.id === testScopeId)?.enabled
+          Object.values(lastChangedSubscriptions[0].scope).find(
+            (scp) => scp.id === testScopeId
+          )?.enabled
         ).toBe(true);
       });
     });
@@ -653,7 +653,6 @@ describe("Notify", () => {
 
         wallet1.on("notify_subscriptions_changed", () => {
           wallet1UpdateCount++;
-
         });
         await createNotifySubscription(wallet, account, onSign);
 
@@ -709,8 +708,10 @@ describe("Notify", () => {
           projectId,
         });
 
-        await createNotifySubscription(wallet1, `eip155:1:${walletAccount1.address}`, (message) =>
-          walletAccount1.signMessage(message)
+        await createNotifySubscription(
+          wallet1,
+          `eip155:1:${walletAccount1.address}`,
+          (message) => walletAccount1.signMessage(message)
         );
 
         const subs = Object.values(wallet1.getActiveSubscriptions());
