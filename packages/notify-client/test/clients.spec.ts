@@ -725,7 +725,29 @@ describe("Notify", () => {
         expect(wallet1.core.relayer.subscriber.isSubscribed(subTopic));
 
         expect(wallet1.messages.get(subTopic).messages).toEqual({});
+
+	// Create inconsistent state
+	await wallet1.core.relayer.subscriber.unsubscribe(subTopic);
+	
+	// Subscribe to a different dapp to trigger subscriptions changed
+        await createNotifySubscription(
+          wallet1,
+          `eip155:1:${walletAccount1.address}`,
+          (message) => walletAccount1.signMessage(message),
+	  true
+        );
+
+        const subsAfterNewSub = Object.values(wallet1.getActiveSubscriptions());
+
+        expect(subsAfterNewSub.length).toEqual(2);
+
+        // const subTopicForInitialSub = subsAfterNewSub.find(s => s.metadata.appDomain === testDappMetadata.appDomain)?.topic;
+
+        expect(wallet1.core.relayer.subscriber.isSubscribed(subTopic));
+
+        expect(wallet1.messages.get(subTopic).messages).toEqual({});
       });
+
 
       it("correctly handles limited access via `isLimited`", async () => {
         const storageLoc1 = generateClientDbName("notifyTestLimit1");
