@@ -966,7 +966,7 @@ export class NotifyEngine extends INotifyEngine {
     }
 
     // Update all subscriptions to account for any changes in scope.
-    const updateSubscriptionsPromises = claims.sbs.map(async (sub) => {
+    const updateSubscriptionsPromises = claims.sbs.map((sub) => async () => {
       const sbTopic = hashKey(sub.symKey);
       const notifyConfig = await this.resolveNotifyConfig(sub.appDomain);
       const scopeMap = notifyConfig
@@ -993,9 +993,24 @@ export class NotifyEngine extends INotifyEngine {
       });
 
       await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
+
+      if (!(await this.client.core.relayer.subscriber.isSubscribed(sbTopic))) {
+        try {
+          await this.client.core.relayer.subscribe(sbTopic);
+        } catch (e) {
+          this.client.logger.error("Failed to subscribe from claims.sbs", e);
+        }
+      }
+
+      if (!this.client.messages.keys.includes(sbTopic)) {
+        // Set up a store for messages sent to this notify topic.
+        await this.client.messages.set(sbTopic, {
+          topic: sbTopic,
+          messages: {},
+        });
+      }
     });
 
-    // Only set messages and symKeys for new subscriptions.
     const newSubscriptions = claims.sbs.filter(
       (sb) => !this.client.subscriptions.keys.includes(hashKey(sb.symKey))
     );
@@ -1005,37 +1020,13 @@ export class NotifyEngine extends INotifyEngine {
       newSubscriptions
     );
 
-    const setupNewSubscriptionsPromises = newSubscriptions.map(
-      (sub) => async () => {
-        const sbTopic = hashKey(sub.symKey);
-
-        try {
-          //TODO: Figure out why this never resolves
-          await this.client.core.relayer.subscribe(sbTopic);
-        } catch (e) {
-          this.client.logger.error("Failed to subscribe from claims.sbs", e);
-        }
-
-        // Set up a store for messages sent to this notify topic.
-        await this.client.messages.set(sbTopic, {
-          topic: sbTopic,
-          messages: {},
-        });
-
-        // Set the symKey in the keychain for the new subscription.
-        await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
-      }
-    );
-
-    await Promise.all(updateSubscriptionsPromises);
-
     // Handle them sequentially because `core.relayer.subscribe` is not compatible
     // with concurrent `relayer.subscribe` requests, as a data race occurs between the two
     // subscriptions and its subscriber.once(SUBSCRIBER_EVENTS.created, ...) will be triggered
     // with a wrong subscription, seeing that the topics of the two subscriptions do not match,
     // it will not resolve.
-    for (const setupNewSubscriptionPromise of setupNewSubscriptionsPromises) {
-      await setupNewSubscriptionPromise();
+    for (const updateSubscriptionsPromise of updateSubscriptionsPromises) {
+      await updateSubscriptionsPromise();
     }
 
     return this.client.subscriptions.getAll();

@@ -5,7 +5,7 @@ import {
   NotifyClientTypes,
 } from "../../src";
 import { waitForEvent } from "./async";
-import { gmDappMetadata, gmHackersMetadata } from "./mocks";
+import { testDappMetadata, gmHackersMetadata } from "./mocks";
 
 const NOTIFY_SERVER_URL =
   process.env.NOTIFY_SERVER_URL || DEFAULT_NOTIFY_SERVER_URL;
@@ -35,7 +35,7 @@ export const createNotifySubscription = async (
 
   const domain = differentSubscription
     ? gmHackersMetadata.appDomain
-    : gmDappMetadata.appDomain;
+    : testDappMetadata.appDomain;
 
   await wallet.register({
     domain,
@@ -59,33 +59,32 @@ export const sendNotifyMessage = async (
   account: string,
   messageBody: string
 ) => {
-  if (!process.env.GM_PROJECT_ID) {
+  if (!process.env.TEST_PROJECT_ID) {
     throw new ReferenceError(
-      "Cannot send notify message. GM_PROJECT_ID env variable not set"
+      "Cannot send notify message. TEST_PROJECT_ID env variable not set"
     );
   }
-  if (!process.env.NOTIFY_GM_PROJECT_SECRET) {
+  if (!process.env.TEST_PROJECT_SECRET) {
     throw new ReferenceError(
-      "Cannot send notify message. NOTIFY_GM_PROJECT_SECRET env variable not set"
+      "Cannot send notify message. TEST_PROJECT_SECRET env variable not set"
     );
   }
-  const url = `${NOTIFY_SERVER_URL}/${process.env.GM_PROJECT_ID}/notify`;
+  const url = `${NOTIFY_SERVER_URL}/${process.env.TEST_PROJECT_ID}/notify`;
 
   const body = {
     notification: {
       body: messageBody,
       title: "Test Message",
-      icon: "",
       url: "https://test.coms",
-      // gm_hourly notification ID, taken from `gm-dapp` project on Cloud.
-      type: "cad9a52d-9b0f-4aed-9cca-3e9568a079f9",
+      // "Notification 1" notification ID, taken from Notify Test (ec020ad1-89bc-4f0f-b7bc-5602990e79b5) project on Cloud.
+      type: "f173f231-a45c-4dc0-aa5d-956eb04f7360",
     },
     accounts: [account],
   };
 
   return axios.post(url, body, {
     headers: {
-      Authorization: `Bearer ${process.env.NOTIFY_GM_PROJECT_SECRET}`,
+      Authorization: `Bearer ${process.env.TEST_PROJECT_SECRET}`,
     },
   });
 };

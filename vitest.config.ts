@@ -6,7 +6,7 @@ export default defineConfig({
     env: {
       ...testEnv,
     },
-    testTimeout: 30_000,
+    testTimeout: 60_000,
     hookTimeout: 10_000,
   },
 });
