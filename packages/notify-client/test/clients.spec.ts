@@ -588,7 +588,7 @@ describe("Notify", () => {
         expect(updateEvent.topic).toBe(subscriptions[0].topic);
       });
 
-      // This test needs a refactor involving mocking event emitter
+      // TODO: This test needs a refactor involving mocking event emitter
       it.skip("automatically fires watchSubscriptions on init", async () => {
         const storageLoc = generateClientDbName("notifyTestAutomatic");
         const wallet1 = await NotifyClient.init({
