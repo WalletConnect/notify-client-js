@@ -19,6 +19,8 @@ import { encodeEd25519Key } from "@walletconnect/did-jwt";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
+// Comes from notify config from explorer
+// https://explorer-api.walletconnect.com/w3i/v1/notify-config?projectId=228af4798d38a06cb431b473254c9720&appDomain="wc-notify-swift-integration-tests-prod.pages.dev
 const testScopeId = "f173f231-a45c-4dc0-aa5d-956eb04f7360";
 
 if (!process.env.TEST_PROJECT_ID) {
@@ -692,7 +694,7 @@ describe("Notify", () => {
         );
       });
 
-      // consistent between relay and notifiy subscriptions
+      // consistent between relay and notify subscriptions
       it("maintains a consistent subscription state across stores", async () => {
         const walletAccount1 = EthersWallet.createRandom();
         const storageLoc1 = generateClientDbName("notifyTestConsistency");
