@@ -1,5 +1,5 @@
 import { Wallet as EthersWallet } from "@ethersproject/wallet";
-import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
+import { Core, RELAYER_DEFAULT_PROTOCOL, RELAYER_EVENTS } from "@walletconnect/core";
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -19,8 +19,7 @@ import { encodeEd25519Key } from "@walletconnect/did-jwt";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
-
-	const testScopeId = "f173f231-a45c-4dc0-aa5d-956eb04f7360"
+const testScopeId = "f173f231-a45c-4dc0-aa5d-956eb04f7360"
 
 if (!process.env.TEST_PROJECT_ID) {
   throw new ReferenceError("TEST_PROJECT_ID env variable not set");
@@ -612,7 +611,7 @@ describe("Notify", () => {
           isLimited: false,
           account,
           onSign,
-          domain: "unrelated.domain.com",
+          domain: "gm.walletconnect.com",
         });
 
         await waitForEvent(() => wallet1ReceivedChangedEvent);
@@ -653,6 +652,7 @@ describe("Notify", () => {
 
         wallet1.on("notify_subscriptions_changed", () => {
           wallet1UpdateCount++;
+
         });
         await createNotifySubscription(wallet, account, onSign);
 
