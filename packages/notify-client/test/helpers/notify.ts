@@ -75,7 +75,6 @@ export const sendNotifyMessage = async (
     notification: {
       body: messageBody,
       title: "Test Message",
-      icon: "",
       url: "https://test.coms",
       // "Notification 1" notification ID, taken from Notify Test (ec020ad1-89bc-4f0f-b7bc-5602990e79b5) project on Cloud.
       type: "f173f231-a45c-4dc0-aa5d-956eb04f7360",

@@ -19,6 +19,9 @@ import { encodeEd25519Key } from "@walletconnect/did-jwt";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
+
+	const testScopeId = "f173f231-a45c-4dc0-aa5d-956eb04f7360"
+
 if (!process.env.TEST_PROJECT_ID) {
   throw new ReferenceError("TEST_PROJECT_ID env variable not set");
 }
@@ -243,6 +246,7 @@ describe("Notify", () => {
           let notifyMessageEvent: any;
 
           wallet.once("notify_message", (event) => {
+	    console.log("notify_message", event);
             gotNotifyMessageResponse = true;
             notifyMessageEvent = event;
           });
@@ -334,21 +338,23 @@ describe("Notify", () => {
 
         await wallet.update({
           topic: subscriptions[0].topic,
-          scope: [],
+          scope: [testScopeId],
         });
 
         await waitForEvent(() => gotNotifyUpdateResponse);
+
+
         await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
 
         expect(gotNotifyUpdateResponse).toBe(true);
         expect(wallet.subscriptions.keys[0]).toBe(
           lastChangedSubscriptions[0].topic
         );
+
         // Ensure all scopes have been disabled in the updated subscription.
         expect(
           Object.values(lastChangedSubscriptions[0].scope)
-            .map((scp) => scp.enabled)
-            .every((enabled) => enabled === false)
+            .find((scp) => scp.id === testScopeId)?.enabled
         ).toBe(true);
       });
     });
@@ -574,7 +580,7 @@ describe("Notify", () => {
 
         await wallet.update({
           topic: subscriptions[0].topic,
-          scope: [""],
+          scope: [testScopeId],
         });
 
         await waitForEvent(() => gotNotifyUpdateResponse);
