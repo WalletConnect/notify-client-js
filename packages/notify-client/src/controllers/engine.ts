@@ -622,12 +622,15 @@ export class NotifyEngine extends INotifyEngine {
 
       const currentMessages = this.client.messages.get(topic).messages;
 
-      const messageIdAlreadyReceived = Object.values(currentMessages)
-	.some(msg => msg.message.id === messageClaims.msg.id);
+      const messageIdAlreadyReceived = Object.values(currentMessages).some(
+        (msg) => msg.message.id === messageClaims.msg.id
+      );
 
-      if(messageIdAlreadyReceived) {
-	this.client.logger.warn(`[Notify] Message with id ${messageClaims.msg.id} `)
-	return;
+      if (messageIdAlreadyReceived) {
+        this.client.logger.warn(
+          `[Notify] Message with id ${messageClaims.msg.id} `
+        );
+        return;
       }
 
       await this.client.messages.update(topic, {
