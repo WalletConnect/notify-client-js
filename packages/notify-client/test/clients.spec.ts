@@ -1,5 +1,9 @@
 import { Wallet as EthersWallet } from "@ethersproject/wallet";
-import { Core, RELAYER_DEFAULT_PROTOCOL } from "@walletconnect/core";
+import {
+  Core,
+  RELAYER_DEFAULT_PROTOCOL,
+  RELAYER_EVENTS,
+} from "@walletconnect/core";
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -15,7 +19,7 @@ import { disconnectSocket } from "./helpers/ws";
 import axios from "axios";
 import { ICore } from "@walletconnect/types";
 import { generateClientDbName } from "./helpers/storage";
-import { encodeEd25519Key } from "@walletconnect/did-jwt";
+import { encodeEd25519Key, encodeJwt } from "@walletconnect/did-jwt";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
@@ -442,12 +446,14 @@ describe("Notify", () => {
         const [subscription] = wallet.subscriptions.getAll();
         const { topic } = subscription;
         const message1 = {
+          id: "test_id_1",
           title: "Test Notify 1",
           body: "This is a test notify notification",
           icon: "xyz.png",
           url: "https://walletconnect.com",
         };
         const message2 = {
+          id: "test_id_2",
           title: "Test Notify 2",
           body: "This is a test notify notification",
           icon: "xyz.png",
@@ -526,6 +532,7 @@ describe("Notify", () => {
         const [subscription] = wallet.subscriptions.getAll();
         const { topic } = subscription;
         const message = {
+          id: "test_id",
           title: "Test Notify",
           body: "This is a test notify notification",
           icon: "xyz.png",
@@ -839,6 +846,64 @@ describe("Notify", () => {
         expect(wallet3ReceivedChangedEvent).toEqual(true);
 
         expect(Object.keys(wallet3.getActiveSubscriptions()).length).toEqual(0);
+      });
+    });
+
+    describe.skipIf(!hasTestProjectSecret)("Message Deduping", () => {
+      it("dedups messages based on notify message id", async () => {
+        await createNotifySubscription(wallet, account, onSign);
+
+        expect(wallet.subscriptions.getAll().length).toEqual(1);
+
+        const testSub = wallet.subscriptions.getAll()[0];
+
+        expect(
+          Object.keys(wallet.messages.get(testSub.topic).messages).length
+        ).toEqual(0);
+
+        let messagesReceived = 0;
+
+        wallet.on("notify_message", () => {
+          messagesReceived++;
+        });
+
+        const now = Date.now();
+
+        await waitForEvent(() => Date.now() - now > 1_000);
+
+        let receivedRealMessage = false;
+        let message: any = {};
+        wallet.on("notify_message", (m) => {
+          receivedRealMessage = true;
+          message = m;
+        });
+
+        await sendNotifyMessage(account, "Test");
+
+        await waitForEvent(() => receivedRealMessage);
+
+        const encoded = await wallet.core.crypto.encode(testSub.topic, {
+          ...message,
+          // Set different JSONRPC ID to avoid the relayer deduping the message based on JSON-RPC ID
+          // Deduping should be done based on notify message ID, not
+          // JSONRPC payload id
+          id: Date.now(),
+        });
+
+        wallet.core.relayer.events.emit(RELAYER_EVENTS.message, {
+          topic: testSub.topic,
+          message: encoded,
+          publishedAt: Date.now(),
+        });
+
+        // Arbitrarily wait for message to come through from event.
+        const date = Date.now();
+        await waitForEvent(() => Date.now() - date > 2_000);
+
+        expect(messagesReceived).toEqual(1);
+        expect(
+          Object.keys(wallet.messages.get(testSub.topic).messages).length
+        ).toEqual(1);
       });
     });
   });
