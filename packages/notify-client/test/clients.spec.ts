@@ -884,7 +884,7 @@ describe("Notify", () => {
 
         const encoded = await wallet.core.crypto.encode(testSub.topic, {
           ...message,
-          // Set different JSONRPC ID
+          // Set different JSONRPC ID to avoid the relayer deduping the message based on JSON-RPC ID
           // Deduping should be done based on notify message ID, not
           // JSONRPC payload id
           id: Date.now(),
