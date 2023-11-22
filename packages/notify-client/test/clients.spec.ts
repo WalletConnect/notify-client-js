@@ -850,7 +850,7 @@ describe("Notify", () => {
     });
 
     describe.skipIf(!hasTestProjectSecret)("Message Deduping", () => {
-      it("dedups messages based on id", async () => {
+      it("dedups messages based on notify message id", async () => {
         await createNotifySubscription(wallet, account, onSign);
 
         expect(wallet.subscriptions.getAll().length).toEqual(1);
@@ -885,6 +885,8 @@ describe("Notify", () => {
         const encoded = await wallet.core.crypto.encode(testSub.topic, {
           ...message,
 	  // Set different JSONRPC ID
+	  // Deduping should be done based on notify message ID, not
+	  // JSONRPC payload id
 	  id: Date.now()
         });
 
