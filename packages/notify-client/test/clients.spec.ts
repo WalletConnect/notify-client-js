@@ -446,14 +446,14 @@ describe("Notify", () => {
         const [subscription] = wallet.subscriptions.getAll();
         const { topic } = subscription;
         const message1 = {
-	  id: "test_id_1",
+          id: "test_id_1",
           title: "Test Notify 1",
           body: "This is a test notify notification",
           icon: "xyz.png",
           url: "https://walletconnect.com",
         };
         const message2 = {
-	  id: "test_id_2",
+          id: "test_id_2",
           title: "Test Notify 2",
           body: "This is a test notify notification",
           icon: "xyz.png",
@@ -532,7 +532,7 @@ describe("Notify", () => {
         const [subscription] = wallet.subscriptions.getAll();
         const { topic } = subscription;
         const message = {
-	  id: "test_id",
+          id: "test_id",
           title: "Test Notify",
           body: "This is a test notify notification",
           icon: "xyz.png",
@@ -871,33 +871,30 @@ describe("Notify", () => {
 
         await waitForEvent(() => Date.now() - now > 1_000);
 
-	let receivedRealMessage = false;
-	let message: any = {};
-	wallet.on('notify_message', (m) => {
-	  receivedRealMessage = true;
-	  message = m;
-	})
+        let receivedRealMessage = false;
+        let message: any = {};
+        wallet.on("notify_message", (m) => {
+          receivedRealMessage = true;
+          message = m;
+        });
 
-	await sendNotifyMessage(account, "Test");
+        await sendNotifyMessage(account, "Test");
 
-	await waitForEvent(() => receivedRealMessage);
+        await waitForEvent(() => receivedRealMessage);
 
-	const encoded = await wallet.core.crypto.encode(testSub.topic, {
-	  ...message,
-	});
+        const encoded = await wallet.core.crypto.encode(testSub.topic, {
+          ...message,
+        });
 
-        wallet.core.relayer.events.emit(
-          RELAYER_EVENTS.message,
-          {
-	    topic: testSub.topic,
-	    message: encoded,
-	    publishedAt: Date.now()
-	  }
-        );
+        wallet.core.relayer.events.emit(RELAYER_EVENTS.message, {
+          topic: testSub.topic,
+          message: encoded,
+          publishedAt: Date.now(),
+        });
 
-	// Arbitrarily wait for message to come through from event.
-	const date = Date.now();
-	await waitForEvent(() => Date.now() - date > 2_000);
+        // Arbitrarily wait for message to come through from event.
+        const date = Date.now();
+        await waitForEvent(() => Date.now() - date > 2_000);
 
         expect(messagesReceived).toEqual(1);
         expect(
