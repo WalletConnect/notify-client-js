@@ -628,7 +628,7 @@ export class NotifyEngine extends INotifyEngine {
 
       if (messageIdAlreadyReceived) {
         this.client.logger.warn(
-          `[Notify] Message with id ${messageClaims.msg.id} already received`
+          `[Notify] Message with id ${messageClaims.msg.id} already received. Ignoring.`
         );
         return;
       }
