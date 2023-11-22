@@ -849,7 +849,7 @@ describe("Notify", () => {
       });
     });
 
-    describe("Message Deduping", () => {
+    describe.skipIf(!hasTestProjectSecret)("Message Deduping", () => {
       it("dedups messages based on id", async () => {
         await createNotifySubscription(wallet, account, onSign);
 
