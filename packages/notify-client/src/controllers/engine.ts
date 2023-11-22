@@ -1071,7 +1071,7 @@ export class NotifyEngine extends INotifyEngine {
 
       const dappUrl = getDappUrl(subscription.metadata.appDomain);
 
-      const cachedKey = this.getCachedDappKey(subscription)
+      const cachedKey = this.getCachedDappKey(subscription);
       const { dappIdentityKey } = cachedKey
         ? { dappIdentityKey: cachedKey }
         : await this.resolveKeys(dappUrl);
@@ -1112,7 +1112,7 @@ export class NotifyEngine extends INotifyEngine {
       });
       const dappUrl = getDappUrl(subscription.metadata.appDomain);
 
-      const cachedKey = this.getCachedDappKey(subscription)
+      const cachedKey = this.getCachedDappKey(subscription);
       const { dappIdentityKey } = cachedKey
         ? { dappIdentityKey: cachedKey }
         : await this.resolveKeys(dappUrl);
@@ -1158,7 +1158,7 @@ export class NotifyEngine extends INotifyEngine {
       });
       const dappUrl = getDappUrl(subscription.metadata.appDomain);
 
-      const cachedKey = this.getCachedDappKey(subscription)
+      const cachedKey = this.getCachedDappKey(subscription);
       const { dappIdentityKey } = cachedKey
         ? { dappIdentityKey: cachedKey }
         : await this.resolveKeys(dappUrl);
