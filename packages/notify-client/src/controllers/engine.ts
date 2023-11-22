@@ -979,6 +979,7 @@ export class NotifyEngine extends INotifyEngine {
         topic: sbTopic,
         scope: scopeMap,
         symKey: sub.symKey,
+        appAuthenticationKey: sub.appAuthenticationKey,
         metadata: {
           name: notifyConfig?.name ?? sub.appDomain,
           description: notifyConfig?.description ?? sub.appDomain,
@@ -1067,7 +1068,9 @@ export class NotifyEngine extends INotifyEngine {
         account: subscription.account,
       });
       const dappUrl = getDappUrl(subscription.metadata.appDomain);
-      const { dappIdentityKey } = await this.resolveKeys(dappUrl);
+      const { dappIdentityKey } = subscription.appAuthenticationKey
+        ? { dappIdentityKey: subscription.appAuthenticationKey }
+        : await this.resolveKeys(dappUrl);
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyMessage"].res.ttl;
       const payload: NotifyClientTypes.MessageResponseJWTClaims = {
@@ -1103,7 +1106,9 @@ export class NotifyEngine extends INotifyEngine {
         account: subscription.account,
       });
       const dappUrl = getDappUrl(subscription.metadata.appDomain);
-      const { dappIdentityKey } = await this.resolveKeys(dappUrl);
+      const { dappIdentityKey } = subscription.appAuthenticationKey
+        ? { dappIdentityKey: subscription.appAuthenticationKey }
+        : await this.resolveKeys(dappUrl);
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyDelete"].req.ttl;
       const payload: NotifyClientTypes.DeleteJWTClaims = {
@@ -1144,7 +1149,11 @@ export class NotifyEngine extends INotifyEngine {
         account: subscription.account,
       });
       const dappUrl = getDappUrl(subscription.metadata.appDomain);
-      const { dappIdentityKey } = await this.resolveKeys(dappUrl);
+
+      const { dappIdentityKey } = subscription.appAuthenticationKey
+        ? { dappIdentityKey: subscription.appAuthenticationKey }
+        : await this.resolveKeys(dappUrl);
+
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyUpdate"].req.ttl;
       const payload: NotifyClientTypes.UpdateJWTClaims = {

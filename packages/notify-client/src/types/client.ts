@@ -71,6 +71,7 @@ export declare namespace NotifyClientTypes {
     topic: string;
     account: string;
     relay: RelayerTypes.ProtocolOptions;
+    appAuthenticationKey: string;
     metadata: Metadata;
     scope: ScopeMap;
     expiry: number;
@@ -80,6 +81,7 @@ export declare namespace NotifyClientTypes {
   interface NotifyServerSubscription {
     appDomain: string;
     scope: string[];
+    appAuthenticationKey: string;
     account: string;
     symKey: string;
     expiry: number;
