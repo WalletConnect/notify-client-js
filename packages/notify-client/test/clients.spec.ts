@@ -857,19 +857,6 @@ describe("Notify", () => {
 
         const testSub = wallet.subscriptions.getAll()[0];
 
-        const messageAuth = await wallet.identityKeys.generateIdAuth(account, {
-          act: "notify_message",
-          exp: Date.now() + 10_000,
-          iat: Date.now(),
-          iss: encodeEd25519Key(
-            await wallet.identityKeys.getIdentity({ account })
-          ),
-          sub: "",
-          // msg content does not matter
-          // @ts-ignore
-          msg: {},
-        });
-
         expect(
           Object.keys(wallet.messages.get(testSub.topic).messages).length
         ).toEqual(0);
@@ -879,19 +866,6 @@ describe("Notify", () => {
         wallet.on("notify_message", () => {
           messagesReceived++;
         });
-
-        const fireMessage = async () => {
-          const messagePayload = await wallet.core.crypto.encode(testSub.topic, {
-            id: Date.now() * 1_000,
-            jsonrpc: "2.0",
-            method: "notify_message",
-            params: {
-              messageAuth,
-            },
-          });
-
-        };
-
 
         const now = Date.now();
 
