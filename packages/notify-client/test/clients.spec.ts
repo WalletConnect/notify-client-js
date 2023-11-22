@@ -884,6 +884,8 @@ describe("Notify", () => {
 
         const encoded = await wallet.core.crypto.encode(testSub.topic, {
           ...message,
+	  // Set different JSONRPC ID
+	  id: Date.now()
         });
 
         wallet.core.relayer.events.emit(RELAYER_EVENTS.message, {
