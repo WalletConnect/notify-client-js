@@ -1255,6 +1255,9 @@ export class NotifyEngine extends INotifyEngine {
     return registeredIdentity;
   };
 
+  // This is a separate method from `resolveKeys` and not an
+  // internal caching mechanism because it only works when
+  // the appAuthenticationKey is required, not both a dapp's keys
   private getCachedDappKey = (
     subscription: NotifyClientTypes.NotifySubscription
   ) => {
