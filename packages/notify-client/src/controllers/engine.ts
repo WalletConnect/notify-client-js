@@ -1261,13 +1261,12 @@ export class NotifyEngine extends INotifyEngine {
   private getCachedDappKey = (
     subscription: NotifyClientTypes.NotifySubscription
   ) => {
-    if (subscription.appAuthenticationKey) {
-      return Buffer.from(
-        decodeEd25519Key(subscription.appAuthenticationKey)
-      ).toString("hex");
+    if (!subscription.appAuthenticationKey) {
+      return null;
     }
-
-    return null;
+    return Buffer.from(
+      decodeEd25519Key(subscription.appAuthenticationKey)
+    ).toString("hex");
   };
 
   private resolveKeys = async (
