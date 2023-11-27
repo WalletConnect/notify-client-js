@@ -3,6 +3,7 @@ import {
   JwtPayload,
   composeDidPkh,
   encodeEd25519Key,
+  decodeEd25519Key,
 } from "@walletconnect/did-jwt";
 import {
   JsonRpcPayload,
@@ -990,6 +991,7 @@ export class NotifyEngine extends INotifyEngine {
         topic: sbTopic,
         scope: scopeMap,
         symKey: sub.symKey,
+        appAuthenticationKey: sub.appAuthenticationKey,
         metadata: {
           name: notifyConfig?.name ?? sub.appDomain,
           description: notifyConfig?.description ?? sub.appDomain,
@@ -1077,8 +1079,14 @@ export class NotifyEngine extends INotifyEngine {
       const identityKeyPub = await this.client.identityKeys.getIdentity({
         account: subscription.account,
       });
+
       const dappUrl = getDappUrl(subscription.metadata.appDomain);
-      const { dappIdentityKey } = await this.resolveKeys(dappUrl);
+
+      const cachedKey = this.getCachedDappKey(subscription);
+      const { dappIdentityKey } = cachedKey
+        ? { dappIdentityKey: cachedKey }
+        : await this.resolveKeys(dappUrl);
+
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyMessage"].res.ttl;
       const payload: NotifyClientTypes.MessageResponseJWTClaims = {
@@ -1114,7 +1122,12 @@ export class NotifyEngine extends INotifyEngine {
         account: subscription.account,
       });
       const dappUrl = getDappUrl(subscription.metadata.appDomain);
-      const { dappIdentityKey } = await this.resolveKeys(dappUrl);
+
+      const cachedKey = this.getCachedDappKey(subscription);
+      const { dappIdentityKey } = cachedKey
+        ? { dappIdentityKey: cachedKey }
+        : await this.resolveKeys(dappUrl);
+
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyDelete"].req.ttl;
       const payload: NotifyClientTypes.DeleteJWTClaims = {
@@ -1155,7 +1168,12 @@ export class NotifyEngine extends INotifyEngine {
         account: subscription.account,
       });
       const dappUrl = getDappUrl(subscription.metadata.appDomain);
-      const { dappIdentityKey } = await this.resolveKeys(dappUrl);
+
+      const cachedKey = this.getCachedDappKey(subscription);
+      const { dappIdentityKey } = cachedKey
+        ? { dappIdentityKey: cachedKey }
+        : await this.resolveKeys(dappUrl);
+
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry = issuedAt + ENGINE_RPC_OPTS["wc_notifyUpdate"].req.ttl;
       const payload: NotifyClientTypes.UpdateJWTClaims = {
@@ -1246,6 +1264,22 @@ export class NotifyEngine extends INotifyEngine {
     });
 
     return registeredIdentity;
+  };
+
+  // This is a separate method from `resolveKeys` and not an
+  // internal caching mechanism of `resolveKeys` because it works when
+  // only the `dappIdentityKey` is required, not both a dapp's keys.
+  // This is because it does not cover fetching the `dappPublicKey`
+  // property that `resolveKeys` can fetch.
+  private getCachedDappKey = (
+    subscription: NotifyClientTypes.NotifySubscription
+  ) => {
+    if (!subscription.appAuthenticationKey) {
+      return null;
+    }
+    return Buffer.from(
+      decodeEd25519Key(subscription.appAuthenticationKey)
+    ).toString("hex");
   };
 
   private resolveKeys = async (
