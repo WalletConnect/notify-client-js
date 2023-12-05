@@ -23,9 +23,6 @@ import { encodeEd25519Key, encodeJwt } from "@walletconnect/did-jwt";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
-//@ts-ignore
-global.window = null;
-
 // Comes from notify config from explorer
 // https://explorer-api.walletconnect.com/w3i/v1/notify-config?projectId=228af4798d38a06cb431b473254c9720&appDomain="wc-notify-swift-integration-tests-prod.pages.dev
 const testScopeId = "f173f231-a45c-4dc0-aa5d-956eb04f7360";
@@ -92,6 +89,8 @@ describe("Notify", () => {
 	  allApps: false
 	})
 
+	console.log({preparedRegistration1})
+
         const identityKey1 = await wallet.register({
 	  registerParams: preparedRegistration1.registerParams,
 	  signature: await onSign(preparedRegistration1.message)
@@ -102,18 +101,20 @@ describe("Notify", () => {
           account,
         });
 
+	expect(wallet.isRegistered({account, allApps: true})).toEqual(false) 
+
 	const preparedRegistration2 = await wallet.prepareRegistration({
 	  account,
 	  domain: testDappMetadata.appDomain,
 	  allApps: false
 	})
 
-        const identityKey2 = await wallet.register({
+        await expect(wallet.register({
 	  registerParams: preparedRegistration2.registerParams,
 	  signature: await onSign(preparedRegistration2.message)
-        });
+        })).rejects.toEqual(new Error("Failed to register, user has an existing stale identity. Unregister using the unregister method."))
 
-        expect(identityKey1).not.to.equal(identityKey2);
+	await wallet.unregister({account})
 
 	const preparedRegistration3 = await wallet.prepareRegistration({
 	  account,
@@ -126,7 +127,7 @@ describe("Notify", () => {
 	  signature: await onSign(preparedRegistration3.message)
         });
 
-        expect(identityKey3).toEqual(identityKey2);
+        expect(identityKey3).to.not.eq(identityKey1);
       });
     });
 
@@ -150,15 +151,15 @@ describe("Notify", () => {
           projectId,
         });
 
-	const preparedRegistration1 = await wallet.prepareRegistration({
+	const preparedRegistration1 = await newClient.prepareRegistration({
 	  account: newAccount,
 	  domain: testDappMetadata.appDomain,
-	  allApps: false
+	  allApps: true
 	})
 
-        const identityKey1 = await wallet.register({
+        const identityKey1 = await newClient.register({
 	  registerParams: preparedRegistration1.registerParams,
-	  signature: await onSign(preparedRegistration1.message)
+	  signature: await newWallet.signMessage(preparedRegistration1.message)
         });
 
         const encodedIdentity = encodeEd25519Key(identityKey1);

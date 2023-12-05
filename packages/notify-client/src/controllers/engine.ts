@@ -194,6 +194,10 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
+    if(!this.client.identityKeys.isRegistered(account)) {
+      throw new Error(`Account ${account} is not registered`)
+    }
+
     const dappUrl = getDappUrl(appDomain);
     const { dappPublicKey, dappIdentityKey } = await this.resolveKeys(dappUrl);
     const notifyConfig = await this.resolveNotifyConfig(appDomain);
@@ -1270,27 +1274,23 @@ export class NotifyEngine extends INotifyEngine {
     signature,
     registerParams,
   }) => {
-    const accountId = registerParams.cacaoPayload.aud
+    const accountId = registerParams.cacaoPayload.iss
       .split(":")
       .slice(-3)
       .join(":");
 
-    if (await this.client.identityKeys.hasIdentity({ account: accountId })) {
-      if (
+    const allApps = registerParams.cacaoPayload.statement === NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
+
+    if (this.client.identityKeys.isRegistered(accountId)) {
+      const hasStaleStatement = 
         this.checkIfSignedStatementIsStale(
           accountId,
-          registerParams.cacaoPayload.statement ?? ""
+          allApps?
+	    NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS :
+	    NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN
         )
-      ) {
-        try {
-          await this.client.identityKeys.unregisterIdentity({
-            account: accountId,
-          });
-        } catch {
-          throw new Error(
-            `Failed to unregister ${accountId} which has a stale signature`
-          );
-        }
+      if (hasStaleStatement) {
+	throw new Error("Failed to register, user has an existing stale identity. Unregister using the unregister method.")
       }
     }
 
