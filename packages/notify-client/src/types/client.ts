@@ -1,4 +1,4 @@
-import { Cacao, CacaoPayload } from "@walletconnect/cacao";
+import { CacaoPayload } from "@walletconnect/cacao";
 import { IdentityKeys } from "@walletconnect/identity-keys";
 import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
 import { CoreTypes, ICore, IStore, RelayerTypes } from "@walletconnect/types";

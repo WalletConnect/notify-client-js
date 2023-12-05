@@ -23,6 +23,9 @@ import { encodeEd25519Key, encodeJwt } from "@walletconnect/did-jwt";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
+//@ts-ignore
+global.window = null;
+
 // Comes from notify config from explorer
 // https://explorer-api.walletconnect.com/w3i/v1/notify-config?projectId=228af4798d38a06cb431b473254c9720&appDomain="wc-notify-swift-integration-tests-prod.pages.dev
 const testScopeId = "f173f231-a45c-4dc0-aa5d-956eb04f7360";
