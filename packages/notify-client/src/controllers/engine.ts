@@ -61,19 +61,26 @@ export class NotifyEngine extends INotifyEngine {
 
   // ---------- Public --------------------------------------- //
 
-  public register: INotifyEngine["register"] = async ({
+  public prepareRegistration: INotifyEngine["prepareRegistration"] = ({
     account,
-    isLimited,
-    onSign,
     domain,
+    allApps
   }) => {
     // Explicitly check if it was set to false because null/undefined should count as
     // as "true" since by default it should be limited. The default of `isLimited` is
     // true.
     const statement =
-      isLimited === false
+      allApps === false
         ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
         : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
+
+    
+  }
+
+  public register: INotifyEngine["register"] = async ({
+    registerParams,
+    signature
+  }) => {
 
     // Retrieve existing identity or register a new one for this account on this device.
     const identity = await this.registerIdentity(

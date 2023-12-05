@@ -1,3 +1,4 @@
+import { Cacao } from "@walletconnect/cacao";
 import { IdentityKeys } from "@walletconnect/identity-keys";
 import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
 import { CoreTypes, ICore, IStore, RelayerTypes } from "@walletconnect/types";
@@ -66,6 +67,11 @@ export declare namespace NotifyClientTypes {
     string,
     { name: string; id: string; description: string; enabled: boolean }
   >;
+
+  interface NotifyRegistrationParams {
+    payload: Cacao["p"],
+    privateIdentityKey: string
+  }
 
   interface NotifySubscription {
     topic: string;
@@ -281,6 +287,8 @@ export abstract class INotifyClient {
 
   // ---------- Public Methods ------------------------------------------------------- //
 
+  public abstract isRegistered: INotifyEngine["isRegistered"];
+  public abstract prepareRegistration: INotifyEngine["prepareRegistration"];
   public abstract register: INotifyEngine["register"];
   public abstract unregister: INotifyEngine["unregister"];
   public abstract subscribe: INotifyEngine["subscribe"];
