@@ -1,4 +1,4 @@
-import { Cacao } from "@walletconnect/cacao";
+import { Cacao, CacaoPayload } from "@walletconnect/cacao";
 import { IdentityKeys } from "@walletconnect/identity-keys";
 import { ErrorResponse } from "@walletconnect/jsonrpc-utils";
 import { CoreTypes, ICore, IStore, RelayerTypes } from "@walletconnect/types";
@@ -69,8 +69,8 @@ export declare namespace NotifyClientTypes {
   >;
 
   interface NotifyRegistrationParams {
-    payload: Cacao["p"],
-    privateIdentityKey: string
+    cacaoPayload: CacaoPayload;
+    privateIdentityKey: Uint8Array;
   }
 
   interface NotifySubscription {

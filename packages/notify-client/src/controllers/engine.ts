@@ -61,10 +61,10 @@ export class NotifyEngine extends INotifyEngine {
 
   // ---------- Public --------------------------------------- //
 
-  public prepareRegistration: INotifyEngine["prepareRegistration"] = ({
+  public prepareRegistration: INotifyEngine["prepareRegistration"] = async ({
     account,
     domain,
-    allApps
+    allApps,
   }) => {
     // Explicitly check if it was set to false because null/undefined should count as
     // as "true" since by default it should be limited. The default of `isLimited` is
@@ -74,21 +74,49 @@ export class NotifyEngine extends INotifyEngine {
         ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
         : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
 
-    
-  }
+    const prepared = await this.client.identityKeys.prepareRegistration({
+      accountId: account,
+      domain,
+      statement,
+    });
+
+    return prepared;
+  };
+
+  public isRegistered: INotifyEngine["isRegistered"] = ({
+    account,
+    allApps,
+  }) => {
+    if (this.client.identityKeys.isRegistered(account)) {
+      return !this.checkIfSignedStatementIsStale(
+        account,
+        allApps
+          ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
+          : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN
+      );
+    }
+    return false;
+  };
 
   public register: INotifyEngine["register"] = async ({
     registerParams,
-    signature
+    signature,
   }) => {
-
     // Retrieve existing identity or register a new one for this account on this device.
-    const identity = await this.registerIdentity(
-      account,
-      onSign,
-      statement,
-      domain
-    );
+    const identity = await this.registerIdentity({
+      registerParams,
+      signature,
+    });
+
+    const isLimited =
+      registerParams.cacaoPayload.statement ===
+      NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
+
+    const domain = registerParams.cacaoPayload.domain;
+    const account = registerParams.cacaoPayload.iss
+      .split(":")
+      .slice(-3)
+      .join(":");
 
     try {
       await this.watchSubscriptions(account, domain, isLimited ?? true);
@@ -1238,14 +1266,22 @@ export class NotifyEngine extends INotifyEngine {
     return messageClaims;
   };
 
-  private registerIdentity = async (
-    accountId: string,
-    onSign: (message: string) => Promise<string>,
-    statement: string,
-    domain: string
-  ): Promise<string> => {
+  private registerIdentity: INotifyEngine["register"] = async ({
+    signature,
+    registerParams,
+  }) => {
+    const accountId = registerParams.cacaoPayload.aud
+      .split(":")
+      .slice(-3)
+      .join(":");
+
     if (await this.client.identityKeys.hasIdentity({ account: accountId })) {
-      if (this.checkIfSignedStatementIsStale(accountId, statement)) {
+      if (
+        this.checkIfSignedStatementIsStale(
+          accountId,
+          registerParams.cacaoPayload.statement ?? ""
+        )
+      ) {
         try {
           await this.client.identityKeys.unregisterIdentity({
             account: accountId,
@@ -1259,11 +1295,17 @@ export class NotifyEngine extends INotifyEngine {
     }
 
     const registeredIdentity = await this.client.identityKeys.registerIdentity({
-      accountId,
-      onSign,
-      statement,
-      domain,
+      signature,
+      registerParams,
     });
+
+    const { statement } = registerParams.cacaoPayload;
+
+    if (!statement) {
+      throw new Error(
+        `Failed to register. Expected statement to be string, instead got: ${statement}`
+      );
+    }
 
     this.client.signedStatements.set(accountId, {
       account: accountId,
