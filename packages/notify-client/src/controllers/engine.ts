@@ -70,7 +70,7 @@ export class NotifyEngine extends INotifyEngine {
     // as "true" since by default it should be limited. The default of `isLimited` is
     // true.
     const statement =
-      allApps === false
+      allApps
         ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
         : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
 
@@ -119,7 +119,7 @@ export class NotifyEngine extends INotifyEngine {
       .join(":");
 
     try {
-      await this.watchSubscriptions(account, domain, isLimited ?? true);
+      await this.watchSubscriptions(account, domain, isLimited);
     } catch (error: any) {
       this.client.logger.error(
         `[Notify] Engine.register > watching subscriptions failed > ${error.message}`

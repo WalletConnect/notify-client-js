@@ -19,7 +19,7 @@ import { disconnectSocket } from "./helpers/ws";
 import axios from "axios";
 import { ICore } from "@walletconnect/types";
 import { generateClientDbName } from "./helpers/storage";
-import { encodeEd25519Key, encodeJwt } from "@walletconnect/did-jwt";
+import { encodeEd25519Key } from "@walletconnect/did-jwt";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
@@ -708,7 +708,7 @@ describe("Notify", () => {
 	const preparedRegistration = await wallet.prepareRegistration({
 	  account,
 	  domain: "hackers.gm.walletconnect.com",
-	  allApps: false
+	  allApps: true
 	})
 
         await wallet2.register({
