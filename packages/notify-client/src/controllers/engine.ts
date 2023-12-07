@@ -69,10 +69,9 @@ export class NotifyEngine extends INotifyEngine {
     // Explicitly check if it was set to false because null/undefined should count as
     // as "true" since by default it should be limited. The default of `isLimited` is
     // true.
-    const statement =
-      allApps
-        ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
-        : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
+    const statement = allApps
+      ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
+      : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
 
     const prepared = await this.client.identityKeys.prepareRegistration({
       accountId: account,
@@ -194,8 +193,8 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
-    if(!this.client.identityKeys.isRegistered(account)) {
-      throw new Error(`Account ${account} is not registered`)
+    if (!this.client.identityKeys.isRegistered(account)) {
+      throw new Error(`Account ${account} is not registered`);
     }
 
     const dappUrl = getDappUrl(appDomain);
@@ -1279,18 +1278,21 @@ export class NotifyEngine extends INotifyEngine {
       .slice(-3)
       .join(":");
 
-    const allApps = registerParams.cacaoPayload.statement === NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
+    const allApps =
+      registerParams.cacaoPayload.statement ===
+      NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS;
 
     if (this.client.identityKeys.isRegistered(accountId)) {
-      const hasStaleStatement = 
-        this.checkIfSignedStatementIsStale(
-          accountId,
-          allApps?
-	    NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS :
-	    NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN
-        )
+      const hasStaleStatement = this.checkIfSignedStatementIsStale(
+        accountId,
+        allApps
+          ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
+          : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN
+      );
       if (hasStaleStatement) {
-	throw new Error("Failed to register, user has an existing stale identity. Unregister using the unregister method.")
+        throw new Error(
+          "Failed to register, user has an existing stale identity. Unregister using the unregister method."
+        );
       }
     }
 
