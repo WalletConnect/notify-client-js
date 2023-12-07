@@ -106,7 +106,7 @@ export class NotifyEngine extends INotifyEngine {
 
     const allApps =
       registerParams.cacaoPayload.statement ===
-      NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
+      NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS;
 
     const domain = registerParams.cacaoPayload.domain;
     const account = registerParams.cacaoPayload.iss
