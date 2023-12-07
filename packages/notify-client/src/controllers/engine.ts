@@ -109,7 +109,7 @@ export class NotifyEngine extends INotifyEngine {
       NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS;
 
     const domain = registerParams.cacaoPayload.domain;
-    const account = getCaip10FromDidPkh(registerParams.cacaoPayload.iss)
+    const account = getCaip10FromDidPkh(registerParams.cacaoPayload.iss);
 
     try {
       await this.watchSubscriptions(account, domain, allApps);
@@ -1270,7 +1270,7 @@ export class NotifyEngine extends INotifyEngine {
     signature,
     registerParams,
   }) => {
-    const accountId = getCaip10FromDidPkh(registerParams.cacaoPayload.iss)
+    const accountId = getCaip10FromDidPkh(registerParams.cacaoPayload.iss);
 
     const allApps =
       registerParams.cacaoPayload.statement ===
