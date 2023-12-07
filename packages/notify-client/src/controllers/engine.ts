@@ -83,13 +83,15 @@ export class NotifyEngine extends INotifyEngine {
   public isRegistered: INotifyEngine["isRegistered"] = ({
     account,
     allApps,
+    domain
   }) => {
     if (this.client.identityKeys.isRegistered(account)) {
-      return !this.checkIfSignedStatementIsStale(
+      return !this.checkIfIdentityIsStale(
         account,
         allApps
           ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
-          : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN
+          : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
+	domain
       );
     }
     return false;
@@ -1278,11 +1280,12 @@ export class NotifyEngine extends INotifyEngine {
       NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS;
 
     if (this.client.identityKeys.isRegistered(accountId)) {
-      const hasStaleStatement = this.checkIfSignedStatementIsStale(
+      const hasStaleStatement = this.checkIfIdentityIsStale(
         accountId,
         allApps
           ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
-          : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN
+          : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
+	registerParams.cacaoPayload.domain
       );
       if (hasStaleStatement) {
         throw new Error(
@@ -1296,7 +1299,7 @@ export class NotifyEngine extends INotifyEngine {
       registerParams,
     });
 
-    const { statement } = registerParams.cacaoPayload;
+    const { statement, domain } = registerParams.cacaoPayload;
 
     if (!statement) {
       throw new Error(
@@ -1306,6 +1309,7 @@ export class NotifyEngine extends INotifyEngine {
 
     this.client.signedStatements.set(accountId, {
       account: accountId,
+      domain, 
       statement,
     });
 
@@ -1431,9 +1435,10 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   // returns true if statement is stale, false otherwise.
-  private checkIfSignedStatementIsStale = (
+  private checkIfIdentityIsStale = (
     account: string,
-    currentStatement: string
+    currentStatement: string,
+    domain: string
   ) => {
     const hasSignedStatement =
       this.client.signedStatements.keys.includes(account);
@@ -1446,7 +1451,7 @@ export class NotifyEngine extends INotifyEngine {
 
     const signedStatement = this.client.signedStatements.get(account);
 
-    return signedStatement.statement !== currentStatement;
+    return signedStatement.statement !== currentStatement || signedStatement.domain !== domain;
   };
 
   private watchLastWatchedAccountIfExists = async () => {

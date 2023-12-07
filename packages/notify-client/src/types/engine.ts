@@ -46,6 +46,7 @@ export abstract class INotifyEngine {
   public abstract isRegistered(params: {
     account: string;
     allApps?: boolean;
+    domain: string
   }): boolean;
 
   public abstract unregister(params: { account: string }): Promise<void>;

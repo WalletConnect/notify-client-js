@@ -260,7 +260,7 @@ export abstract class INotifyClient {
 
   public abstract signedStatements: IStore<
     string,
-    { statement: string; account: string }
+    { statement: string; account: string; domain: string }
   >;
 
   public abstract watchedAccounts: IStore<
