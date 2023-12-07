@@ -96,9 +96,10 @@ describe("Notify", () => {
         await wallet.signedStatements.set(account, {
           statement: "false statement",
           account,
+	  domain: testDappMetadata.appDomain
         });
 
-        expect(wallet.isRegistered({ account, allApps: true })).toEqual(false);
+        expect(wallet.isRegistered({ account, allApps: true, domain: testDappMetadata.appDomain })).toEqual(false);
 
         const preparedRegistration2 = await wallet.prepareRegistration({
           account,
