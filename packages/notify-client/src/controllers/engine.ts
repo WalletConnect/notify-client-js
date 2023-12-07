@@ -83,7 +83,7 @@ export class NotifyEngine extends INotifyEngine {
   public isRegistered: INotifyEngine["isRegistered"] = ({
     account,
     allApps,
-    domain
+    domain,
   }) => {
     if (this.client.identityKeys.isRegistered(account)) {
       return !this.checkIfIdentityIsStale(
@@ -91,7 +91,7 @@ export class NotifyEngine extends INotifyEngine {
         allApps
           ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
           : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
-	domain
+        domain
       );
     }
     return false;
@@ -1285,7 +1285,7 @@ export class NotifyEngine extends INotifyEngine {
         allApps
           ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
           : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
-	registerParams.cacaoPayload.domain
+        registerParams.cacaoPayload.domain
       );
       if (hasStaleStatement) {
         throw new Error(
@@ -1309,7 +1309,7 @@ export class NotifyEngine extends INotifyEngine {
 
     this.client.signedStatements.set(accountId, {
       account: accountId,
-      domain, 
+      domain,
       statement,
     });
 
@@ -1451,7 +1451,10 @@ export class NotifyEngine extends INotifyEngine {
 
     const signedStatement = this.client.signedStatements.get(account);
 
-    return signedStatement.statement !== currentStatement || signedStatement.domain !== domain;
+    return (
+      signedStatement.statement !== currentStatement ||
+      signedStatement.domain !== domain
+    );
   };
 
   private watchLastWatchedAccountIfExists = async () => {
