@@ -109,10 +109,7 @@ export class NotifyEngine extends INotifyEngine {
       NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS;
 
     const domain = registerParams.cacaoPayload.domain;
-    const account = registerParams.cacaoPayload.iss
-      .split(":")
-      .slice(-3)
-      .join(":");
+    const account = getCaip10FromDidPkh(registerParams.cacaoPayload.iss)
 
     try {
       await this.watchSubscriptions(account, domain, allApps);
@@ -190,8 +187,11 @@ export class NotifyEngine extends INotifyEngine {
   }) => {
     this.isInitialized();
 
+    // Not using `this.isRegistered` because that accounts for stale
+    // statements, and we don't want stale statements to block users
+    // from subscribing.
     if (!this.client.identityKeys.isRegistered(account)) {
-      throw new Error(`Account ${account} is not registered`);
+      throw new Error(`Account ${account} is not registered.`);
     }
 
     const dappUrl = getDappUrl(appDomain);
@@ -1270,10 +1270,7 @@ export class NotifyEngine extends INotifyEngine {
     signature,
     registerParams,
   }) => {
-    const accountId = registerParams.cacaoPayload.iss
-      .split(":")
-      .slice(-3)
-      .join(":");
+    const accountId = getCaip10FromDidPkh(registerParams.cacaoPayload.iss)
 
     const allApps =
       registerParams.cacaoPayload.statement ===
