@@ -37,10 +37,10 @@ export const createNotifySubscription = async (
     ? gmHackersMetadata.appDomain
     : testDappMetadata.appDomain;
 
-  if (!wallet.isRegistered({ account })) {
+  if (!wallet.isRegistered({ account, domain: testDappMetadata.appDomain })) {
     const preparedRegistration = await wallet.prepareRegistration({
       account,
-      domain,
+      domain: testDappMetadata.appDomain,
       allApps: true,
     });
 

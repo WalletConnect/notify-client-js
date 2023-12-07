@@ -713,7 +713,7 @@ describe("Notify", () => {
           wallet2GotUpdate = true;
         });
 
-        const preparedRegistration = await wallet.prepareRegistration({
+        const preparedRegistration = await wallet2.prepareRegistration({
           account,
           domain: "hackers.gm.walletconnect.com",
           allApps: true,
