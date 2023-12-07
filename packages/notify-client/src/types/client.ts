@@ -266,7 +266,7 @@ export abstract class INotifyClient {
   public abstract watchedAccounts: IStore<
     string,
     {
-      isLimited: boolean;
+      allApps: boolean;
       appDomain: string;
       resTopic: string;
       account: string;

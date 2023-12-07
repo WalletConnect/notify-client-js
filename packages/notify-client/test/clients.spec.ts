@@ -784,7 +784,7 @@ describe("Notify", () => {
         expect(wallet1.messages.get(subTopic).messages).toEqual({});
       });
 
-      it("correctly handles limited access via `isLimited`", async () => {
+      it("correctly handles limited access via `allApps`", async () => {
         const storageLoc1 = generateClientDbName("notifyTestLimit1");
         const wallet1 = await NotifyClient.init({
           name: "testNotifyClient1",

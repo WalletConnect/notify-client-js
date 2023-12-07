@@ -66,9 +66,6 @@ export class NotifyEngine extends INotifyEngine {
     domain,
     allApps,
   }) => {
-    // Explicitly check if it was set to false because null/undefined should count as
-    // as "true" since by default it should be limited. The default of `isLimited` is
-    // true.
     const statement = allApps
       ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
       : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
@@ -107,9 +104,9 @@ export class NotifyEngine extends INotifyEngine {
       signature,
     });
 
-    const isLimited =
+    const allApps =
       registerParams.cacaoPayload.statement ===
-      NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
+      NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
 
     const domain = registerParams.cacaoPayload.domain;
     const account = registerParams.cacaoPayload.iss
@@ -118,7 +115,7 @@ export class NotifyEngine extends INotifyEngine {
       .join(":");
 
     try {
-      await this.watchSubscriptions(account, domain, isLimited);
+      await this.watchSubscriptions(account, domain, allApps);
     } catch (error: any) {
       this.client.logger.error(
         `[Notify] Engine.register > watching subscriptions failed > ${error.message}`
@@ -876,7 +873,7 @@ export class NotifyEngine extends INotifyEngine {
   private async watchSubscriptions(
     accountId: string,
     appDomain: string,
-    isLimited: boolean
+    allApps: boolean
   ) {
     const notifyKeys = await this.resolveKeys(this.client.notifyServerUrl);
 
@@ -927,7 +924,7 @@ export class NotifyEngine extends INotifyEngine {
       aud: encodeEd25519Key(notifyKeys.dappIdentityKey),
       ksu: this.client.keyserverUrl,
       sub: composeDidPkh(accountId),
-      app: isLimited ? `did:web:${appDomain}` : null,
+      app: allApps ? null : `did:web:${appDomain}`,
     };
 
     const generatedAuth = await this.client.identityKeys.generateIdAuth(
@@ -971,7 +968,7 @@ export class NotifyEngine extends INotifyEngine {
     await this.client.watchedAccounts.set(accountId, {
       appDomain,
       account: accountId,
-      isLimited,
+      allApps,
       lastWatched: true,
       privateKeyY: privKeyY,
       publicKeyY: pubKeyY,
@@ -1461,7 +1458,7 @@ export class NotifyEngine extends INotifyEngine {
       .find((acc) => acc.lastWatched);
     // If an account was previously watched
     if (lastWatched) {
-      const { account, appDomain, isLimited } = lastWatched;
+      const { account, appDomain, allApps } = lastWatched;
 
       try {
         // Account for invalid state where the last watched account does not have an identity.
@@ -1481,7 +1478,7 @@ export class NotifyEngine extends INotifyEngine {
       }
 
       try {
-        await this.watchSubscriptions(account, appDomain, isLimited);
+        await this.watchSubscriptions(account, appDomain, allApps);
       } catch (error: any) {
         this.client.logger.error(
           `[Notify] Engine.watchLastWatchedAccountIfExists > Failed to watch subscriptions for account ${account} > ${error.message}`
