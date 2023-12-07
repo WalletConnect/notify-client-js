@@ -88,8 +88,6 @@ describe("Notify", () => {
           allApps: false,
         });
 
-        console.log({ preparedRegistration1 });
-
         const identityKey1 = await wallet.register({
           registerParams: preparedRegistration1.registerParams,
           signature: await onSign(preparedRegistration1.message),
@@ -538,8 +536,6 @@ describe("Notify", () => {
         await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
 
         await waitForEvent(() => gotNotifySubscriptionsChanged);
-
-        console.log(gotNotifySubscriptionsChangedEvent);
 
         // Check that wallet is in expected state.
         expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
