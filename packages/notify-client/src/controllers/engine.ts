@@ -71,15 +71,14 @@ export class NotifyEngine extends INotifyEngine {
       ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
       : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
 
-    const prepared = await this.client.identityKeys.prepareRegistration({
+    return this.client.identityKeys.prepareRegistration({
       accountId: account,
       domain,
       statement,
     });
-
-    return prepared;
   };
 
+  // Checks if user is registered and has up to date registration data.
   public isRegistered: INotifyEngine["isRegistered"] = ({
     account,
     allApps,
@@ -94,6 +93,7 @@ export class NotifyEngine extends INotifyEngine {
         domain
       );
     }
+
     return false;
   };
 
