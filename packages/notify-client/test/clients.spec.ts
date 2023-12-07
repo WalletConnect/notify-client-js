@@ -93,7 +93,7 @@ describe("Notify", () => {
           signature: await onSign(preparedRegistration1.message),
         });
 
-        await wallet.signedStatements.set(account, {
+        await wallet.registrationData.set(account, {
           statement: "false statement",
           account,
           domain: testDappMetadata.appDomain,

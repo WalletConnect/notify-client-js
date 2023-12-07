@@ -258,7 +258,7 @@ export abstract class INotifyClient {
     }
   >;
 
-  public abstract signedStatements: IStore<
+  public abstract registrationData: IStore<
     string,
     { statement: string; account: string; domain: string }
   >;

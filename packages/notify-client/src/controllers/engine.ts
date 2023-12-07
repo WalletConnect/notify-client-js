@@ -1307,7 +1307,7 @@ export class NotifyEngine extends INotifyEngine {
       );
     }
 
-    this.client.signedStatements.set(accountId, {
+    this.client.registrationData.set(accountId, {
       account: accountId,
       domain,
       statement,
@@ -1441,7 +1441,7 @@ export class NotifyEngine extends INotifyEngine {
     domain: string
   ) => {
     const hasSignedStatement =
-      this.client.signedStatements.keys.includes(account);
+      this.client.registrationData.keys.includes(account);
     if (!hasSignedStatement) {
       // if there is no signed statement, then this account's statement was signed
       // previous to this function (and thus the latest statement) being introduced
@@ -1449,7 +1449,7 @@ export class NotifyEngine extends INotifyEngine {
       return true;
     }
 
-    const signedStatement = this.client.signedStatements.get(account);
+    const signedStatement = this.client.registrationData.get(account);
 
     return (
       signedStatement.statement !== currentStatement ||
