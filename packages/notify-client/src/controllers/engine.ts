@@ -34,6 +34,7 @@ import {
   NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
 } from "../constants";
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
+import { getCaip10FromDidPkh } from "../utils/address";
 import { getDappUrl } from "../utils/formats";
 
 export class NotifyEngine extends INotifyEngine {
