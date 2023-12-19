@@ -29,12 +29,25 @@ export abstract class INotifyEngine {
 
   // ---------- Public Methods ------------------------------------------ //
 
-  public abstract register(params: {
+  public abstract prepareRegistration(params: {
     account: string;
-    onSign: (message: string) => Promise<string>;
-    isLimited?: boolean;
     domain: string;
+    allApps?: boolean;
+  }): Promise<{
+    registerParams: NotifyClientTypes.NotifyRegistrationParams;
+    message: string;
+  }>;
+
+  public abstract register(params: {
+    registerParams: NotifyClientTypes.NotifyRegistrationParams;
+    signature: string;
   }): Promise<string>;
+
+  public abstract isRegistered(params: {
+    account: string;
+    allApps?: boolean;
+    domain: string;
+  }): boolean;
 
   public abstract unregister(params: { account: string }): Promise<void>;
 

@@ -34,7 +34,7 @@ export class NotifyClient extends INotifyClient {
   public subscriptions: INotifyClient["subscriptions"];
   public messages: INotifyClient["messages"];
   public watchedAccounts: INotifyClient["watchedAccounts"];
-  public signedStatements: INotifyClient["signedStatements"];
+  public registrationData: INotifyClient["registrationData"];
   public identityKeys: INotifyClient["identityKeys"];
 
   static async init(opts: NotifyClientTypes.ClientOptions) {
@@ -64,7 +64,7 @@ export class NotifyClient extends INotifyClient {
 
     this.logger = generateChildLogger(logger, this.name);
 
-    this.signedStatements = new Store(
+    this.registrationData = new Store(
       this.core,
       this.logger,
       "signedStatements",
@@ -177,6 +177,26 @@ export class NotifyClient extends INotifyClient {
     }
   };
 
+  public prepareRegistration: INotifyClient["prepareRegistration"] = (
+    params
+  ) => {
+    try {
+      return this.engine.prepareRegistration(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
+  public isRegistered: INotifyClient["isRegistered"] = (params) => {
+    try {
+      return this.engine.isRegistered(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   public register: INotifyClient["register"] = async (params) => {
     try {
       return await this.engine.register(params);
@@ -225,7 +245,7 @@ export class NotifyClient extends INotifyClient {
       await this.core.start();
       await this.subscriptions.init();
       await this.messages.init();
-      await this.signedStatements.init();
+      await this.registrationData.init();
       await this.identityKeys.init();
       await this.watchedAccounts.init();
       await this.engine.init();

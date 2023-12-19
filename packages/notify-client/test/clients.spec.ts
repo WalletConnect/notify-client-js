@@ -19,7 +19,7 @@ import { disconnectSocket } from "./helpers/ws";
 import axios from "axios";
 import { ICore } from "@walletconnect/types";
 import { generateClientDbName } from "./helpers/storage";
-import { encodeEd25519Key, encodeJwt } from "@walletconnect/did-jwt";
+import { encodeEd25519Key } from "@walletconnect/did-jwt";
 
 const DEFAULT_RELAY_URL = "wss://relay.walletconnect.com";
 
@@ -82,45 +82,62 @@ describe("Notify", () => {
 
     describe("register", () => {
       it("can handle stale statements", async () => {
-        let onSignCalledTimes = 0;
-        const countedOnSign = async (message: string) => {
-          onSignCalledTimes += 1;
-          return onSign(message);
-        };
+        const preparedRegistration1 = await wallet.prepareRegistration({
+          account,
+          domain: testDappMetadata.appDomain,
+          allApps: false,
+        });
 
         const identityKey1 = await wallet.register({
-          account,
-          isLimited: false,
-          onSign: countedOnSign,
-          domain: testDappMetadata.appDomain,
+          registerParams: preparedRegistration1.registerParams,
+          signature: await onSign(preparedRegistration1.message),
         });
 
-        await wallet.signedStatements.set(account, {
+        await wallet.registrationData.set(account, {
           statement: "false statement",
           account,
-        });
-
-        const identityKey2 = await wallet.register({
-          account,
-          isLimited: false,
-          onSign: countedOnSign,
           domain: testDappMetadata.appDomain,
         });
 
-        await waitForEvent(() => onSignCalledTimes === 2);
+        expect(
+          wallet.isRegistered({
+            account,
+            allApps: true,
+            domain: testDappMetadata.appDomain,
+          })
+        ).toEqual(false);
 
-        expect(identityKey1).not.to.equal(identityKey2);
+        const preparedRegistration2 = await wallet.prepareRegistration({
+          account,
+          domain: testDappMetadata.appDomain,
+          allApps: false,
+        });
+
+        await expect(
+          wallet.register({
+            registerParams: preparedRegistration2.registerParams,
+            signature: await onSign(preparedRegistration2.message),
+          })
+        ).rejects.toEqual(
+          new Error(
+            "Failed to register, user has an existing stale identity. Unregister using the unregister method."
+          )
+        );
+
+        await wallet.unregister({ account });
+
+        const preparedRegistration3 = await wallet.prepareRegistration({
+          account,
+          domain: testDappMetadata.appDomain,
+          allApps: false,
+        });
 
         const identityKey3 = await wallet.register({
-          account,
-          isLimited: false,
-          onSign: countedOnSign,
-          domain: testDappMetadata.appDomain,
+          registerParams: preparedRegistration3.registerParams,
+          signature: await onSign(preparedRegistration3.message),
         });
 
-        expect(identityKey3).toEqual(identityKey2);
-
-        expect(onSignCalledTimes).toEqual(2);
+        expect(identityKey3).to.not.eq(identityKey1);
       });
     });
 
@@ -144,14 +161,18 @@ describe("Notify", () => {
           projectId,
         });
 
-        const identity = await newClient.register({
+        const preparedRegistration1 = await newClient.prepareRegistration({
           account: newAccount,
-          onSign: (m) => newWallet.signMessage(m),
-          isLimited: false,
           domain: testDappMetadata.appDomain,
+          allApps: true,
         });
 
-        const encodedIdentity = encodeEd25519Key(identity);
+        const identityKey1 = await newClient.register({
+          registerParams: preparedRegistration1.registerParams,
+          signature: await newWallet.signMessage(preparedRegistration1.message),
+        });
+
+        const encodedIdentity = encodeEd25519Key(identityKey1);
 
         // key server expects identity key in this format.
         const identityKeyFetchFormat = encodedIdentity.split(":").pop();
@@ -217,11 +238,15 @@ describe("Notify", () => {
           }
         });
 
-        await wallet.register({
-          isLimited: false,
+        const preparedRegistration = await wallet.prepareRegistration({
           account,
-          onSign,
           domain: testDappMetadata.appDomain,
+          allApps: true,
+        });
+
+        await wallet.register({
+          registerParams: preparedRegistration.registerParams,
+          signature: await onSign(preparedRegistration.message),
         });
 
         await wallet.subscribe({
@@ -419,6 +444,7 @@ describe("Notify", () => {
           wallet.subscriptions.set(`topic${num}`, {
             account: `account${num}`,
             expiry: Date.now(),
+            appAuthenticationKey: "",
             relay: {
               protocol: RELAYER_DEFAULT_PROTOCOL,
             },
@@ -518,8 +544,6 @@ describe("Notify", () => {
 
         await waitForEvent(() => gotNotifySubscriptionsChanged);
 
-        console.log(gotNotifySubscriptionsChangedEvent);
-
         // Check that wallet is in expected state.
         expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
         expect(wallet.messages.keys.length).toBe(0);
@@ -617,11 +641,15 @@ describe("Notify", () => {
           wallet1ReceivedChangedEvent = true;
         });
 
-        await wallet1.register({
-          isLimited: false,
+        const preparedRegistration = await wallet.prepareRegistration({
           account,
-          onSign,
-          domain: "gm.walletconnect.com",
+          domain: testDappMetadata.appDomain,
+          allApps: false,
+        });
+
+        await wallet.register({
+          registerParams: preparedRegistration.registerParams,
+          signature: await onSign(preparedRegistration.message),
         });
 
         await waitForEvent(() => wallet1ReceivedChangedEvent);
@@ -685,11 +713,15 @@ describe("Notify", () => {
           wallet2GotUpdate = true;
         });
 
-        await wallet2.register({
-          isLimited: false,
+        const preparedRegistration = await wallet2.prepareRegistration({
           account,
-          onSign,
           domain: "hackers.gm.walletconnect.com",
+          allApps: true,
+        });
+
+        await wallet2.register({
+          registerParams: preparedRegistration.registerParams,
+          signature: await onSign(preparedRegistration.message),
         });
 
         await waitForEvent(() => {
@@ -755,7 +787,7 @@ describe("Notify", () => {
         expect(wallet1.messages.get(subTopic).messages).toEqual({});
       });
 
-      it("correctly handles limited access via `isLimited`", async () => {
+      it("correctly handles limited access via `allApps`", async () => {
         const storageLoc1 = generateClientDbName("notifyTestLimit1");
         const wallet1 = await NotifyClient.init({
           name: "testNotifyClient1",
@@ -774,11 +806,15 @@ describe("Notify", () => {
           wallet1ReceivedChangedEvent = true;
         });
 
-        await wallet1.register({
-          isLimited: true,
+        const preparedRegistration = await wallet1.prepareRegistration({
           account,
-          onSign,
           domain: testDappMetadata.appDomain,
+          allApps: false,
+        });
+
+        await wallet1.register({
+          registerParams: preparedRegistration.registerParams,
+          signature: await onSign(preparedRegistration.message),
         });
 
         await waitForEvent(() => wallet1ReceivedChangedEvent);
@@ -801,11 +837,15 @@ describe("Notify", () => {
           wallet2ReceivedChangedEvent = true;
         });
 
-        await wallet2.register({
-          isLimited: true,
+        const preparedRegistration2 = await wallet2.prepareRegistration({
           account,
-          onSign,
           domain: testDappMetadata.appDomain,
+          allApps: false,
+        });
+
+        await wallet2.register({
+          registerParams: preparedRegistration2.registerParams,
+          signature: await onSign(preparedRegistration2.message),
         });
 
         await waitForEvent(() => wallet2ReceivedChangedEvent);
@@ -834,11 +874,15 @@ describe("Notify", () => {
           wallet3ReceivedChangedEvent = true;
         });
 
-        await wallet3.register({
-          isLimited: true,
+        const preparedRegistration3 = await wallet3.prepareRegistration({
           account,
-          onSign,
           domain: "hackers.gm.walletconnect.com",
+          allApps: false,
+        });
+
+        await wallet3.register({
+          registerParams: preparedRegistration3.registerParams,
+          signature: await onSign(preparedRegistration3.message),
         });
 
         await waitForEvent(() => wallet3ReceivedChangedEvent);

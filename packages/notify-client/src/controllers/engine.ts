@@ -34,6 +34,7 @@ import {
   NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
 } from "../constants";
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
+import { getCaip10FromDidPkh } from "../utils/address";
 import { getDappUrl } from "../utils/formats";
 
 export class NotifyEngine extends INotifyEngine {
@@ -61,30 +62,60 @@ export class NotifyEngine extends INotifyEngine {
 
   // ---------- Public --------------------------------------- //
 
-  public register: INotifyEngine["register"] = async ({
+  public prepareRegistration: INotifyEngine["prepareRegistration"] = async ({
     account,
-    isLimited,
-    onSign,
+    domain,
+    allApps,
+  }) => {
+    const statement = allApps
+      ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
+      : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
+
+    return this.client.identityKeys.prepareRegistration({
+      accountId: account,
+      domain,
+      statement,
+    });
+  };
+
+  // Checks if user is registered and has up to date registration data.
+  public isRegistered: INotifyEngine["isRegistered"] = ({
+    account,
+    allApps,
     domain,
   }) => {
-    // Explicitly check if it was set to false because null/undefined should count as
-    // as "true" since by default it should be limited. The default of `isLimited` is
-    // true.
-    const statement =
-      isLimited === false
-        ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
-        : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
+    if (this.client.identityKeys.isRegistered(account)) {
+      return !this.checkIfIdentityIsStale(
+        account,
+        allApps
+          ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
+          : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
+        domain
+      );
+    }
 
+    return false;
+  };
+
+  public register: INotifyEngine["register"] = async ({
+    registerParams,
+    signature,
+  }) => {
     // Retrieve existing identity or register a new one for this account on this device.
-    const identity = await this.registerIdentity(
-      account,
-      onSign,
-      statement,
-      domain
-    );
+    const identity = await this.registerIdentity({
+      registerParams,
+      signature,
+    });
+
+    const allApps =
+      registerParams.cacaoPayload.statement ===
+      NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS;
+
+    const domain = registerParams.cacaoPayload.domain;
+    const account = getCaip10FromDidPkh(registerParams.cacaoPayload.iss);
 
     try {
-      await this.watchSubscriptions(account, domain, isLimited ?? true);
+      await this.watchSubscriptions(account, domain, allApps);
     } catch (error: any) {
       this.client.logger.error(
         `[Notify] Engine.register > watching subscriptions failed > ${error.message}`
@@ -158,6 +189,13 @@ export class NotifyEngine extends INotifyEngine {
     account,
   }) => {
     this.isInitialized();
+
+    // Not using `this.isRegistered` because that accounts for stale
+    // statements, and we don't want stale statements to block users
+    // from subscribing.
+    if (!this.client.identityKeys.isRegistered(account)) {
+      throw new Error(`Account ${account} is not registered.`);
+    }
 
     const dappUrl = getDappUrl(appDomain);
     const { dappPublicKey, dappIdentityKey } = await this.resolveKeys(dappUrl);
@@ -838,7 +876,7 @@ export class NotifyEngine extends INotifyEngine {
   private async watchSubscriptions(
     accountId: string,
     appDomain: string,
-    isLimited: boolean
+    allApps: boolean
   ) {
     const notifyKeys = await this.resolveKeys(this.client.notifyServerUrl);
 
@@ -889,7 +927,7 @@ export class NotifyEngine extends INotifyEngine {
       aud: encodeEd25519Key(notifyKeys.dappIdentityKey),
       ksu: this.client.keyserverUrl,
       sub: composeDidPkh(accountId),
-      app: isLimited ? `did:web:${appDomain}` : null,
+      app: allApps ? null : `did:web:${appDomain}`,
     };
 
     const generatedAuth = await this.client.identityKeys.generateIdAuth(
@@ -933,7 +971,7 @@ export class NotifyEngine extends INotifyEngine {
     await this.client.watchedAccounts.set(accountId, {
       appDomain,
       account: accountId,
-      isLimited,
+      allApps,
       lastWatched: true,
       privateKeyY: privKeyY,
       publicKeyY: pubKeyY,
@@ -1231,35 +1269,47 @@ export class NotifyEngine extends INotifyEngine {
     return messageClaims;
   };
 
-  private registerIdentity = async (
-    accountId: string,
-    onSign: (message: string) => Promise<string>,
-    statement: string,
-    domain: string
-  ): Promise<string> => {
-    if (await this.client.identityKeys.hasIdentity({ account: accountId })) {
-      if (this.checkIfSignedStatementIsStale(accountId, statement)) {
-        try {
-          await this.client.identityKeys.unregisterIdentity({
-            account: accountId,
-          });
-        } catch {
-          throw new Error(
-            `Failed to unregister ${accountId} which has a stale signature`
-          );
-        }
+  private registerIdentity: INotifyEngine["register"] = async ({
+    signature,
+    registerParams,
+  }) => {
+    const accountId = getCaip10FromDidPkh(registerParams.cacaoPayload.iss);
+
+    const allApps =
+      registerParams.cacaoPayload.statement ===
+      NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS;
+
+    if (this.client.identityKeys.isRegistered(accountId)) {
+      const hasStaleStatement = this.checkIfIdentityIsStale(
+        accountId,
+        allApps
+          ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
+          : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
+        registerParams.cacaoPayload.domain
+      );
+      if (hasStaleStatement) {
+        throw new Error(
+          "Failed to register, user has an existing stale identity. Unregister using the unregister method."
+        );
       }
     }
 
     const registeredIdentity = await this.client.identityKeys.registerIdentity({
-      accountId,
-      onSign,
-      statement,
-      domain,
+      signature,
+      registerParams,
     });
 
-    this.client.signedStatements.set(accountId, {
+    const { statement, domain } = registerParams.cacaoPayload;
+
+    if (!statement) {
+      throw new Error(
+        `Failed to register. Expected statement to be string, instead got: ${statement}`
+      );
+    }
+
+    this.client.registrationData.set(accountId, {
       account: accountId,
+      domain,
       statement,
     });
 
@@ -1385,12 +1435,13 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   // returns true if statement is stale, false otherwise.
-  private checkIfSignedStatementIsStale = (
+  private checkIfIdentityIsStale = (
     account: string,
-    currentStatement: string
+    currentStatement: string,
+    domain: string
   ) => {
     const hasSignedStatement =
-      this.client.signedStatements.keys.includes(account);
+      this.client.registrationData.keys.includes(account);
     if (!hasSignedStatement) {
       // if there is no signed statement, then this account's statement was signed
       // previous to this function (and thus the latest statement) being introduced
@@ -1398,9 +1449,12 @@ export class NotifyEngine extends INotifyEngine {
       return true;
     }
 
-    const signedStatement = this.client.signedStatements.get(account);
+    const signedStatement = this.client.registrationData.get(account);
 
-    return signedStatement.statement !== currentStatement;
+    return (
+      signedStatement.statement !== currentStatement ||
+      signedStatement.domain !== domain
+    );
   };
 
   private watchLastWatchedAccountIfExists = async () => {
@@ -1410,7 +1464,7 @@ export class NotifyEngine extends INotifyEngine {
       .find((acc) => acc.lastWatched);
     // If an account was previously watched
     if (lastWatched) {
-      const { account, appDomain, isLimited } = lastWatched;
+      const { account, appDomain, allApps } = lastWatched;
 
       try {
         // Account for invalid state where the last watched account does not have an identity.
@@ -1430,7 +1484,7 @@ export class NotifyEngine extends INotifyEngine {
       }
 
       try {
-        await this.watchSubscriptions(account, appDomain, isLimited);
+        await this.watchSubscriptions(account, appDomain, allApps);
       } catch (error: any) {
         this.client.logger.error(
           `[Notify] Engine.watchLastWatchedAccountIfExists > Failed to watch subscriptions for account ${account} > ${error.message}`
