@@ -97,7 +97,6 @@ export declare namespace NotifyClientTypes {
     title: string;
     body: string;
     id: string;
-    icon: string;
     url: string;
     type?: string;
   }
