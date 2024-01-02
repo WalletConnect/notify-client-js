@@ -71,7 +71,14 @@ export declare namespace NotifyClientTypes {
 
   type ScopeMap = Record<
     string,
-    { name: string; id: string; description: string; enabled: boolean, imageId?: string, imageUrls: ImageUrl  }
+    {
+      name: string;
+      id: string;
+      description: string;
+      enabled: boolean;
+      imageId?: string;
+      imageUrls: ImageUrl;
+    }
   >;
 
   interface NotifyRegistrationParams {
