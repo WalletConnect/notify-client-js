@@ -548,17 +548,17 @@ describe("Notify", () => {
 
         const subscription = wallet.subscriptions.getAll()[0];
 
-	const scope = Object.entries(subscription.scope)[0][1]
+        const scope = Object.entries(subscription.scope)[0][1];
 
-	const expectedImageSmUrlRegex = /.*\/w3i\/v1\/logo\/sm\/.*/g
-	const expectedImageMdUrlRegex = /.*\/w3i\/v1\/logo\/md\/.*/g
-	const expectedImageLgUrlRegex = /.*\/w3i\/v1\/logo\/lg\/.*/g
+        const expectedImageSmUrlRegex = /.*\/w3i\/v1\/logo\/sm\/.*/g;
+        const expectedImageMdUrlRegex = /.*\/w3i\/v1\/logo\/md\/.*/g;
+        const expectedImageLgUrlRegex = /.*\/w3i\/v1\/logo\/lg\/.*/g;
 
-	expect(scope.imageUrls.sm).toMatch(expectedImageSmUrlRegex)
-	expect(scope.imageUrls.md).toMatch(expectedImageMdUrlRegex)
-	expect(scope.imageUrls.lg).toMatch(expectedImageLgUrlRegex)
-      })
-    })
+        expect(scope.imageUrls.sm).toMatch(expectedImageSmUrlRegex);
+        expect(scope.imageUrls.md).toMatch(expectedImageMdUrlRegex);
+        expect(scope.imageUrls.lg).toMatch(expectedImageLgUrlRegex);
+      });
+    });
 
     describe("watchSubscriptions", () => {
       it("fires correct event update", async () => {
