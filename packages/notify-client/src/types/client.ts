@@ -60,6 +60,7 @@ export declare namespace NotifyClientTypes {
     description: string;
     icons: string[];
     appDomain: string;
+    isVerified: boolean;
   }
 
   type ScopeMap = Record<
@@ -229,6 +230,7 @@ export declare namespace NotifyClientTypes {
       md: string;
       lg: string;
     };
+    isVerified: boolean;
   }
 }
 

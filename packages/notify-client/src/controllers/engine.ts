@@ -999,6 +999,7 @@ export class NotifyEngine extends INotifyEngine {
             ? Object.values(notifyConfig.image_url)
             : [],
           appDomain: sub.appDomain,
+          isVerified: notifyConfig?.isVerified ?? false,
         },
         relay: {
           protocol: RELAYER_DEFAULT_PROTOCOL,
