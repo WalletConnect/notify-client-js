@@ -609,6 +609,8 @@ export class NotifyEngine extends INotifyEngine {
           response,
         });
 
+	await this.updateSubscriptionsUsingJwt(response.result.responseAuth, "notify_subscription_response");
+
         // Emit the NotifySubscription at client level.
         this.client.emit("notify_subscription", {
           id: response.id,
@@ -750,6 +752,7 @@ export class NotifyEngine extends INotifyEngine {
   protected onNotifyDeleteResponse: INotifyEngine["onNotifyDeleteResponse"] =
     async (topic, payload) => {
       if (isJsonRpcResult(payload)) {
+	await this.updateSubscriptionsUsingJwt(payload.result.responseAuth, "notify_delete_response");
         this.client.logger.info(
           "[Notify] Engine.onNotifyDeleteResponse > result:",
           topic,
@@ -838,6 +841,8 @@ export class NotifyEngine extends INotifyEngine {
           topic,
           result: payload,
         });
+
+	await this.updateSubscriptionsUsingJwt(payload.result.responseAuth, "notify_update_response")
 
         this.client.events.emit("notify_update", {
           id: payload.id,
@@ -981,18 +986,35 @@ export class NotifyEngine extends INotifyEngine {
     this.client.logger.info("watchSubscriptions >", "requestId >", id);
   }
 
+
   private updateSubscriptionsUsingJwt = async (
     jwt: string,
     act:
       | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims["act"]
       | NotifyClientTypes.NotifySubscriptionsChangedClaims["act"]
+      | NotifyClientTypes.SubscriptionResponseJWTClaims["act"]
+      | NotifyClientTypes.UpdateResponseJWTClaims["act"]
+      | NotifyClientTypes.DeleteResponseJWTClaims["act"]
   ) => {
     const claims = this.decodeAndValidateJwtAuth<
       | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims
       | NotifyClientTypes.NotifySubscriptionsChangedClaims
+      | NotifyClientTypes.SubscriptionResponseJWTClaims
+      | NotifyClientTypes.UpdateResponseJWTClaims
+      | NotifyClientTypes.DeleteResponseJWTClaims
     >(jwt, act);
 
     this.client.logger.info("updateSubscriptionsUsingJwt > claims", claims);
+
+    const latestSubscriptionSequence = this.client.clientStateMaintenance.get('stateMaintenance').latestSubscriptionSequence;
+
+    if(latestSubscriptionSequence && latestSubscriptionSequence > claims.seq) {
+      return this.client.subscriptions.getAll();
+    }
+
+    await this.client.clientStateMaintenance.update('stateMaintenance', {
+      latestSubscriptionSequence: claims.seq
+    })
 
     // Clean up any subscriptions that are no longer valid.
     const newStateSubsTopics = claims.sbs.map((sb) => hashKey(sb.symKey));

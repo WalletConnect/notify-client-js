@@ -32,6 +32,7 @@ export class NotifyClient extends INotifyClient {
   public events: INotifyClient["events"] = new EventEmitter();
   public engine: INotifyClient["engine"];
   public subscriptions: INotifyClient["subscriptions"];
+  public clientStateMaintenance: INotifyClient["clientStateMaintenance"];
   public messages: INotifyClient["messages"];
   public watchedAccounts: INotifyClient["watchedAccounts"];
   public registrationData: INotifyClient["registrationData"];
@@ -91,6 +92,14 @@ export class NotifyClient extends INotifyClient {
       "watchedAccounts",
       NOTIFY_CLIENT_STORAGE_PREFIX,
       ({ account }: { account: string }) => account
+    );
+
+    this.clientStateMaintenance = new Store(
+      this.core,
+      this.logger,
+      "clientStateMaintenance",
+      NOTIFY_CLIENT_STORAGE_PREFIX,
+      () => "stateMaintenance"
     );
 
     this.identityKeys =
@@ -248,6 +257,7 @@ export class NotifyClient extends INotifyClient {
       await this.registrationData.init();
       await this.identityKeys.init();
       await this.watchedAccounts.init();
+      await this.clientStateMaintenance.init();
       await this.engine.init();
 
       this.logger.info(`NotifyClient Initialization Success`);
