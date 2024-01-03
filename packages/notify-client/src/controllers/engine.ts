@@ -1538,7 +1538,6 @@ export class NotifyEngine extends INotifyEngine {
         return [
           type.id,
           {
-            imageId: type.image_id,
             imageUrls: type.imageUrls,
             description: type.description,
             name: type.name,

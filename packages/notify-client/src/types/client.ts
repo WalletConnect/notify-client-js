@@ -76,7 +76,6 @@ export declare namespace NotifyClientTypes {
       id: string;
       description: string;
       enabled: boolean;
-      imageId?: string;
       imageUrls: ImageUrl;
     }
   >;
