@@ -102,7 +102,7 @@ export declare namespace NotifyClientTypes {
     type?: string;
   }
 
-  interface NotifyMessageRecord {
+  interface NotifyNotificationRecord {
     id: number;
     topic: string;
     message: NotifyMessage;
@@ -262,7 +262,7 @@ export abstract class INotifyClient {
     string,
     {
       topic: string;
-      messages: Record<number, NotifyClientTypes.NotifyMessageRecord>;
+      messages: Record<number, NotifyClientTypes.NotifyNotificationRecord>;
     }
   >;
 
@@ -306,7 +306,7 @@ export abstract class INotifyClient {
   public abstract subscribe: INotifyEngine["subscribe"];
   public abstract update: INotifyEngine["update"];
   public abstract decryptMessage: INotifyEngine["decryptMessage"];
-  public abstract getMessageHistory: INotifyEngine["getMessageHistory"];
+  public abstract getNotificationHistory: INotifyEngine["getNotificationHistory"];
   public abstract deleteNotifyMessage: INotifyEngine["deleteNotifyMessage"];
   public abstract getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"];
   public abstract deleteSubscription: INotifyEngine["deleteSubscription"];

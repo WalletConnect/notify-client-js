@@ -375,10 +375,16 @@ export class NotifyEngine extends INotifyEngine {
     }
   };
 
-  public getMessageHistory: INotifyEngine["getMessageHistory"] = ({
+  public getNotificationHistory: INotifyEngine["getNotificationHistory"] = async ({
     topic,
+    limit,
+    startingAfter
   }) => {
     this.isInitialized();
+
+    this.on('notify_get_notifications_response', () => {
+      return [];
+    })
 
     return this.client.messages.keys.includes(topic)
       ? this.client.messages.get(topic).messages
@@ -399,26 +405,6 @@ export class NotifyEngine extends INotifyEngine {
     this.client.logger.info(
       `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
     );
-  };
-
-  public deleteNotifyMessage: INotifyEngine["deleteNotifyMessage"] = ({
-    id,
-  }) => {
-    this.isInitialized();
-
-    const targetRecord = this.client.messages
-      .getAll()
-      .find((record) => record.messages[id]);
-
-    if (!targetRecord) {
-      throw new Error(
-        `No message with id ${id} found in notify message history.`
-      );
-    }
-
-    delete targetRecord.messages[id];
-
-    this.client.messages.update(targetRecord.topic, targetRecord);
   };
 
   public getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"] = (
@@ -557,6 +543,7 @@ export class NotifyEngine extends INotifyEngine {
     }
   };
 
+  // TODO: ROUTE GET NOTIFY NOTIFICATIONS to events emitter so it can be consumed by functions
   protected onRelayEventResponse: INotifyEngine["onRelayEventResponse"] =
     async (event) => {
       const { topic, payload } = event;
@@ -590,6 +577,20 @@ export class NotifyEngine extends INotifyEngine {
           );
       }
     };
+
+  // ---------- Relay Event Forwarding ------------------------------- //
+
+  public on: INotifyEngine["on"] = (name, listener) => {
+    return this.client.events.on(name, listener);
+  };
+
+  public once: INotifyEngine["once"] = (name, listener) => {
+    return this.client.events.once(name, listener);
+  };
+
+  public off: INotifyEngine["off"] = (name, listener) => {
+    return this.client.events.off(name, listener);
+  };
 
   // ---------- Relay Event Handlers --------------------------------- //
 

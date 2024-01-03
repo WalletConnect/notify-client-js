@@ -8,6 +8,7 @@ import {
 import { CryptoTypes } from "@walletconnect/types";
 import { INotifyClient, NotifyClientTypes } from "./client";
 import { JsonRpcTypes } from "./jsonrpc";
+import EventEmitter from "events";
 
 export interface RpcOpts {
   req: { ttl: number; tag: number };
@@ -19,6 +20,15 @@ export declare namespace NotifyEngineTypes {
     topic: string;
     payload: T;
     publishedAt: number;
+  }
+
+  type Event =
+    | "notify_get_notifications_response"
+    | "notify_get_notification_response"
+
+  interface EventArguments {
+    notify_get_notifications_response: null,
+    notify_get_notification_response: null
   }
 }
 
@@ -68,14 +78,35 @@ export abstract class INotifyEngine {
   }): Promise<NotifyClientTypes.NotifyMessage>;
 
   // get all messages for a subscription
-  public abstract getMessageHistory(params: {
+  public abstract getNotificationHistory(params: {
     topic: string;
-  }): Record<number, NotifyClientTypes.NotifyMessageRecord>;
+    limit?: number;
+    startingAfter?: string
+  }): Promise<{
+    notifications: Record<number, NotifyClientTypes.NotifyNotificationRecord>,
+    has_more: boolean,
+    has_more_unread: boolean,
+  }>;
+
+  // get notification by ID
+  public abstract getNotification(params: {
+    topic: string,
+    id: string,
+  }): Promise<NotifyClientTypes.NotifyNotificationRecord>
+
+  // mark notification as read
+  public abstract markNotificationsAsRead(params: {
+    topic: string,
+    ids: string[],
+  }): Promise<NotifyClientTypes.NotifyNotificationRecord>
+
+  // returns how many notifications are unread
+  public abstract getUnreadNotificationsCount(params: {
+    topic: string,
+  }): Promise<number>
 
   // delete active subscription
   public abstract deleteSubscription(params: { topic: string }): Promise<void>;
-
-  public abstract deleteNotifyMessage(params: { id: number }): void;
 
   // ---------- Public Methods ------------------------------------------ //
 
@@ -171,4 +202,19 @@ export abstract class INotifyEngine {
       | JsonRpcResult<JsonRpcTypes.Results["wc_notifyUpdate"]>
       | JsonRpcError
   ): Promise<void>;
+
+  public abstract on: <E extends NotifyEngineTypes.Event>(
+    event: E,
+    listener: (args: NotifyEngineTypes.EventArguments[E]) => void
+  ) => EventEmitter;
+
+  public abstract once: <E extends NotifyEngineTypes.Event>(
+    event: E,
+    listener: (args: NotifyEngineTypes.EventArguments[E]) => void
+  ) => EventEmitter;
+
+  public abstract off: <E extends NotifyEngineTypes.Event>(
+    event: E,
+    listener: (args: NotifyEngineTypes.EventArguments[E]) => void
+  ) => EventEmitter;
 }
