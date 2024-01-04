@@ -268,12 +268,11 @@ export class NotifyEngine extends INotifyEngine {
 
     return new Promise((resolve, reject) => {
       this.client.on("notify_subscription", (args) => {
-	if(args.params.error) {
-	  reject(args.params.error)
-	}
-	else {
-	  resolve(true)
-	}
+        if (args.params.error) {
+          reject(args.params.error);
+        } else {
+          resolve(true);
+        }
       });
       // SPEC: Wallet sends wc_notifySubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
       const id = this.sendRequest<"wc_notifySubscribe">(
@@ -302,7 +301,6 @@ export class NotifyEngine extends INotifyEngine {
         },
       });
     });
-
   };
 
   public update: INotifyEngine["update"] = async ({ topic, scope }) => {
@@ -332,29 +330,26 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     return new Promise<boolean>((resolve, reject) => {
-      this.client.on('notify_update', (args) => {
-	if(args.error) {
-	  reject(args.error)
-	}
-	else {
-	  resolve(true)
-	}
-      })
+      this.client.on("notify_update", (args) => {
+        if (args.error) {
+          reject(args.error);
+        } else {
+          resolve(true);
+        }
+      });
 
       this.sendRequest(topic, "wc_notifyUpdate", {
-	updateAuth,
-      }).then(id => {
-	this.client.logger.info({
-	  action: "sendRequest",
-	  method: "wc_notifyUpdate",
-	  id,
-	  topic,
-	  updateAuth,
-	});
+        updateAuth,
+      }).then((id) => {
+        this.client.logger.info({
+          action: "sendRequest",
+          method: "wc_notifyUpdate",
+          id,
+          topic,
+          updateAuth,
+        });
       });
-      
-    })
-
+    });
   };
 
   public decryptMessage: INotifyEngine["decryptMessage"] = async ({
@@ -612,18 +607,16 @@ export class NotifyEngine extends INotifyEngine {
     });
 
     return new Promise<void>((resolve) => {
-      this.client.on('notify_delete', () => {
-	resolve();
-      })
+      this.client.on("notify_delete", () => {
+        resolve();
+      });
 
       this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
 
       this.client.logger.info(
         `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
       );
-    })
-
-
+    });
   };
 
   public getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"] = (
