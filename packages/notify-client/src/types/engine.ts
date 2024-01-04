@@ -22,13 +22,32 @@ export declare namespace NotifyEngineTypes {
     publishedAt: number;
   }
 
+  type EventError = {
+      hasError: true;
+      error: string
+    }
+
+  type EventOrError<T> = (T & { hasError: false }) | EventError
+
   type Event =
     | "notify_get_notifications_response"
     | "notify_get_notification_response"
+    | "notify_get_unread_notifications_count_response"
 
   interface EventArguments {
-    notify_get_notifications_response: null,
-    notify_get_notification_response: null
+    notify_get_notifications_response: EventOrError<{
+      notifications: NotifyClientTypes.NotifyMessage[]
+      hasMore: boolean
+      hasMoreUnread: boolean
+    }>
+
+    notify_get_notification_response: EventOrError<{
+      notification: NotifyClientTypes.NotifyMessage
+    }>
+
+    notify_get_unread_notifications_count_response: EventOrError<{
+      count: number
+    }>
   }
 }
 
@@ -82,23 +101,24 @@ export abstract class INotifyEngine {
     topic: string;
     limit?: number;
     startingAfter?: string
+    unreadFirst: boolean
   }): Promise<{
-    notifications: Record<number, NotifyClientTypes.NotifyNotificationRecord>,
-    has_more: boolean,
-    has_more_unread: boolean,
+    notifications: NotifyClientTypes.NotifyMessage[],
+    hasMore: boolean,
+    hasMoreUnread: boolean,
   }>;
 
   // get notification by ID
   public abstract getNotification(params: {
     topic: string,
     id: string,
-  }): Promise<NotifyClientTypes.NotifyNotificationRecord>
+  }): Promise<NotifyClientTypes.NotifyMessage>
 
   // mark notification as read
   public abstract markNotificationsAsRead(params: {
     topic: string,
     ids: string[],
-  }): Promise<NotifyClientTypes.NotifyNotificationRecord>
+  }): Promise<void>
 
   // returns how many notifications are unread
   public abstract getUnreadNotificationsCount(params: {
@@ -203,6 +223,27 @@ export abstract class INotifyEngine {
       | JsonRpcError
   ): Promise<void>;
 
+  protected abstract onNotifyGetNotificationsResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyGetNotifications"]>
+      | JsonRpcError
+  ): Promise<void>;
+
+  protected abstract onNotifyGetNotificationResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyGetNotifications"]>
+      | JsonRpcError
+  ): Promise<void>;
+
+  protected abstract onNotifyGetUnreadNotificationsCountResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyGetUnreadNotificationsCount"]>
+      | JsonRpcError
+  ): Promise<void>;
+
   public abstract on: <E extends NotifyEngineTypes.Event>(
     event: E,
     listener: (args: NotifyEngineTypes.EventArguments[E]) => void
@@ -217,4 +258,9 @@ export abstract class INotifyEngine {
     event: E,
     listener: (args: NotifyEngineTypes.EventArguments[E]) => void
   ) => EventEmitter;
+
+  public abstract emit: <E extends NotifyEngineTypes.Event>(
+    event: E,
+    args: NotifyEngineTypes.EventArguments[E]
+  ) => boolean;
 }

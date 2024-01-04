@@ -15,6 +15,7 @@ import {
   isJsonRpcResponse,
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
+import { ONE_MINUTE } from "@walletconnect/time";
 import { JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
@@ -375,21 +376,199 @@ export class NotifyEngine extends INotifyEngine {
     }
   };
 
-  public getNotificationHistory: INotifyEngine["getNotificationHistory"] = async ({
+  public getNotification: INotifyEngine["getNotification"] = async ({
     topic,
-    limit,
-    startingAfter
+    id
   }) => {
     this.isInitialized();
 
-    this.on('notify_get_notifications_response', () => {
-      return [];
-    })
+    const subscription = this.client.subscriptions.get(topic);
 
-    return this.client.messages.keys.includes(topic)
-      ? this.client.messages.get(topic).messages
-      : {};
+    const identityKey = encodeEd25519Key(
+      await this.client.identityKeys.getIdentity({ account: subscription.account })
+    )
+
+    const issuedAt = Math.round(Date.now() / 1000);
+    const expiry =
+      issuedAt + ENGINE_RPC_OPTS["wc_notifyGetNotifications"].res.ttl;
+    
+    const getNotificationClaims: NotifyClientTypes.GetNotificationJwtClaims = {
+      act: "notify_get_notifications",
+      iss: identityKey,
+      ksu: this.client.keyserverUrl,
+      sub: composeDidPkh(subscription.account),
+      iat: issuedAt,
+      exp: expiry,
+      app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
+      id
+    }
+
+    const auth
+      = await this.client.identityKeys.generateIdAuth(subscription.account, getNotificationClaims);
+
+    return new Promise((resolve, reject) => {
+      this.once('notify_get_notification_response', (args) => {
+        if(args.hasError) {
+          reject(args.error)
+        }
+        else {
+          resolve(args.notification)
+        }
+      })
+
+      setTimeout(() => {
+	reject("getNotificationtimed out waiting for a response")
+      }, ONE_MINUTE)
+      
+      this.sendRequest(topic, "wc_notifyGetNotification", { auth })
+    })
+    
+  }
+
+  public getNotificationHistory: INotifyEngine["getNotificationHistory"] = async ({
+    topic,
+    limit,
+    startingAfter,
+    unreadFirst
+  }) => {
+    this.isInitialized();
+
+    const subscription = this.client.subscriptions.get(topic);
+
+    const identityKey = encodeEd25519Key(
+      await this.client.identityKeys.getIdentity({ account: subscription.account })
+    )
+
+    const issuedAt = Math.round(Date.now() / 1000);
+    const expiry =
+      issuedAt + ENGINE_RPC_OPTS["wc_notifyGetNotifications"].res.ttl;
+    
+    const getNotificationsClaims: NotifyClientTypes.GetNotificationsJwtClaims = {
+      act: "notify_get_notifications",
+      aft: startingAfter ?? null,
+      iss: identityKey,
+      ksu: this.client.keyserverUrl,
+      sub: composeDidPkh(subscription.account),
+      iat: issuedAt,
+      exp: expiry,
+      app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
+      lmt: limit ?? 50,
+      urf: unreadFirst
+    }
+
+    const auth
+      = await this.client.identityKeys.generateIdAuth(subscription.account, getNotificationsClaims);
+
+    return new Promise((resolve, reject) => {
+      this.once('notify_get_notifications_response', (args) => {
+        if(args.hasError) {
+          reject(args.error)
+        }
+        else {
+          resolve(args)
+        }
+      })
+
+      setTimeout(() => {
+	reject("getNotificationHistory timed out waiting for a response")
+      }, ONE_MINUTE)
+      
+      this.sendRequest(topic, "wc_notifyGetNotifications", { auth })
+    })
   };
+
+  public getUnreadNotificationsCount: INotifyEngine["getUnreadNotificationsCount"] = async ({
+    topic
+  }) => {
+    this.isInitialized();
+
+    const subscription = this.client.subscriptions.get(topic);
+
+    const identityKey = encodeEd25519Key(
+      await this.client.identityKeys.getIdentity({ account: subscription.account })
+    )
+
+    const issuedAt = Math.round(Date.now() / 1000);
+    const expiry =
+      issuedAt + ENGINE_RPC_OPTS["wc_notifyGetNotifications"].res.ttl;
+
+    const cachedKey = this.getCachedDappKey(subscription);
+    const dappUrl = getDappUrl(subscription.metadata.appDomain);
+    const { dappIdentityKey } = cachedKey
+      ? { dappIdentityKey: cachedKey }
+      : await this.resolveKeys(dappUrl);
+    
+    const getUnreadNotificationsClaims: NotifyClientTypes.GetUnreadNotificationsCountJwtClaims = {
+      act: "notify_get_unread_notifications_count",
+      iss: identityKey,
+      ksu: this.client.keyserverUrl,
+      sub: composeDidPkh(subscription.account),
+      iat: issuedAt,
+      exp: expiry,
+      app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
+      aud: encodeEd25519Key(dappIdentityKey)
+    }
+
+    const auth
+      = await this.client.identityKeys.generateIdAuth(subscription.account, getUnreadNotificationsClaims);
+
+    return new Promise((resolve, reject) => {
+      this.once('notify_get_unread_notifications_count_response', (args) => {
+        if(args.hasError) {
+          reject(args.error)
+        }
+        else {
+          resolve(args.count)
+        }
+      })
+
+      setTimeout(() => {
+	reject("getUnreadNotificationsClaims timed out waiting for a response")
+      }, ONE_MINUTE)
+      
+      this.sendRequest(topic, "wc_notifyGetUnreadNotificationsCount", { auth })
+    })
+  }
+
+  public markNotificationsAsRead: INotifyEngine["markNotificationsAsRead"] = async ({
+    ids,
+    topic
+  }) => {
+    this.isInitialized();
+
+    const subscription = this.client.subscriptions.get(topic);
+
+    const identityKey = encodeEd25519Key(
+      await this.client.identityKeys.getIdentity({ account: subscription.account })
+    )
+
+    const issuedAt = Math.round(Date.now() / 1000);
+    const expiry =
+      issuedAt + ENGINE_RPC_OPTS["wc_notifyGetNotifications"].res.ttl;
+
+    const cachedKey = this.getCachedDappKey(subscription);
+    const dappUrl = getDappUrl(subscription.metadata.appDomain);
+    const { dappIdentityKey } = cachedKey
+      ? { dappIdentityKey: cachedKey }
+      : await this.resolveKeys(dappUrl);
+    
+    const markNotificationAsReadClaims: NotifyClientTypes.MarkNotificationsAsReadJwtClaims = {
+      act: "notify_read_notification",
+      iss: identityKey,
+      ksu: this.client.keyserverUrl,
+      sub: composeDidPkh(subscription.account),
+      iat: issuedAt,
+      exp: expiry,
+      app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
+      aud: encodeEd25519Key(dappIdentityKey),
+      ids
+    }
+
+    const auth
+      = await this.client.identityKeys.generateIdAuth(subscription.account, markNotificationAsReadClaims);
+
+    await this.sendRequest(topic, "wc_notifyReadNotification", { auth })
+  }
 
   public deleteSubscription: INotifyEngine["deleteSubscription"] = async ({
     topic,
@@ -571,6 +750,12 @@ export class NotifyEngine extends INotifyEngine {
           return this.onNotifyUpdateResponse(topic, payload);
         case "wc_notifyWatchSubscription":
           return this.onNotifyWatchSubscriptionsResponse(topic, payload);
+        case "wc_notifyGetNotifications":
+          return this.onNotifyGetNotificationsResponse(topic, payload);
+        case "wc_notifyGetNotification":
+          return this.onNotifyGetNotificationResponse(topic, payload);
+        case "wc_notifyGetUnreadNotificationsCount":
+          return this.onNotifyGetUnreadNotificationsCountResponse(topic, payload);
         default:
           return this.client.logger.info(
             `[Notify] Unsupported response method ${resMethod}`
@@ -590,6 +775,10 @@ export class NotifyEngine extends INotifyEngine {
 
   public off: INotifyEngine["off"] = (name, listener) => {
     return this.client.events.off(name, listener);
+  };
+
+  public emit: INotifyEngine["emit"] = (name, args) => {
+    return this.client.events.emit(name, args);
   };
 
   // ---------- Relay Event Handlers --------------------------------- //
@@ -733,6 +922,84 @@ export class NotifyEngine extends INotifyEngine {
         );
       }
     };
+
+  protected onNotifyGetUnreadNotificationsCountResponse: INotifyEngine["onNotifyGetUnreadNotificationsCountResponse"] =
+    async (topic, payload) => {
+      if (isJsonRpcResult(payload)) {
+        this.client.logger.info(
+          "[Notify] Engine.onNotifyGetNotificationsResponse > result:",
+          topic,
+          payload
+        );
+	const auth = payload.result.auth
+
+	const responseClaims =
+	  this.decodeAndValidateJwtAuth<NotifyClientTypes.GetUnreadNotificationsCountResponseClaims>(auth, "notify_get_unread_notifications_response")
+
+	this.emit('notify_get_unread_notifications_count_response', {
+	  count: responseClaims.cnt,
+	  hasError: false,
+	})
+
+      } else if (isJsonRpcError(payload)) {
+        this.client.logger.error(
+          "[Notify] Engine.onNotifyGetNotificationsResponse  > error:",
+          topic,
+          payload.error
+        );
+      }
+    }
+
+  protected onNotifyGetNotificationResponse: INotifyEngine["onNotifyGetNotificationResponse"] =
+    async (topic, payload) => {
+      if (isJsonRpcResult(payload)) {
+        this.client.logger.info(
+          "[Notify] Engine.onNotifyGetNotificationsResponse > result:",
+          topic,
+          payload
+        );
+	const auth = payload.result.auth
+
+	const responseClaims =
+	  this.decodeAndValidateJwtAuth<NotifyClientTypes.GetNotificationResponseClaims>(auth, "notify_get_notification_response")
+
+	this.emit('notify_get_notification_response', {
+	  notification: responseClaims.nfn,
+	  hasError: false,
+	})
+
+      } else if (isJsonRpcError(payload)) {
+        this.client.logger.error(
+          "[Notify] Engine.onNotifyGetNotificationsResponse  > error:",
+          topic,
+          payload.error
+        );
+      }
+    }
+
+  protected onNotifyGetNotificationsResponse: INotifyEngine["onNotifyGetNotificationsResponse"] =
+    async (topic, payload) => {
+      if (isJsonRpcResult(payload)) {
+        this.client.logger.info(
+          "[Notify] Engine.onNotifyGetNotificationsResponse > result:",
+          topic,
+          payload
+        );
+	this.emit('notify_get_notifications_response', {
+	  hasMore: false,
+	  hasMoreUnread: false,
+	  hasError: false,
+	  notifications: []
+	})
+
+      } else if (isJsonRpcError(payload)) {
+        this.client.logger.error(
+          "[Notify] Engine.onNotifyGetNotificationsResponse  > error:",
+          topic,
+          payload.error
+        );
+      }
+    }
 
   protected onNotifyDeleteRequest: INotifyEngine["onNotifyDeleteRequest"] =
     async (topic, payload) => {

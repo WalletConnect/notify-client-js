@@ -127,6 +127,41 @@ export declare namespace NotifyClientTypes {
     msg: NotifyMessage;
   }
 
+  interface GetNotificationsJwtClaims extends BaseJwtClaims {
+    act: "notify_get_notifications";
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
+    iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
+    app: string; // did web domain url,
+    urf: boolean; // unread first
+    lmt: number // max number of notifications
+    aft: string | null // notification to start returning messages after, 
+  }
+
+  interface MarkNotificationsAsReadJwtClaims extends BaseJwtClaims {
+    act: "notify_read_notification";
+    iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
+    app: string; // did web domain url,
+    aud: string; // did:key of client identity key
+    ids: string[] // array of notification ids, max 1000 items
+  }
+
+  interface GetUnreadNotificationsCountJwtClaims extends BaseJwtClaims {
+    act: "notify_get_unread_notifications_count"
+    iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
+    app: string; // did web domain url,
+    aud: string; // did:key of client identity key
+  }
+
+  interface GetNotificationJwtClaims extends BaseJwtClaims {
+    act: "notify_get_notifications";
+    iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
+    app: string; // did web domain url,
+    id: string // notification id
+  }
+
   interface MessageResponseJWTClaims extends BaseJwtClaims {
     act: "notify_message_response"; // description of action intent. Must be equal to "notify_message_response"
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
@@ -210,6 +245,20 @@ export declare namespace NotifyClientTypes {
     aud: string; // did:key of client identity key
     sub: string; // did:key of the public key used for key agreement on the Notify topic
     sbs: Omit<NotifySubscription, "relay">[]; // array of [Notify Server Subscriptions]
+  }
+
+  interface GetNotificationResponseClaims extends BaseJwtClaims {
+    act: "notify_get_notification_response";
+    iss: string; // did:key of notify server identity key
+    aud: string; // did:key of client identity key
+    nfn: NotifyMessage // notification
+  }
+
+  interface GetUnreadNotificationsCountResponseClaims extends BaseJwtClaims {
+    act: "notify_get_unread_notifications_response";
+    iss: string; // did:key of notify server identity key
+    aud: string; // did:key of client identity key
+    cnt: number // count
   }
 
   interface NotifyDidDocument {
@@ -307,7 +356,6 @@ export abstract class INotifyClient {
   public abstract update: INotifyEngine["update"];
   public abstract decryptMessage: INotifyEngine["decryptMessage"];
   public abstract getNotificationHistory: INotifyEngine["getNotificationHistory"];
-  public abstract deleteNotifyMessage: INotifyEngine["deleteNotifyMessage"];
   public abstract getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"];
   public abstract deleteSubscription: INotifyEngine["deleteSubscription"];
 
