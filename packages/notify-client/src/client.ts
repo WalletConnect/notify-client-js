@@ -144,20 +144,9 @@ export class NotifyClient extends INotifyClient {
     }
   };
 
-  public getMessageHistory: INotifyClient["getMessageHistory"] = (params) => {
+  public getNotificationHistory: INotifyClient["getNotificationHistory"] = (params) => {
     try {
-      return this.engine.getMessageHistory(params);
-    } catch (error: any) {
-      this.logger.error(error.message);
-      throw error;
-    }
-  };
-
-  public deleteNotifyMessage: INotifyClient["deleteNotifyMessage"] = (
-    params
-  ) => {
-    try {
-      return this.engine.deleteNotifyMessage(params);
+      return this.engine.getNotificationHistory(params);
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;
