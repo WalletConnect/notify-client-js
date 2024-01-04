@@ -331,19 +331,30 @@ export class NotifyEngine extends INotifyEngine {
       `[Notify] update > generated updateAuth JWT: ${updateAuth}`
     );
 
-    const id = await this.sendRequest(topic, "wc_notifyUpdate", {
-      updateAuth,
-    });
+    return new Promise<boolean>((resolve, reject) => {
+      this.client.on('notify_update', (args) => {
+	if(args.error) {
+	  reject(args.error)
+	}
+	else {
+	  resolve(true)
+	}
+      })
 
-    this.client.logger.info({
-      action: "sendRequest",
-      method: "wc_notifyUpdate",
-      id,
-      topic,
-      updateAuth,
-    });
+      this.sendRequest(topic, "wc_notifyUpdate", {
+	updateAuth,
+      }).then(id => {
+	this.client.logger.info({
+	  action: "sendRequest",
+	  method: "wc_notifyUpdate",
+	  id,
+	  topic,
+	  updateAuth,
+	});
+      });
+      
+    })
 
-    return true;
   };
 
   public decryptMessage: INotifyEngine["decryptMessage"] = async ({
@@ -600,11 +611,19 @@ export class NotifyEngine extends INotifyEngine {
       topic,
     });
 
-    await this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
+    return new Promise<void>((resolve) => {
+      this.client.on('notify_delete', () => {
+	resolve();
+      })
 
-    this.client.logger.info(
-      `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
-    );
+      this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
+
+      this.client.logger.info(
+        `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
+      );
+    })
+
+
   };
 
   public getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"] = (
@@ -1060,7 +1079,6 @@ export class NotifyEngine extends INotifyEngine {
         payload
       );
       try {
-        this.client.events.emit("notify_delete", { id, topic });
       } catch (err: any) {
         this.client.logger.error(err);
         await this.sendError(id, topic, err);
@@ -1079,12 +1097,14 @@ export class NotifyEngine extends INotifyEngine {
           topic,
           payload
         );
+        this.client.emit("notify_delete", { error: null });
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error(
           "[Notify] Engine.onNotifyDeleteResponse > error:",
           topic,
           payload.error
         );
+        this.client.emit("notify_delete", { error: payload.error.message });
       }
     };
 
@@ -1180,11 +1200,7 @@ export class NotifyEngine extends INotifyEngine {
           error: payload.error,
         });
         this.client.emit("notify_update", {
-          id: payload.id,
-          topic,
-          params: {
-            error: payload.error,
-          },
+          error: payload.error.message,
         });
       }
     };

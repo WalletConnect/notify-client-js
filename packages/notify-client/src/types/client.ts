@@ -31,7 +31,7 @@ export declare namespace NotifyClientTypes {
     message: NotifyClientTypes.NotifyMessage;
   };
 
-  type NotifyDeleteRequestEventArgs = { id: number; topic: string };
+  type NotifyDeleteRequestEventArgs = { error: null | string };
 
   interface BaseEventArgs<T = unknown> {
     id: number;
@@ -42,8 +42,8 @@ export declare namespace NotifyClientTypes {
   interface EventArguments {
     notify_subscription: BaseEventArgs<NotifyResponseEventArgs>;
     notify_message: BaseEventArgs<NotifyMessageRequestEventArgs>;
-    notify_delete: BaseEventArgs<NotifyDeleteRequestEventArgs>;
-    notify_update: BaseEventArgs<NotifyResponseEventArgs>;
+    notify_delete: NotifyDeleteRequestEventArgs;
+    notify_update: NotifyDeleteRequestEventArgs;
     notify_subscriptions_changed: BaseEventArgs<NotifySubscriptionsChangedEventArgs>;
   }
 
