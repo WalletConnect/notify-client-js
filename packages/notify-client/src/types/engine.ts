@@ -23,31 +23,31 @@ export declare namespace NotifyEngineTypes {
   }
 
   type EventError = {
-      hasError: true;
-      error: string
-    }
+    hasError: true;
+    error: string;
+  };
 
-  type EventOrError<T> = (T & { hasError: false }) | EventError
+  type EventOrError<T> = (T & { hasError: false }) | EventError;
 
   type Event =
     | "notify_get_notifications_response"
     | "notify_get_notification_response"
-    | "notify_get_unread_notifications_count_response"
+    | "notify_get_unread_notifications_count_response";
 
   interface EventArguments {
     notify_get_notifications_response: EventOrError<{
-      notifications: NotifyClientTypes.NotifyMessage[]
-      hasMore: boolean
-      hasMoreUnread: boolean
-    }>
+      notifications: NotifyClientTypes.NotifyMessage[];
+      hasMore: boolean;
+      hasMoreUnread: boolean;
+    }>;
 
     notify_get_notification_response: EventOrError<{
-      notification: NotifyClientTypes.NotifyMessage
-    }>
+      notification: NotifyClientTypes.NotifyMessage;
+    }>;
 
     notify_get_unread_notifications_count_response: EventOrError<{
-      count: number
-    }>
+      count: number;
+    }>;
   }
 }
 
@@ -83,7 +83,7 @@ export abstract class INotifyEngine {
   public abstract subscribe(params: {
     appDomain: string;
     account: string;
-  }): Promise<{ id: number; subscriptionAuth: string }>;
+  }): Promise<boolean>;
 
   public abstract update(params: {
     topic: string;
@@ -100,30 +100,30 @@ export abstract class INotifyEngine {
   public abstract getNotificationHistory(params: {
     topic: string;
     limit?: number;
-    startingAfter?: string
-    unreadFirst: boolean
+    startingAfter?: string;
+    unreadFirst: boolean;
   }): Promise<{
-    notifications: NotifyClientTypes.NotifyMessage[],
-    hasMore: boolean,
-    hasMoreUnread: boolean,
+    notifications: NotifyClientTypes.NotifyMessage[];
+    hasMore: boolean;
+    hasMoreUnread: boolean;
   }>;
 
   // get notification by ID
   public abstract getNotification(params: {
-    topic: string,
-    id: string,
-  }): Promise<NotifyClientTypes.NotifyMessage>
+    topic: string;
+    id: string;
+  }): Promise<NotifyClientTypes.NotifyMessage>;
 
   // mark notification as read
   public abstract markNotificationsAsRead(params: {
-    topic: string,
-    ids: string[],
-  }): Promise<void>
+    topic: string;
+    ids: string[];
+  }): Promise<void>;
 
   // returns how many notifications are unread
   public abstract getUnreadNotificationsCount(params: {
-    topic: string,
-  }): Promise<number>
+    topic: string;
+  }): Promise<number>;
 
   // delete active subscription
   public abstract deleteSubscription(params: { topic: string }): Promise<void>;
@@ -240,7 +240,9 @@ export abstract class INotifyEngine {
   protected abstract onNotifyGetUnreadNotificationsCountResponse(
     topic: string,
     payload:
-      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyGetUnreadNotificationsCount"]>
+      | JsonRpcResult<
+          JsonRpcTypes.Results["wc_notifyGetUnreadNotificationsCount"]
+        >
       | JsonRpcError
   ): Promise<void>;
 

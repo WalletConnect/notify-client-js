@@ -15,9 +15,13 @@ export declare namespace NotifyClientTypes {
     | "notify_update"
     | "notify_subscriptions_changed";
 
-  type NotifyResponseEventArgs = {
-    error?: ErrorResponse;
-  };
+  type NotifyResponseEventArgs =
+    | {
+        subscription: NotifySubscription;
+        allSubscriptions: NotifySubscription[];
+        error: null;
+      }
+    | { error: ErrorResponse };
 
   type NotifySubscriptionsChangedEventArgs = {
     subscriptions: NotifySubscription[];
@@ -133,8 +137,8 @@ export declare namespace NotifyClientTypes {
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
     app: string; // did web domain url,
     urf: boolean; // unread first
-    lmt: number // max number of notifications
-    aft: string | null // notification to start returning messages after, 
+    lmt: number; // max number of notifications
+    aft: string | null; // notification to start returning messages after,
   }
 
   interface MarkNotificationsAsReadJwtClaims extends BaseJwtClaims {
@@ -143,11 +147,11 @@ export declare namespace NotifyClientTypes {
     sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     app: string; // did web domain url,
     aud: string; // did:key of client identity key
-    ids: string[] // array of notification ids, max 1000 items
+    ids: string[]; // array of notification ids, max 1000 items
   }
 
   interface GetUnreadNotificationsCountJwtClaims extends BaseJwtClaims {
-    act: "notify_get_unread_notifications_count"
+    act: "notify_get_unread_notifications_count";
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
     sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     app: string; // did web domain url,
@@ -159,7 +163,7 @@ export declare namespace NotifyClientTypes {
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
     sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     app: string; // did web domain url,
-    id: string // notification id
+    id: string; // notification id
   }
 
   interface MessageResponseJWTClaims extends BaseJwtClaims {
@@ -202,7 +206,7 @@ export declare namespace NotifyClientTypes {
     aud: string; // did:pkh blockchain account that notify subscription is associated with
     sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
-    seq: number // sequence number of subscriptions list
+    seq: number; // sequence number of subscriptions list
   }
 
   interface CommonResponseJWTClaims extends BaseJwtClaims {
@@ -215,19 +219,19 @@ export declare namespace NotifyClientTypes {
   interface SubscriptionResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_subscription_response";
     sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
-    seq: number // sequence number of subscriptions list
+    seq: number; // sequence number of subscriptions list
   }
 
   interface UpdateResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_update_response";
     sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
-    seq: number // sequence number of subscriptions list
+    seq: number; // sequence number of subscriptions list
   }
 
   interface DeleteResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_delete_response";
     sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
-    seq: number // sequence number of subscriptions list
+    seq: number; // sequence number of subscriptions list
   }
 
   interface NotifyWatchSubscriptionsResponseClaims extends BaseJwtClaims {
@@ -236,7 +240,7 @@ export declare namespace NotifyClientTypes {
     aud: string; // did:key of client identity key
     sub: string; // did:key of the public key used for key agreement on the Notify topic
     sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
-    seq: number // sequence number of subscriptions list
+    seq: number; // sequence number of subscriptions list
   }
 
   interface NotifySubscriptionsChangedResponseClaims extends BaseJwtClaims {
@@ -251,14 +255,14 @@ export declare namespace NotifyClientTypes {
     act: "notify_get_notification_response";
     iss: string; // did:key of notify server identity key
     aud: string; // did:key of client identity key
-    nfn: NotifyMessage // notification
+    nfn: NotifyMessage; // notification
   }
 
   interface GetUnreadNotificationsCountResponseClaims extends BaseJwtClaims {
     act: "notify_get_unread_notifications_response";
     iss: string; // did:key of notify server identity key
     aud: string; // did:key of client identity key
-    cnt: number // count
+    cnt: number; // count
   }
 
   interface NotifyDidDocument {
@@ -340,9 +344,12 @@ export abstract class INotifyClient {
     NotifyClientTypes.NotifySubscription
   >;
 
-  public abstract clientStateMaintenance: IStore<"stateMaintenance", {
-    latestSubscriptionSequence: number
-  }>
+  public abstract clientStateMaintenance: IStore<
+    "stateMaintenance",
+    {
+      latestSubscriptionSequence: number;
+    }
+  >;
 
   constructor(public opts: NotifyClientTypes.ClientOptions) {}
 

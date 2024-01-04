@@ -32,16 +32,16 @@ export declare namespace JsonRpcTypes {
       updateAuth: string;
     };
     wc_notifyGetNotifications: {
-      auth: string
+      auth: string;
     };
     wc_notifyGetNotification: {
-      auth: string
+      auth: string;
     };
     wc_notifyReadNotification: {
-      auth: string
+      auth: string;
     };
     wc_notifyGetUnreadNotificationsCount: {
-      auth: string
+      auth: string;
     };
   }
 
@@ -64,16 +64,16 @@ export declare namespace JsonRpcTypes {
       responseAuth: string;
     };
     wc_notifyGetNotifications: {
-      auth: string
+      auth: string;
     };
     wc_notifyGetNotification: {
-      auth: string
+      auth: string;
     };
     wc_notifyReadNotification: {
-      auth: string
+      auth: string;
     };
     wc_notifyGetUnreadNotificationsCount: {
-      auth: string
+      auth: string;
     };
   }
 }

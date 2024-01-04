@@ -76,41 +76,41 @@ export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
   wc_notifyGetNotifications: {
     req: {
       ttl: FIVE_MINUTES,
-      tag:4014
+      tag: 4014,
     },
     res: {
       ttl: FIVE_MINUTES,
-      tag:4015
-    }
+      tag: 4015,
+    },
   },
   wc_notifyGetNotification: {
     req: {
       ttl: FIVE_MINUTES,
-      tag:4016
+      tag: 4016,
     },
     res: {
       ttl: FIVE_MINUTES,
-      tag:4017
-    }
+      tag: 4017,
+    },
   },
   wc_notifyReadNotification: {
     req: {
       ttl: FIVE_MINUTES,
-      tag:4020
+      tag: 4020,
     },
     res: {
       ttl: FIVE_MINUTES,
-      tag:4021
-    }
+      tag: 4021,
+    },
   },
   wc_notifyGetUnreadNotificationsCount: {
     req: {
       ttl: FIVE_MINUTES,
-      tag:4022
+      tag: 4022,
     },
     res: {
       ttl: FIVE_MINUTES,
-      tag:4023
-    }
-  }
+      tag: 4023,
+    },
+  },
 };
