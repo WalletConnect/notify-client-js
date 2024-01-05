@@ -608,12 +608,11 @@ export class NotifyEngine extends INotifyEngine {
 
     return new Promise<void>((resolve, reject) => {
       this.client.on("notify_delete", (args) => {
-	if(args.error === null) {
-	  resolve();
-	}
-	else {
-	  reject(args.error)
-	}
+        if (args.error === null) {
+          resolve();
+        } else {
+          reject(args.error);
+        }
       });
 
       this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
