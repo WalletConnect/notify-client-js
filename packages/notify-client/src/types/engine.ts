@@ -23,11 +23,10 @@ export declare namespace NotifyEngineTypes {
   }
 
   type EventError = {
-    hasError: true;
     error: string;
   };
 
-  type EventOrError<T> = (T & { hasError: false }) | EventError;
+  type EventOrError<T> = (T & { error: null }) | EventError;
 
   type Event =
     | "notify_get_notifications_response"

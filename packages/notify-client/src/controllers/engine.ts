@@ -427,10 +427,10 @@ export class NotifyEngine extends INotifyEngine {
 
     return new Promise((resolve, reject) => {
       this.once("notify_get_notification_response", (args) => {
-        if (args.hasError) {
-          reject(args.error);
-        } else {
+        if (args.error === null) {
           resolve(args.notification);
+        } else {
+          reject(args.error);
         }
       });
 
@@ -479,10 +479,10 @@ export class NotifyEngine extends INotifyEngine {
 
       return new Promise((resolve, reject) => {
         this.once("notify_get_notifications_response", (args) => {
-          if (args.hasError) {
-            reject(args.error);
-          } else {
+          if (args.error === null) {
             resolve(args);
+          } else {
+            reject(args.error);
           }
         });
 
@@ -535,10 +535,10 @@ export class NotifyEngine extends INotifyEngine {
 
       return new Promise((resolve, reject) => {
         this.once("notify_get_unread_notifications_count_response", (args) => {
-          if (args.hasError) {
-            reject(args.error);
-          } else {
+          if (args.error === null) {
             resolve(args.count);
+          } else {
+            reject(args.error);
           }
         });
 
@@ -606,9 +606,14 @@ export class NotifyEngine extends INotifyEngine {
       topic,
     });
 
-    return new Promise<void>((resolve) => {
-      this.client.on("notify_delete", () => {
-        resolve();
+    return new Promise<void>((resolve, reject) => {
+      this.client.on("notify_delete", (args) => {
+	if(args.error === null) {
+	  resolve();
+	}
+	else {
+	  reject(args.error)
+	}
       });
 
       this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
@@ -1000,7 +1005,7 @@ export class NotifyEngine extends INotifyEngine {
 
         this.emit("notify_get_unread_notifications_count_response", {
           count: responseClaims.cnt,
-          hasError: false,
+          error: null,
         });
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error(
@@ -1029,7 +1034,7 @@ export class NotifyEngine extends INotifyEngine {
 
         this.emit("notify_get_notification_response", {
           notification: responseClaims.nfn,
-          hasError: false,
+          error: null,
         });
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error(
@@ -1051,7 +1056,7 @@ export class NotifyEngine extends INotifyEngine {
         this.emit("notify_get_notifications_response", {
           hasMore: false,
           hasMoreUnread: false,
-          hasError: false,
+          error: null,
           notifications: [],
         });
       } else if (isJsonRpcError(payload)) {
