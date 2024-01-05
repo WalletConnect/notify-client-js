@@ -231,7 +231,6 @@ describe("Notify", () => {
           gotNotifySubscriptionResponse = true;
         });
         wallet.on("notify_subscriptions_changed", (event) => {
-          console.log("notify_subscriptions_changed", event);
           if (event.params.subscriptions.length > 0) {
             gotNotifySubscriptionsChangedRequest = true;
             changedSubscriptions = event.params.subscriptions;
@@ -255,6 +254,7 @@ describe("Notify", () => {
         });
 
         await waitForEvent(() => gotNotifySubscriptionResponse);
+
         await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
 
         // Check that wallet is in expected state.
@@ -276,7 +276,6 @@ describe("Notify", () => {
           let notifyMessageEvent: any;
 
           wallet.once("notify_message", (event) => {
-            console.log("notify_message", event);
             gotNotifyMessageResponse = true;
             notifyMessageEvent = event;
           });
@@ -352,7 +351,6 @@ describe("Notify", () => {
           gotNotifyUpdateResponse = true;
         });
         wallet.on("notify_subscriptions_changed", (event) => {
-          console.log("notify_subscriptions_changed", event);
           gotNotifySubscriptionsChangedRequest = true;
           lastChangedSubscriptions = event.params.subscriptions;
         });

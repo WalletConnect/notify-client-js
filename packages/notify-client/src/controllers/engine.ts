@@ -274,6 +274,7 @@ export class NotifyEngine extends INotifyEngine {
           resolve(true);
         }
       });
+
       // SPEC: Wallet sends wc_notifySubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
       const id = this.sendRequest<"wc_notifySubscribe">(
         subscribeTopic,
@@ -854,6 +855,7 @@ export class NotifyEngine extends INotifyEngine {
           .getAll()
           .find((sub) => `did:web:${sub.metadata.appDomain}` === claims.app);
 
+
         // Emit the NotifySubscription at client level.
         if (subscription) {
           this.client.emit("notify_subscription", {
@@ -870,7 +872,20 @@ export class NotifyEngine extends INotifyEngine {
             },
           });
         }
-      } else if (isJsonRpcError(response)) {
+	else {
+          this.client.emit("notify_subscription", {
+            id: response.id,
+            topic: responseTopic,
+            params: {
+              error: {
+		code: -1,
+		message: "Subscription not found"
+	      },
+            },
+          });
+	}
+      }
+      else if (isJsonRpcError(response)) {
         // Emit the error response at client level.
         this.client.emit("notify_subscription", {
           id: response.id,
@@ -1342,20 +1357,22 @@ export class NotifyEngine extends INotifyEngine {
 
     this.client.logger.info("updateSubscriptionsUsingJwt > claims", claims);
 
-    const latestSubscriptionSequence =
-      this.client.clientStateMaintenance.get(
-        "stateMaintenance"
-      ).latestSubscriptionSequence;
+    // TODO: enable this when seq property is in notify server
+    // const latestSubscriptionSequence =
+    //   this.client.clientStateMaintenance.get(
+    //     "stateMaintenance"
+    //   ).latestSubscriptionSequence;
 
-    if (latestSubscriptionSequence && latestSubscriptionSequence > claims.seq) {
-      return this.client.subscriptions.getAll();
-    }
+    // if (latestSubscriptionSequence && latestSubscriptionSequence > claims.seq) {
+    //   return this.client.subscriptions.getAll();
+    // }
 
-    await this.client.clientStateMaintenance.update("stateMaintenance", {
-      latestSubscriptionSequence: claims.seq,
-    });
+    // await this.client.clientStateMaintenance.update("stateMaintenance", {
+    //   latestSubscriptionSequence: claims.seq,
+    // });
 
     // Clean up any subscriptions that are no longer valid.
+
     const newStateSubsTopics = claims.sbs.map((sb) => hashKey(sb.symKey));
     for (const currentSubTopic of this.client.subscriptions
       .getAll()
