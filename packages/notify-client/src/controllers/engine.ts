@@ -15,6 +15,7 @@ import {
   isJsonRpcResponse,
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
+import { FIVE_MINUTES } from "@walletconnect/time";
 import { JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
@@ -335,6 +336,68 @@ export class NotifyEngine extends INotifyEngine {
 
     return true;
   };
+
+  public getNotificationHistory: INotifyEngine["getNotificationHistory"] =
+    async ({ topic, limit, startingAfter }) => {
+      this.isInitialized();
+
+      const subscription = this.client.subscriptions.get(topic);
+
+      const identityKey = encodeEd25519Key(
+        await this.client.identityKeys.getIdentity({
+          account: subscription.account,
+        })
+      );
+
+      const issuedAt = Math.round(Date.now() / 1000);
+      const expiry =
+        issuedAt + ENGINE_RPC_OPTS["wc_notifyGetNotifications"].res.ttl;
+
+      const cachedKey = this.getCachedDappKey(subscription);
+      const dappUrl = getDappUrl(subscription.metadata.appDomain);
+      const { dappIdentityKey } = cachedKey
+        ? { dappIdentityKey: cachedKey }
+        : await this.resolveKeys(dappUrl);
+
+      const getNotificationsClaims: NotifyClientTypes.GetNotificationsJwtClaims =
+        {
+          act: "notify_get_notifications",
+          aft: startingAfter ?? null,
+          iss: identityKey,
+          ksu: this.client.keyserverUrl,
+          sub: composeDidPkh(subscription.account),
+          iat: issuedAt,
+          exp: expiry,
+	  aud: encodeEd25519Key(dappIdentityKey),
+          app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
+          lmt: limit ?? 50,
+	  // TODO: adapt to unread capabilities when available on Notify server
+          urf: false,
+        };
+
+      const auth = await this.client.identityKeys.generateIdAuth(
+        subscription.account,
+        getNotificationsClaims
+      );
+
+      return new Promise((resolve, reject) => {
+        this.once("notify_get_notifications_response", (args) => {
+          if (args.error === null) {
+            resolve(args);
+          } else {
+            reject(args.error);
+          }
+        });
+
+	// Add timeout to prevent memory leaks with undying promises
+        setTimeout(() => {
+          reject("getNotificationHistory timed out waiting for a response");
+	// Using five minutes as it is the TTL of wc_getNotificationHistory
+        }, FIVE_MINUTES);
+
+        this.sendRequest(topic, "wc_notifyGetNotifications", { auth });
+      });
+    };
 
   public decryptMessage: INotifyEngine["decryptMessage"] = async ({
     topic,
