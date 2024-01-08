@@ -135,11 +135,11 @@ export class NotifyClient extends INotifyClient {
     }
   };
 
-  public deleteNotifyMessage: INotifyClient["deleteNotifyMessage"] = (
+  public getNotificationHistory: INotifyClient["getNotificationHistory"] = (
     params
   ) => {
     try {
-      return this.engine.deleteNotifyMessage(params);
+      return this.engine.getNotificationHistory(params);
     } catch (error: any) {
       this.logger.error(error.message);
       throw error;
