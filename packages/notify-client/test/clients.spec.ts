@@ -487,7 +487,7 @@ describe("Notify", () => {
           totalMessages++;
         });
 
-	const notifications = [0,1].map(num => `${num}Test`)
+        const notifications = [0, 1].map((num) => `${num}Test`);
         for (const notification of notifications) {
           await sendNotifyMessage(account, notification);
         }
@@ -504,9 +504,9 @@ describe("Notify", () => {
           limit: 2,
         });
 
-	expect(history.notifications.map(n => n.body)).toEqual(notifications);
+        expect(history.notifications.map((n) => n.body)).toEqual(notifications);
 
-	expect(history.hasMore).toEqual(false);
+        expect(history.hasMore).toEqual(false);
       });
     });
 
