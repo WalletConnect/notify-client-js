@@ -384,7 +384,7 @@ export class NotifyEngine extends INotifyEngine {
           if (args.error === null) {
             resolve(args);
           } else {
-            reject(args.error);
+            reject(new Error(args.error));
           }
         });
 
@@ -637,6 +637,8 @@ export class NotifyEngine extends INotifyEngine {
           return this.onNotifyUpdateResponse(topic, payload);
         case "wc_notifyWatchSubscription":
           return this.onNotifyWatchSubscriptionsResponse(topic, payload);
+        case "wc_notifyGetNotifications":
+          return this.onNotifyGetNotificationsResponse(topic, payload);
         default:
           return this.client.logger.info(
             `[Notify] Unsupported response method ${resMethod}`
