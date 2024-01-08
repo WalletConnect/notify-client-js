@@ -205,7 +205,7 @@ export declare namespace NotifyClientTypes {
     aud: string; // did:key of client identity key
     mur: boolean; // more unread
     mre: boolean; // more pages
-    nfs: NotifyMessage[]
+    nfs: NotifyMessage[];
   }
 
   interface NotifyWatchSubscriptionsResponseClaims extends BaseJwtClaims {

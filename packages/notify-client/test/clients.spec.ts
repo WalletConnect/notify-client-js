@@ -466,9 +466,9 @@ describe("Notify", () => {
       });
     });
 
-describe.skipIf(!hasTestProjectSecret)("Message retrieval", () => {
+    describe.skipIf(!hasTestProjectSecret)("Message retrieval", () => {
       it("getNotificationHistory", async () => {
-	let totalMessages = 0;
+        let totalMessages = 0;
         await createNotifySubscription(wallet, account, onSign);
 
         expect(wallet.subscriptions.getAll().length).toEqual(1);
@@ -484,27 +484,27 @@ describe.skipIf(!hasTestProjectSecret)("Message retrieval", () => {
         await waitForEvent(() => Date.now() - now > 1_000);
 
         wallet.on("notify_message", () => {
-	  totalMessages++;
+          totalMessages++;
         });
 
-	for(let i = 0; i < 2; ++i) {
-	  await sendNotifyMessage(account, `${i}Test`);
-	}
+        for (let i = 0; i < 2; ++i) {
+          await sendNotifyMessage(account, `${i}Test`);
+        }
 
-	await waitForEvent(() => totalMessages === 2);
+        await waitForEvent(() => totalMessages === 2);
 
-	await wallet.messages.delete(testSub.topic, {
-	  code: -1,
-	  message: "Delete for testing"
-	});
+        await wallet.messages.delete(testSub.topic, {
+          code: -1,
+          message: "Delete for testing",
+        });
 
-	const history = await wallet.getNotificationHistory({
-	  topic: testSub.topic,
-	  limit: 2,
-	})
+        const history = await wallet.getNotificationHistory({
+          topic: testSub.topic,
+          limit: 2,
+        });
 
-	console.log({history: history.notifications})
-      })
+        console.log({ history: history.notifications });
+      });
     });
 
     describe("deleteSubscription", () => {

@@ -368,10 +368,10 @@ export class NotifyEngine extends INotifyEngine {
           sub: composeDidPkh(subscription.account),
           iat: issuedAt,
           exp: expiry,
-	  aud: encodeEd25519Key(dappIdentityKey),
+          aud: encodeEd25519Key(dappIdentityKey),
           app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
           lmt: limit ?? 50,
-	  // TODO: adapt to unread capabilities when available on Notify server
+          // TODO: adapt to unread capabilities when available on Notify server
           urf: false,
         };
 
@@ -389,10 +389,10 @@ export class NotifyEngine extends INotifyEngine {
           }
         });
 
-	// Add timeout to prevent memory leaks with undying promises
+        // Add timeout to prevent memory leaks with undying promises
         setTimeout(() => {
           reject("getNotificationHistory timed out waiting for a response");
-	// Using five minutes as it is the TTL of wc_getNotificationHistory
+          // Using five minutes as it is the TTL of wc_getNotificationHistory
         }, FIVE_MINUTES);
 
         this.sendRequest(topic, "wc_notifyGetNotifications", { auth });
@@ -485,7 +485,6 @@ export class NotifyEngine extends INotifyEngine {
 
     return Object.fromEntries(subscriptions);
   };
-
 
   // ---------- Protected Helpers --------------------------------------- //
   protected sendRequest: INotifyEngine["sendRequest"] = async (
