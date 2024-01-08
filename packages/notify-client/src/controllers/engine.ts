@@ -375,16 +375,6 @@ export class NotifyEngine extends INotifyEngine {
     }
   };
 
-  public getMessageHistory: INotifyEngine["getMessageHistory"] = ({
-    topic,
-  }) => {
-    this.isInitialized();
-
-    return this.client.messages.keys.includes(topic)
-      ? this.client.messages.get(topic).messages
-      : {};
-  };
-
   public deleteSubscription: INotifyEngine["deleteSubscription"] = async ({
     topic,
   }) => {
