@@ -107,6 +107,7 @@ export declare namespace NotifyClientTypes {
 
   interface NotifyMessage {
     title: string;
+    sentAt: number
     body: string;
     id: string;
     url: string;
