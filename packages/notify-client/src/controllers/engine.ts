@@ -423,8 +423,8 @@ export class NotifyEngine extends INotifyEngine {
     return Object.fromEntries(subscriptions);
   };
 
-  // ---------- Protected Helpers --------------------------------------- //
 
+  // ---------- Protected Helpers --------------------------------------- //
   protected sendRequest: INotifyEngine["sendRequest"] = async (
     topic,
     method,
@@ -849,6 +849,24 @@ export class NotifyEngine extends INotifyEngine {
         });
       }
     };
+
+  // ---------- Relay Event Forwarding ------------------------------- //
+
+  protected on: INotifyEngine["on"] = (name, listener) => {
+    return this.client.events.on(name, listener);
+  };
+
+  protected once: INotifyEngine["once"] = (name, listener) => {
+    return this.client.events.once(name, listener);
+  };
+
+  protected off: INotifyEngine["off"] = (name, listener) => {
+    return this.client.events.off(name, listener);
+  };
+
+  protected emit: INotifyEngine["emit"] = (name, args) => {
+    return this.client.events.emit(name, args);
+  };
 
   // ---------- Private Helpers --------------------------------- //
 

@@ -8,6 +8,7 @@ import {
 import { CryptoTypes } from "@walletconnect/types";
 import { INotifyClient, NotifyClientTypes } from "./client";
 import { JsonRpcTypes } from "./jsonrpc";
+import EventEmitter from "events";
 
 export interface RpcOpts {
   req: { ttl: number; tag: number };
@@ -195,4 +196,24 @@ export abstract class INotifyEngine {
       | JsonRpcResult<JsonRpcTypes.Results["wc_notifyGetNotifications"]>
       | JsonRpcError
   ): Promise<void>;
+
+  protected abstract on: <E extends NotifyEngineTypes.Event>(
+    event: E,
+    listener: (args: NotifyEngineTypes.EventArguments[E]) => void
+  ) => EventEmitter;
+
+  protected abstract once: <E extends NotifyEngineTypes.Event>(
+    event: E,
+    listener: (args: NotifyEngineTypes.EventArguments[E]) => void
+  ) => EventEmitter;
+
+  protected abstract off: <E extends NotifyEngineTypes.Event>(
+    event: E,
+    listener: (args: NotifyEngineTypes.EventArguments[E]) => void
+  ) => EventEmitter;
+
+  protected abstract emit: <E extends NotifyEngineTypes.Event>(
+    event: E,
+    args: NotifyEngineTypes.EventArguments[E]
+  ) => boolean;
 }
