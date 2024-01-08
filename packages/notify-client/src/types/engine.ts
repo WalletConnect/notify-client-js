@@ -93,8 +93,14 @@ export abstract class INotifyEngine {
 
   public abstract deleteNotifyMessage(params: { id: number }): void;
 
-  // ---------- Public Methods ------------------------------------------ //
-
+  public abstract getNotificationHistory(params: {
+    topic: string;
+    limit?: number;
+    startingAfter?: string;
+  }): Promise<{
+    notifications: NotifyClientTypes.NotifyMessage[];
+    hasMore: boolean;
+  }>;
   // query all active subscriptions
   public abstract getActiveSubscriptions(params?: {
     account: string;
