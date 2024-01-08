@@ -1538,7 +1538,10 @@ export class NotifyEngine extends INotifyEngine {
         return [
           type.id,
           {
-            ...type,
+            imageUrls: type.imageUrls,
+            description: type.description,
+            name: type.name,
+            id: type.id,
             enabled: serverSub.scope.includes(type.id),
           },
         ];

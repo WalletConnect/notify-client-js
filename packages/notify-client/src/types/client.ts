@@ -7,6 +7,12 @@ import { Logger } from "pino";
 
 import { INotifyEngine } from "./engine";
 
+interface ImageUrls {
+  sm: string;
+  md: string;
+  lg: string;
+}
+
 export declare namespace NotifyClientTypes {
   type Event =
     | "notify_subscription"
@@ -65,7 +71,13 @@ export declare namespace NotifyClientTypes {
 
   type ScopeMap = Record<
     string,
-    { name: string; id: string; description: string; enabled: boolean }
+    {
+      name: string;
+      id: string;
+      description: string;
+      enabled: boolean;
+      imageUrls: ImageUrls;
+    }
   >;
 
   interface NotifyRegistrationParams {
@@ -97,7 +109,6 @@ export declare namespace NotifyClientTypes {
     title: string;
     body: string;
     id: string;
-    icon: string;
     url: string;
     type?: string;
   }
@@ -247,6 +258,8 @@ export declare namespace NotifyClientTypes {
     notificationTypes: Array<{
       id: string;
       name: string;
+      imageUrls: ImageUrls;
+      image_id: string;
       description: string;
     }>;
     description: Metadata["description"];
