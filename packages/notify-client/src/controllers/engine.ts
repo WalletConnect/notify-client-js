@@ -15,6 +15,7 @@ import {
   isJsonRpcResponse,
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
+import { FIVE_MINUTES } from "@walletconnect/time";
 import { JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
@@ -394,7 +395,8 @@ export class NotifyEngine extends INotifyEngine {
             new Error("getNotificationHistory timed out waiting for a response")
           );
           // Using five minutes as it is the TTL of wc_getNotificationHistory
-        }, 300 * 1000);
+          // The FIVE_MINUTES const is in seconds, not ms.
+        }, FIVE_MINUTES * 1000);
 
         this.sendRequest(topic, "wc_notifyGetNotifications", { auth });
       });
