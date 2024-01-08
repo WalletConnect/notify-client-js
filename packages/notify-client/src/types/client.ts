@@ -7,7 +7,7 @@ import { Logger } from "pino";
 
 import { INotifyEngine } from "./engine";
 
-interface ImageUrl {
+interface ImageUrls {
   sm: string;
   md: string;
   lg: string;
@@ -76,7 +76,7 @@ export declare namespace NotifyClientTypes {
       id: string;
       description: string;
       enabled: boolean;
-      imageUrls: ImageUrl;
+      imageUrls: ImageUrls;
     }
   >;
 
@@ -258,7 +258,7 @@ export declare namespace NotifyClientTypes {
     notificationTypes: Array<{
       id: string;
       name: string;
-      imageUrls: ImageUrl;
+      imageUrls: ImageUrls;
       image_id: string;
       description: string;
     }>;
