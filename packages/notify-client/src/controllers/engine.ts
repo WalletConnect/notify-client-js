@@ -351,7 +351,7 @@ export class NotifyEngine extends INotifyEngine {
 
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry =
-        issuedAt + ENGINE_RPC_OPTS["wc_notifyGetNotifications"].res.ttl;
+        issuedAt + ENGINE_RPC_OPTS["wc_notifyGetNotifications"].req.ttl;
 
       const cachedKey = this.getCachedDappKey(subscription);
       const dappUrl = getDappUrl(subscription.metadata.appDomain);
@@ -389,7 +389,7 @@ export class NotifyEngine extends INotifyEngine {
           }
         });
 
-        // Add timeout to prevent memory leaks with undying promises
+        // Add timeout to prevent memory leaks with unresolving promises
         setTimeout(() => {
           reject(
             new Error("getNotificationHistory timed out waiting for a response")
