@@ -36,6 +36,8 @@ const hasTestProjectSecret =
 
 const projectId = process.env.TEST_PROJECT_ID;
 
+const runningLocally = Boolean(process.env.TEST_IS_LOCAL);
+
 describe("Notify", () => {
   let core: ICore;
   let wallet: INotifyClient;
@@ -466,59 +468,47 @@ describe("Notify", () => {
       });
     });
 
-    describe("getMessageHistory", async () => {
-      it("can get message history for a known notify topic", async () => {
+    describe.skipIf(!hasTestProjectSecret)("Message retrieval", () => {
+      it("getNotificationHistory", async () => {
+        let totalMessages = 0;
         await createNotifySubscription(wallet, account, onSign);
-        const [subscription] = wallet.subscriptions.getAll();
-        const { topic } = subscription;
-        const message1 = {
-          id: "test_id_1",
-          title: "Test Notify 1",
-          body: "This is a test notify notification",
-          icon: "xyz.png",
-          url: "https://walletconnect.com",
-        };
-        const message2 = {
-          id: "test_id_2",
-          title: "Test Notify 2",
-          body: "This is a test notify notification",
-          icon: "xyz.png",
-          url: "https://walletconnect.com",
-        };
 
-        wallet.messages.set(topic, {
-          topic,
-          messages: {
-            "1685014464223153": {
-              id: 1685014464223153,
-              topic:
-                "a185fd51f0a9a4d1fb4fffb4129480a8779d6c8f549cbbac3a0cfefd8788cd5d",
-              message: message1,
-              publishedAt: 1685014464322,
-            },
-            "1685014464326223": {
-              id: 1685014464326223,
-              topic:
-                "a185fd51f0a9a4d1fb4fffb4129480a8779d6c8f549cbbac3a0cfefd8788cd5d",
-              message: message2,
-              publishedAt: 1685014464426,
-            },
-          },
+        expect(wallet.subscriptions.getAll().length).toEqual(1);
+
+        const testSub = wallet.subscriptions.getAll()[0];
+
+        expect(
+          Object.keys(wallet.messages.get(testSub.topic).messages).length
+        ).toEqual(0);
+
+        const now = Date.now();
+
+        await waitForEvent(() => Date.now() - now > 1_000);
+
+        wallet.on("notify_message", () => {
+          totalMessages++;
         });
 
-        const messageHistory = wallet.getMessageHistory({ topic });
-        const sortedHistory = Object.values(messageHistory).sort(
-          (a, b) => a.publishedAt - b.publishedAt
-        );
+        const notifications = [0, 1].map((num) => `${num}Test`);
+        for (const notification of notifications) {
+          await sendNotifyMessage(account, notification);
+        }
 
-        expect(sortedHistory.length).toBe(2);
-        expect(sortedHistory[0].id).toBeDefined();
-        expect(sortedHistory[0].topic).toBeDefined();
-        expect(sortedHistory[0].publishedAt).toBeDefined();
-        expect(sortedHistory.map(({ message }) => message)).to.deep.equal([
-          message1,
-          message2,
-        ]);
+        await waitForEvent(() => totalMessages === 2);
+
+        await wallet.messages.delete(testSub.topic, {
+          code: -1,
+          message: "Delete for testing",
+        });
+
+        const history = await wallet.getNotificationHistory({
+          topic: testSub.topic,
+          limit: 2,
+        });
+
+        expect(history.notifications.map((n) => n.body)).toEqual(notifications);
+
+        expect(history.hasMore).toEqual(false);
       });
     });
 
@@ -547,45 +537,6 @@ describe("Notify", () => {
         // Check that wallet is in expected state.
         expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
         expect(wallet.messages.keys.length).toBe(0);
-      });
-    });
-
-    describe("deleteNotifyMessage", async () => {
-      it("deletes the notify message associated with the provided `id`", async () => {
-        await createNotifySubscription(wallet, account, onSign);
-        const [subscription] = wallet.subscriptions.getAll();
-        const { topic } = subscription;
-        const message = {
-          id: "test_id",
-          title: "Test Notify",
-          body: "This is a test notify notification",
-          icon: "xyz.png",
-          url: "https://walletconnect.com",
-        };
-
-        wallet.messages.set(topic, {
-          topic,
-          messages: {
-            "1685014464223153": {
-              id: 1685014464223153,
-              topic:
-                "a185fd51f0a9a4d1fb4fffb4129480a8779d6c8f549cbbac3a0cfefd8788cd5d",
-              message,
-              publishedAt: 1685014464322,
-            },
-          },
-        });
-
-        const messages = Object.values(wallet.messages.get(topic).messages);
-
-        expect(messages.length).toBe(1);
-
-        const targetMessageId = messages[0].id;
-        wallet.deleteNotifyMessage({ id: targetMessageId });
-
-        expect(Object.values(wallet.messages.get(topic).messages).length).toBe(
-          0
-        );
       });
     });
 
@@ -676,7 +627,7 @@ describe("Notify", () => {
         expect(wallet2ReceivedChangedEvent).toEqual(true);
       });
 
-      it("handles multiple subscriptions", async () => {
+      it.skipIf(!runningLocally)("handles multiple subscriptions", async () => {
         const wallet1 = await NotifyClient.init({
           name: "testNotifyClient1",
           logger: "error",

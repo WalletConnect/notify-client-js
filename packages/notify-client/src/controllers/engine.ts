@@ -15,6 +15,7 @@ import {
   isJsonRpcResponse,
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
+import { FIVE_MINUTES } from "@walletconnect/time";
 import { JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
@@ -336,6 +337,75 @@ export class NotifyEngine extends INotifyEngine {
     return true;
   };
 
+  public getNotificationHistory: INotifyEngine["getNotificationHistory"] =
+    async ({ topic, limit, startingAfter }) => {
+      this.isInitialized();
+
+      if (!this.client.subscriptions.keys.includes(topic)) {
+        throw new Error(`No subscription with topic ${topic} exists`);
+      }
+
+      const subscription = this.client.subscriptions.get(topic);
+
+      const identityKey = encodeEd25519Key(
+        await this.client.identityKeys.getIdentity({
+          account: subscription.account,
+        })
+      );
+
+      const issuedAt = Math.round(Date.now() / 1000);
+      const expiry =
+        issuedAt + ENGINE_RPC_OPTS["wc_notifyGetNotifications"].req.ttl;
+
+      const cachedKey = this.getCachedDappKey(subscription);
+      const dappUrl = getDappUrl(subscription.metadata.appDomain);
+      const { dappIdentityKey } = cachedKey
+        ? { dappIdentityKey: cachedKey }
+        : await this.resolveKeys(dappUrl);
+
+      const getNotificationsClaims: NotifyClientTypes.GetNotificationsJwtClaims =
+        {
+          act: "notify_get_notifications",
+          aft: startingAfter ?? null,
+          iss: identityKey,
+          ksu: this.client.keyserverUrl,
+          sub: composeDidPkh(subscription.account),
+          iat: issuedAt,
+          exp: expiry,
+          aud: encodeEd25519Key(dappIdentityKey),
+          app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
+          lmt: limit ?? 50,
+          // TODO: adapt to unread capabilities when available on Notify server
+          urf: false,
+        };
+
+      const auth = await this.client.identityKeys.generateIdAuth(
+        subscription.account,
+        getNotificationsClaims
+      );
+
+      return new Promise((resolve, reject) => {
+        this.once("notify_get_notifications_response", (args) => {
+          if (args.error === null) {
+            resolve(args);
+          } else {
+            reject(new Error(args.error));
+          }
+        });
+
+        // Add timeout to prevent memory leaks with unresolving promises
+        setTimeout(() => {
+          reject(
+            new Error("getNotificationHistory timed out waiting for a response")
+          );
+          // Using five minutes as it is the TTL of wc_getNotificationHistory
+          // The FIVE_MINUTES const is in seconds, not ms.
+        }, FIVE_MINUTES * 1000);
+
+        this.sendRequest(topic, "wc_notifyGetNotifications", { auth });
+      });
+    };
+
   public decryptMessage: INotifyEngine["decryptMessage"] = async ({
     topic,
     encryptedMessage,
@@ -373,16 +443,6 @@ export class NotifyEngine extends INotifyEngine {
         }`
       );
     }
-  };
-
-  public getMessageHistory: INotifyEngine["getMessageHistory"] = ({
-    topic,
-  }) => {
-    this.isInitialized();
-
-    return this.client.messages.keys.includes(topic)
-      ? this.client.messages.get(topic).messages
-      : {};
   };
 
   public deleteSubscription: INotifyEngine["deleteSubscription"] = async ({
@@ -434,7 +494,6 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   // ---------- Protected Helpers --------------------------------------- //
-
   protected sendRequest: INotifyEngine["sendRequest"] = async (
     topic,
     method,
@@ -584,6 +643,8 @@ export class NotifyEngine extends INotifyEngine {
           return this.onNotifyUpdateResponse(topic, payload);
         case "wc_notifyWatchSubscription":
           return this.onNotifyWatchSubscriptionsResponse(topic, payload);
+        case "wc_notifyGetNotifications":
+          return this.onNotifyGetNotificationsResponse(topic, payload);
         default:
           return this.client.logger.info(
             `[Notify] Unsupported response method ${resMethod}`
@@ -764,6 +825,39 @@ export class NotifyEngine extends INotifyEngine {
       }
     };
 
+  protected onNotifyGetNotificationsResponse: INotifyEngine["onNotifyGetNotificationsResponse"] =
+    async (topic, payload) => {
+      if (isJsonRpcResult(payload)) {
+        this.client.logger.info(
+          "[Notify] Engine.onNotifyGetNotificationsResponse > result:",
+          topic,
+          payload
+        );
+        const claims =
+          this.decodeAndValidateJwtAuth<NotifyClientTypes.GetNotificationsResponseClaims>(
+            payload.result.auth,
+            "notify_get_notifications_response"
+          );
+
+        this.emit("notify_get_notifications_response", {
+          hasMore: claims.mre ?? false,
+          hasMoreUnread: claims.mur ?? false,
+          error: null,
+          notifications: claims.nfs,
+        });
+      } else if (isJsonRpcError(payload)) {
+        this.client.logger.error(
+          "[Notify] Engine.onNotifyGetNotificationsResponse  > error:",
+          topic,
+          payload.error
+        );
+
+        this.emit("notify_get_notifications_response", {
+          error: payload.error.message,
+        });
+      }
+    };
+
   protected onNotifyWatchSubscriptionsResponse: INotifyEngine["onNotifyWatchSubscriptionsResponse"] =
     async (topic, payload) => {
       this.client.logger.info(
@@ -859,6 +953,24 @@ export class NotifyEngine extends INotifyEngine {
         });
       }
     };
+
+  // ---------- Relay Event Forwarding ------------------------------- //
+
+  protected on: INotifyEngine["on"] = (name, listener) => {
+    return this.client.events.on(name, listener);
+  };
+
+  protected once: INotifyEngine["once"] = (name, listener) => {
+    return this.client.events.once(name, listener);
+  };
+
+  protected off: INotifyEngine["off"] = (name, listener) => {
+    return this.client.events.off(name, listener);
+  };
+
+  protected emit: INotifyEngine["emit"] = (name, args) => {
+    return this.client.events.emit(name, args);
+  };
 
   // ---------- Private Helpers --------------------------------- //
 

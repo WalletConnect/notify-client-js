@@ -8,6 +8,7 @@ import {
 import { CryptoTypes } from "@walletconnect/types";
 import { INotifyClient, NotifyClientTypes } from "./client";
 import { JsonRpcTypes } from "./jsonrpc";
+import EventEmitter from "events";
 
 export interface RpcOpts {
   req: { ttl: number; tag: number };
@@ -19,6 +20,22 @@ export declare namespace NotifyEngineTypes {
     topic: string;
     payload: T;
     publishedAt: number;
+  }
+
+  type EventResponseOrError<T> =
+    | (T & { error: null })
+    | {
+        error: string;
+      };
+
+  type Event = "notify_get_notifications_response";
+
+  interface EventArguments {
+    notify_get_notifications_response: EventResponseOrError<{
+      notifications: NotifyClientTypes.NotifyMessage[];
+      hasMore: boolean;
+      hasMoreUnread: boolean;
+    }>;
   }
 }
 
@@ -67,18 +84,19 @@ export abstract class INotifyEngine {
     encryptedMessage: string;
   }): Promise<NotifyClientTypes.NotifyMessage>;
 
-  // get all messages for a subscription
-  public abstract getMessageHistory(params: {
-    topic: string;
-  }): Record<number, NotifyClientTypes.NotifyMessageRecord>;
-
   // delete active subscription
   public abstract deleteSubscription(params: { topic: string }): Promise<void>;
 
   public abstract deleteNotifyMessage(params: { id: number }): void;
 
-  // ---------- Public Methods ------------------------------------------ //
-
+  public abstract getNotificationHistory(params: {
+    topic: string;
+    limit?: number;
+    startingAfter?: string;
+  }): Promise<{
+    notifications: NotifyClientTypes.NotifyMessage[];
+    hasMore: boolean;
+  }>;
   // query all active subscriptions
   public abstract getActiveSubscriptions(params?: {
     account: string;
@@ -171,4 +189,31 @@ export abstract class INotifyEngine {
       | JsonRpcResult<JsonRpcTypes.Results["wc_notifyUpdate"]>
       | JsonRpcError
   ): Promise<void>;
+
+  protected abstract onNotifyGetNotificationsResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyGetNotifications"]>
+      | JsonRpcError
+  ): Promise<void>;
+
+  protected abstract on: <E extends NotifyEngineTypes.Event>(
+    event: E,
+    listener: (args: NotifyEngineTypes.EventArguments[E]) => void
+  ) => EventEmitter;
+
+  protected abstract once: <E extends NotifyEngineTypes.Event>(
+    event: E,
+    listener: (args: NotifyEngineTypes.EventArguments[E]) => void
+  ) => EventEmitter;
+
+  protected abstract off: <E extends NotifyEngineTypes.Event>(
+    event: E,
+    listener: (args: NotifyEngineTypes.EventArguments[E]) => void
+  ) => EventEmitter;
+
+  protected abstract emit: <E extends NotifyEngineTypes.Event>(
+    event: E,
+    args: NotifyEngineTypes.EventArguments[E]
+  ) => boolean;
 }
