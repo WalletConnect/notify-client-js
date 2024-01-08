@@ -21,12 +21,13 @@ export declare namespace NotifyEngineTypes {
     publishedAt: number;
   }
 
-  type EventResponseOrError<T> = (T & {error: null}) | {
-    error: string
-  }
+  type EventResponseOrError<T> =
+    | (T & { error: null })
+    | {
+        error: string;
+      };
 
-  type Event =
-    | "notify_get_notifications_response"
+  type Event = "notify_get_notifications_response";
 
   interface EventArguments {
     notify_get_notifications_response: EventResponseOrError<{
