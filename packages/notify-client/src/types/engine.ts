@@ -193,4 +193,11 @@ export abstract class INotifyEngine {
       | JsonRpcResult<JsonRpcTypes.Results["wc_notifyUpdate"]>
       | JsonRpcError
   ): Promise<void>;
+
+  protected abstract onNotifyGetNotificationsResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyGetNotifications"]>
+      | JsonRpcError
+  ): Promise<void>;
 }
