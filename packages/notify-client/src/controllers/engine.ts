@@ -818,18 +818,17 @@ export class NotifyEngine extends INotifyEngine {
 
   protected onNotifyGetNotificationsResponse: INotifyEngine["onNotifyGetNotificationsResponse"] =
     async (topic, payload) => {
-      console.log("GOT RESPONSE")
       if (isJsonRpcResult(payload)) {
         this.client.logger.info(
           "[Notify] Engine.onNotifyGetNotificationsResponse > result:",
           topic,
           payload
         );
-	const claims =
-	  this.decodeAndValidateJwtAuth<NotifyClientTypes.GetNotificationsResponseClaims>(
-	    payload.result.auth,
-	    "notify_get_notifications_response"
-	  )
+        const claims =
+          this.decodeAndValidateJwtAuth<NotifyClientTypes.GetNotificationsResponseClaims>(
+            payload.result.auth,
+            "notify_get_notifications_response"
+          );
 
         this.emit("notify_get_notifications_response", {
           hasMore: claims.mre ?? false,
@@ -838,7 +837,6 @@ export class NotifyEngine extends INotifyEngine {
           notifications: claims.nfs,
         });
       } else if (isJsonRpcError(payload)) {
-      console.log("IT'S AN ERROR")
         this.client.logger.error(
           "[Notify] Engine.onNotifyGetNotificationsResponse  > error:",
           topic,
@@ -846,7 +844,6 @@ export class NotifyEngine extends INotifyEngine {
         );
       }
     };
-
 
   protected onNotifyWatchSubscriptionsResponse: INotifyEngine["onNotifyWatchSubscriptionsResponse"] =
     async (topic, payload) => {
