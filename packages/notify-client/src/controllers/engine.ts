@@ -390,7 +390,9 @@ export class NotifyEngine extends INotifyEngine {
 
         // Add timeout to prevent memory leaks with undying promises
         setTimeout(() => {
-          reject(new Error("getNotificationHistory timed out waiting for a response"));
+          reject(
+            new Error("getNotificationHistory timed out waiting for a response")
+          );
           // Using five minutes as it is the TTL of wc_getNotificationHistory
         }, 300 * 1000);
 
