@@ -36,6 +36,8 @@ const hasTestProjectSecret =
 
 const projectId = process.env.TEST_PROJECT_ID;
 
+const runningLocally = Boolean(process.env.TEST_IS_LOCAL)
+
 describe("Notify", () => {
   let core: ICore;
   let wallet: INotifyClient;
@@ -625,7 +627,7 @@ describe("Notify", () => {
         expect(wallet2ReceivedChangedEvent).toEqual(true);
       });
 
-      it("handles multiple subscriptions", async () => {
+      it.skipIf(!runningLocally)("handles multiple subscriptions", async () => {
         const wallet1 = await NotifyClient.init({
           name: "testNotifyClient1",
           logger: "error",
