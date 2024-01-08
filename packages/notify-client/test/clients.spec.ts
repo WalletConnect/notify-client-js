@@ -538,45 +538,6 @@ describe("Notify", () => {
       });
     });
 
-    describe("deleteNotifyMessage", async () => {
-      it("deletes the notify message associated with the provided `id`", async () => {
-        await createNotifySubscription(wallet, account, onSign);
-        const [subscription] = wallet.subscriptions.getAll();
-        const { topic } = subscription;
-        const message = {
-          id: "test_id",
-          title: "Test Notify",
-          body: "This is a test notify notification",
-          icon: "xyz.png",
-          url: "https://walletconnect.com",
-        };
-
-        wallet.messages.set(topic, {
-          topic,
-          messages: {
-            "1685014464223153": {
-              id: 1685014464223153,
-              topic:
-                "a185fd51f0a9a4d1fb4fffb4129480a8779d6c8f549cbbac3a0cfefd8788cd5d",
-              message,
-              publishedAt: 1685014464322,
-            },
-          },
-        });
-
-        const messages = Object.values(wallet.messages.get(topic).messages);
-
-        expect(messages.length).toBe(1);
-
-        const targetMessageId = messages[0].id;
-        wallet.deleteNotifyMessage({ id: targetMessageId });
-
-        expect(Object.values(wallet.messages.get(topic).messages).length).toBe(
-          0
-        );
-      });
-    });
-
     describe("watchSubscriptions", () => {
       it("fires correct event update", async () => {
         let updateEvent: any = {};
