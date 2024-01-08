@@ -83,11 +83,6 @@ export abstract class INotifyEngine {
     encryptedMessage: string;
   }): Promise<NotifyClientTypes.NotifyMessage>;
 
-  // get all messages for a subscription
-  public abstract getMessageHistory(params: {
-    topic: string;
-  }): Record<number, NotifyClientTypes.NotifyMessageRecord>;
-
   // delete active subscription
   public abstract deleteSubscription(params: { topic: string }): Promise<void>;
 
