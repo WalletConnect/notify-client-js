@@ -848,9 +848,9 @@ export class NotifyEngine extends INotifyEngine {
           payload.error
         );
 
-	this.emit("notify_get_notifications_response", {
-	  error: payload.error.message
-	})
+        this.emit("notify_get_notifications_response", {
+          error: payload.error.message,
+        });
       }
     };
 
