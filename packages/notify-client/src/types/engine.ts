@@ -20,6 +20,21 @@ export declare namespace NotifyEngineTypes {
     payload: T;
     publishedAt: number;
   }
+
+  type EventResponseOrError<T> = (T & {error: null}) | {
+    error: string
+  }
+
+  type Event =
+    | "notify_get_notifications_response"
+
+  interface EventArguments {
+    notify_get_notifications_response: EventResponseOrError<{
+      notifications: NotifyClientTypes.NotifyMessage[];
+      hasMore: boolean;
+      hasMoreUnread: boolean;
+    }>;
+  }
 }
 
 export abstract class INotifyEngine {
