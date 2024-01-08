@@ -341,6 +341,10 @@ export class NotifyEngine extends INotifyEngine {
     async ({ topic, limit, startingAfter }) => {
       this.isInitialized();
 
+      if (!this.client.subscriptions.keys.includes(topic)) {
+        throw new Error(`No subscription with topic ${topic} exists`);
+      }
+
       const subscription = this.client.subscriptions.get(topic);
 
       const identityKey = encodeEd25519Key(
