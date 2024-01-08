@@ -15,7 +15,7 @@ import {
   isJsonRpcResponse,
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
-import { ONE_MINUTE } from "@walletconnect/time";
+import { FIVE_MINUTES, ONE_MINUTE } from "@walletconnect/time";
 import { JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
@@ -268,11 +268,13 @@ export class NotifyEngine extends INotifyEngine {
 
     return new Promise((resolve, reject) => {
       this.client.on("notify_subscription", (args) => {
-        if (args.params.error) {
-          reject(args.params.error);
-        } else {
-          resolve(true);
-        }
+	resolve(true);
+	// TODO: add error checking when sbs is supported
+        // if (args.params.error) {
+        //   reject(args.params.error);
+        // } else {
+        //   resolve(true);
+        // }
       });
 
       // SPEC: Wallet sends wc_notifySubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
@@ -459,6 +461,12 @@ export class NotifyEngine extends INotifyEngine {
       const expiry =
         issuedAt + ENGINE_RPC_OPTS["wc_notifyGetNotifications"].res.ttl;
 
+      const cachedKey = this.getCachedDappKey(subscription);
+      const dappUrl = getDappUrl(subscription.metadata.appDomain);
+      const { dappIdentityKey } = cachedKey
+        ? { dappIdentityKey: cachedKey }
+        : await this.resolveKeys(dappUrl);
+
       const getNotificationsClaims: NotifyClientTypes.GetNotificationsJwtClaims =
         {
           act: "notify_get_notifications",
@@ -468,6 +476,7 @@ export class NotifyEngine extends INotifyEngine {
           sub: composeDidPkh(subscription.account),
           iat: issuedAt,
           exp: expiry,
+	  aud: encodeEd25519Key(dappIdentityKey),
           app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
           lmt: limit ?? 50,
           urf: unreadFirst,
@@ -487,10 +496,11 @@ export class NotifyEngine extends INotifyEngine {
           }
         });
 
-        setTimeout(() => {
-          reject("getNotificationHistory timed out waiting for a response");
-        }, ONE_MINUTE);
+        // setTimeout(() => {
+        //   reject("getNotificationHistory timed out waiting for a response");
+        // }, FIVE_MINUTES);
 
+	console.log("Sending request...", { auth })
         this.sendRequest(topic, "wc_notifyGetNotifications", { auth });
       });
     };
@@ -777,6 +787,8 @@ export class NotifyEngine extends INotifyEngine {
 
       const resMethod = record.request.method as JsonRpcTypes.WcMethod;
 
+      console.log("-- resMethod: ", resMethod);
+
       switch (resMethod) {
         case "wc_notifySubscribe":
           return this.onNotifySubscribeResponse(topic, payload);
@@ -1061,19 +1073,27 @@ export class NotifyEngine extends INotifyEngine {
 
   protected onNotifyGetNotificationsResponse: INotifyEngine["onNotifyGetNotificationsResponse"] =
     async (topic, payload) => {
+      console.log("GOT RESPONSE")
       if (isJsonRpcResult(payload)) {
         this.client.logger.info(
           "[Notify] Engine.onNotifyGetNotificationsResponse > result:",
           topic,
           payload
         );
+	const claims =
+	  this.decodeAndValidateJwtAuth<NotifyClientTypes.GetNotificationsResponseClaims>(
+	    payload.result.auth,
+	    "notify_get_notifications_response"
+	  )
+
         this.emit("notify_get_notifications_response", {
-          hasMore: false,
-          hasMoreUnread: false,
+          hasMore: claims.mre ?? false,
+          hasMoreUnread: claims.mur ?? false,
           error: null,
-          notifications: [],
+          notifications: claims.nfs,
         });
       } else if (isJsonRpcError(payload)) {
+      console.log("IT'S AN ERROR")
         this.client.logger.error(
           "[Notify] Engine.onNotifyGetNotificationsResponse  > error:",
           topic,

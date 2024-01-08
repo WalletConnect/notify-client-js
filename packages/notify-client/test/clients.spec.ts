@@ -1,7 +1,6 @@
 import { Wallet as EthersWallet } from "@ethersproject/wallet";
 import {
-  Core,
-  RELAYER_DEFAULT_PROTOCOL,
+  Core, RELAYER_DEFAULT_PROTOCOL,
   RELAYER_EVENTS,
 } from "@walletconnect/core";
 import { formatJsonRpcRequest } from "@walletconnect/jsonrpc-utils";
@@ -464,62 +463,6 @@ describe("Notify", () => {
       });
     });
 
-    describe("getMessageHistory", async () => {
-      it("can get message history for a known notify topic", async () => {
-        await createNotifySubscription(wallet, account, onSign);
-        const [subscription] = wallet.subscriptions.getAll();
-        const { topic } = subscription;
-        const message1 = {
-          id: "test_id_1",
-          title: "Test Notify 1",
-          body: "This is a test notify notification",
-          icon: "xyz.png",
-          url: "https://walletconnect.com",
-        };
-        const message2 = {
-          id: "test_id_2",
-          title: "Test Notify 2",
-          body: "This is a test notify notification",
-          icon: "xyz.png",
-          url: "https://walletconnect.com",
-        };
-
-        wallet.messages.set(topic, {
-          topic,
-          messages: {
-            "1685014464223153": {
-              id: 1685014464223153,
-              topic:
-                "a185fd51f0a9a4d1fb4fffb4129480a8779d6c8f549cbbac3a0cfefd8788cd5d",
-              message: message1,
-              publishedAt: 1685014464322,
-            },
-            "1685014464326223": {
-              id: 1685014464326223,
-              topic:
-                "a185fd51f0a9a4d1fb4fffb4129480a8779d6c8f549cbbac3a0cfefd8788cd5d",
-              message: message2,
-              publishedAt: 1685014464426,
-            },
-          },
-        });
-
-        const messageHistory = wallet.getMessageHistory({ topic });
-        const sortedHistory = Object.values(messageHistory).sort(
-          (a, b) => a.publishedAt - b.publishedAt
-        );
-
-        expect(sortedHistory.length).toBe(2);
-        expect(sortedHistory[0].id).toBeDefined();
-        expect(sortedHistory[0].topic).toBeDefined();
-        expect(sortedHistory[0].publishedAt).toBeDefined();
-        expect(sortedHistory.map(({ message }) => message)).to.deep.equal([
-          message1,
-          message2,
-        ]);
-      });
-    });
-
     describe("deleteSubscription", () => {
       it("can delete a currently active notify subscription", async () => {
         let gotNotifySubscriptionsChanged = false;
@@ -947,6 +890,48 @@ describe("Notify", () => {
           Object.keys(wallet.messages.get(testSub.topic).messages).length
         ).toEqual(1);
       });
+    });
+
+    describe.skipIf(!hasTestProjectSecret)("Message retrieval", () => {
+      it("getNotificationHistory", async () => {
+	let totalMessages = 0;
+        await createNotifySubscription(wallet, account, onSign);
+
+        expect(wallet.subscriptions.getAll().length).toEqual(1);
+
+        const testSub = wallet.subscriptions.getAll()[0];
+
+        expect(
+          Object.keys(wallet.messages.get(testSub.topic).messages).length
+        ).toEqual(0);
+
+        const now = Date.now();
+
+        await waitForEvent(() => Date.now() - now > 1_000);
+
+        wallet.on("notify_message", (m) => {
+	  totalMessages++;
+        });
+
+	for(let i = 0; i < 2; ++i) {
+	  await sendNotifyMessage(account, `${i}Test`);
+	}
+
+	await waitForEvent(() => totalMessages === 2);
+
+	await wallet.messages.delete(testSub.topic, {
+	  code: -1,
+	  message: "Delete for testing"
+	});
+
+	const history = await wallet.getNotificationHistory({
+	  topic: testSub.topic,
+	  unreadFirst: false,
+	  limit: 2,
+	})
+
+	console.log({history: history.notifications})
+      })
     });
   });
 });

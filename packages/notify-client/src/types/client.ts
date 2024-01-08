@@ -134,6 +134,7 @@ export declare namespace NotifyClientTypes {
   interface GetNotificationsJwtClaims extends BaseJwtClaims {
     act: "notify_get_notifications";
     sub: string; // did:pkh of blockchain account that this notify subscription is associated with
+    aud: string; // did:key of client identity key
     iss: string; // did:key of an identity key. Enables to resolve attached blockchain account.
     app: string; // did web domain url,
     urf: boolean; // unread first
@@ -256,6 +257,15 @@ export declare namespace NotifyClientTypes {
     iss: string; // did:key of notify server identity key
     aud: string; // did:key of client identity key
     nfn: NotifyMessage; // notification
+  }
+
+  interface GetNotificationsResponseClaims extends BaseJwtClaims {
+    act: "notify_get_notifications_response";
+    iss: string; // did:key of notify server identity key
+    aud: string; // did:key of client identity key
+    mur: boolean; // more unread
+    mre: boolean; // more pages
+    nfs: NotifyMessage[]
   }
 
   interface GetUnreadNotificationsCountResponseClaims extends BaseJwtClaims {
