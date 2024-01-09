@@ -839,20 +839,21 @@ export class NotifyEngine extends INotifyEngine {
             "notify_get_notifications_response"
           );
 
-	const mappedNotifications: NotifyClientTypes.NotifyMessage[] = claims.nfs.map(nf => ({
-	  body: nf.body,
-	  id: nf.id,
-	  sentAt: nf.sent_at,
-	  title: nf.title,
-	  url: nf.url,
-	  type: nf.type
-	}))
+        const mappedNotifications: NotifyClientTypes.NotifyMessage[] =
+          claims.nfs.map((nf) => ({
+            body: nf.body,
+            id: nf.id,
+            sentAt: nf.sent_at,
+            title: nf.title,
+            url: nf.url,
+            type: nf.type,
+          }));
 
         this.emit("notify_get_notifications_response", {
           hasMore: claims.mre ?? false,
           hasMoreUnread: claims.mur ?? false,
           error: null,
-          notifications: mappedNotifications
+          notifications: mappedNotifications,
         });
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error(
