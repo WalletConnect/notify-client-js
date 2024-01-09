@@ -487,11 +487,21 @@ export class NotifyEngine extends INotifyEngine {
       topic,
     });
 
-    await this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
+    return new Promise<void>((resolve, reject) => {
+      this.client.on("notify_subscription", (args) => {
+        if (args.params.error) {
+          reject(args.params.error);
+        } else {
+          resolve();
+        }
+      });
 
-    this.client.logger.info(
-      `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
-    );
+      this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
+
+      this.client.logger.info(
+        `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
+      );
+    });
   };
 
   public deleteNotifyMessage: INotifyEngine["deleteNotifyMessage"] = ({
@@ -889,12 +899,30 @@ export class NotifyEngine extends INotifyEngine {
           topic,
           payload
         );
+
+        await this.updateSubscriptionsUsingJwt(
+          payload.result.responseAuth,
+          "notify_subscription_response"
+        );
+
+        this.client.emit("notify_delete", {
+          id: payload.id,
+          topic,
+          params: {},
+        });
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error(
           "[Notify] Engine.onNotifyDeleteResponse > error:",
           topic,
           payload.error
         );
+        this.client.emit("notify_delete", {
+          id: payload.id,
+          topic,
+          params: {
+            error: payload.error,
+          },
+        });
       }
     };
 
@@ -1036,18 +1064,20 @@ export class NotifyEngine extends INotifyEngine {
           .getAll()
           .find((sub) => `did:web:${sub.metadata.appDomain}` === claims.app);
 
-	if (subscription) {
+        if (subscription) {
           this.client.emit("notify_update", {
             id: payload.id,
             topic,
-            params: { subscription, allSubscriptions: Object.values(
+            params: {
+              subscription,
+              allSubscriptions: Object.values(
                 this.client.getActiveSubscriptions({
                   account: subscription.account,
                 })
-              )  },
+              ),
+            },
           });
-	}
-	else {
+        } else {
           this.client.events.emit("notify_update", {
             id: payload.id,
             topic,
@@ -1058,8 +1088,7 @@ export class NotifyEngine extends INotifyEngine {
               },
             },
           });
-	}
-
+        }
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error({
           event: "onNotifyUpdateResponse",
