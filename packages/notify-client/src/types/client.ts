@@ -224,10 +224,12 @@ export declare namespace NotifyClientTypes {
 
   interface UpdateResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_update_response";
+    sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
   }
 
   interface DeleteResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_delete_response";
+    sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
   }
 
   interface GetNotificationsResponseClaims extends BaseJwtClaims {

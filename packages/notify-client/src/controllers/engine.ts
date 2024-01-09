@@ -902,7 +902,7 @@ export class NotifyEngine extends INotifyEngine {
 
         await this.updateSubscriptionsUsingJwt(
           payload.result.responseAuth,
-          "notify_subscription_response"
+          "notify_delete_response"
         );
 
         this.client.emit("notify_delete", {
@@ -1051,7 +1051,7 @@ export class NotifyEngine extends INotifyEngine {
 
         await this.updateSubscriptionsUsingJwt(
           payload.result.responseAuth,
-          "notify_subscription_response"
+          "notify_update_response"
         );
 
         const claims =
@@ -1250,11 +1250,15 @@ export class NotifyEngine extends INotifyEngine {
       | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims["act"]
       | NotifyClientTypes.NotifySubscriptionsChangedClaims["act"]
       | NotifyClientTypes.SubscriptionResponseJWTClaims["act"]
+      | NotifyClientTypes.DeleteResponseJWTClaims["act"]
+      | NotifyClientTypes.UpdateResponseJWTClaims["act"]
   ) => {
     const claims = this.decodeAndValidateJwtAuth<
       | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims
       | NotifyClientTypes.NotifySubscriptionsChangedClaims
       | NotifyClientTypes.SubscriptionResponseJWTClaims
+      | NotifyClientTypes.DeleteResponseJWTClaims
+      | NotifyClientTypes.UpdateResponseJWTClaims
     >(jwt, act);
 
     this.client.logger.info("updateSubscriptionsUsingJwt > claims", claims);
