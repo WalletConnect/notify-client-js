@@ -347,19 +347,27 @@ export class NotifyEngine extends INotifyEngine {
       `[Notify] update > generated updateAuth JWT: ${updateAuth}`
     );
 
-    const id = await this.sendRequest(topic, "wc_notifyUpdate", {
-      updateAuth,
-    });
+    return new Promise<boolean>((resolve, reject) => {
+      this.client.on("notify_update", (args) => {
+        if (args.params.error) {
+          reject(args.params.error);
+        } else {
+          resolve(true);
+        }
+      });
 
-    this.client.logger.info({
-      action: "sendRequest",
-      method: "wc_notifyUpdate",
-      id,
-      topic,
-      updateAuth,
+      this.sendRequest(topic, "wc_notifyUpdate", {
+        updateAuth,
+      }).then((id) => {
+        this.client.logger.info({
+          action: "sendRequest",
+          method: "wc_notifyUpdate",
+          id,
+          topic,
+          updateAuth,
+        });
+      });
     });
-
-    return true;
   };
 
   public getNotificationHistory: INotifyEngine["getNotificationHistory"] =
