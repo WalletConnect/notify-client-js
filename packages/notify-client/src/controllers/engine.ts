@@ -1021,11 +1021,45 @@ export class NotifyEngine extends INotifyEngine {
           result: payload,
         });
 
-        this.client.events.emit("notify_update", {
-          id: payload.id,
-          topic,
-          params: {},
-        });
+        await this.updateSubscriptionsUsingJwt(
+          payload.result.responseAuth,
+          "notify_subscription_response"
+        );
+
+        const claims =
+          this.decodeAndValidateJwtAuth<NotifyClientTypes.UpdateResponseJWTClaims>(
+            payload.result.responseAuth,
+            "notify_update_response"
+          );
+
+        const subscription = this.client.subscriptions
+          .getAll()
+          .find((sub) => `did:web:${sub.metadata.appDomain}` === claims.app);
+
+	if (subscription) {
+          this.client.emit("notify_update", {
+            id: payload.id,
+            topic,
+            params: { subscription, allSubscriptions: Object.values(
+                this.client.getActiveSubscriptions({
+                  account: subscription.account,
+                })
+              )  },
+          });
+	}
+	else {
+          this.client.events.emit("notify_update", {
+            id: payload.id,
+            topic,
+            params: {
+              error: {
+                code: -1,
+                message: "Subscription not found",
+              },
+            },
+          });
+	}
+
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error({
           event: "onNotifyUpdateResponse",
