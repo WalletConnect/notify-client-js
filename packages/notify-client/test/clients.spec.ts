@@ -508,6 +508,8 @@ describe("Notify", () => {
 
         expect(history.notifications.map((n) => n.body)).toEqual(notifications);
 
+	expect(history.notifications[0].sentAt).toBeTypeOf("number")
+
         expect(history.hasMore).toEqual(false);
       });
     });
