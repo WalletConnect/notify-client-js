@@ -73,7 +73,7 @@ export abstract class INotifyEngine {
   public abstract subscribe(params: {
     appDomain: string;
     account: string;
-  }): Promise<{ id: number; subscriptionAuth: string }>;
+  }): Promise<boolean>;
 
   public abstract update(params: {
     topic: string;

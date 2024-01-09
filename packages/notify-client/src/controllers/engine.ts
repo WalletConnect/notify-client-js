@@ -284,34 +284,41 @@ export class NotifyEngine extends INotifyEngine {
       `[Notify] subscribe > sending wc_notifySubscribe request on topic ${subscribeTopic}...`
     );
 
-    // SPEC: Wallet sends wc_notifySubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
-    const id = await this.sendRequest<"wc_notifySubscribe">(
-      subscribeTopic,
-      "wc_notifySubscribe",
-      {
-        subscriptionAuth,
-      },
-      {
-        type: TYPE_1,
-        senderPublicKey: selfPublicKey,
-        receiverPublicKey: dappPublicKey,
-      }
-    );
-
-    this.client.logger.info({
-      action: "sendRequest",
-      method: "wc_notifySubscribe",
-      id,
-      topic: subscribeTopic,
-      subscriptionAuth,
-      params: {
-        type: TYPE_1,
-        senderPublicKey: selfPublicKey,
-        receiverPublicKey: dappPublicKey,
-      },
+    return new Promise<boolean>((resolve) => {
+      this.client.on("notify_subscription", (args) => {
+        if (args.params.error) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
+      // SPEC: Wallet sends wc_notifySubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
+      this.sendRequest<"wc_notifySubscribe">(
+        subscribeTopic,
+        "wc_notifySubscribe",
+        {
+          subscriptionAuth,
+        },
+        {
+          type: TYPE_1,
+          senderPublicKey: selfPublicKey,
+          receiverPublicKey: dappPublicKey,
+        }
+      ).then((id) => {
+        this.client.logger.info({
+          action: "sendRequest",
+          method: "wc_notifySubscribe",
+          id,
+          topic: subscribeTopic,
+          subscriptionAuth,
+          params: {
+            type: TYPE_1,
+            senderPublicKey: selfPublicKey,
+            receiverPublicKey: dappPublicKey,
+          },
+        });
+      });
     });
-
-    return { id, subscriptionAuth };
   };
 
   public update: INotifyEngine["update"] = async ({ topic, scope }) => {
@@ -688,6 +695,46 @@ export class NotifyEngine extends INotifyEngine {
           response,
         });
 
+        await this.updateSubscriptionsUsingJwt(
+          response.result.responseAuth,
+          "notify_subscription_response"
+        );
+
+        const claims =
+          this.decodeAndValidateJwtAuth<NotifyClientTypes.SubscriptionResponseJWTClaims>(
+            response.result.responseAuth,
+            "notify_subscription_response"
+          );
+
+        const subscription = this.client.subscriptions
+          .getAll()
+          .find((sub) => `did:web:${sub.metadata.appDomain}` === claims.app);
+
+        if (subscription) {
+          this.client.emit("notify_subscription", {
+            id: response.id,
+            topic: responseTopic,
+            params: {
+              allSubscriptions: Object.values(
+                this.client.getActiveSubscriptions({
+                  account: subscription.account,
+                })
+              ),
+              subscription,
+            },
+          });
+        } else {
+          this.client.emit("notify_subscription", {
+            id: response.id,
+            topic: responseTopic,
+            params: {
+              error: {
+                code: -1,
+                message: "Subscription not found",
+              },
+            },
+          });
+        }
         // Emit the NotifySubscription at client level.
         this.client.emit("notify_subscription", {
           id: response.id,
@@ -1131,10 +1178,12 @@ export class NotifyEngine extends INotifyEngine {
     act:
       | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims["act"]
       | NotifyClientTypes.NotifySubscriptionsChangedClaims["act"]
+      | NotifyClientTypes.SubscriptionResponseJWTClaims["act"]
   ) => {
     const claims = this.decodeAndValidateJwtAuth<
       | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims
       | NotifyClientTypes.NotifySubscriptionsChangedClaims
+      | NotifyClientTypes.SubscriptionResponseJWTClaims
     >(jwt, act);
 
     this.client.logger.info("updateSubscriptionsUsingJwt > claims", claims);
