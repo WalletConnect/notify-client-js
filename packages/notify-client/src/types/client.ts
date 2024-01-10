@@ -288,7 +288,6 @@ export abstract class INotifyClient {
   public abstract readonly keyserverUrl: string;
   public abstract readonly notifyServerUrl: string;
 
-
   public abstract core: ICore;
   public abstract events: EventEmitter;
   public abstract logger: Logger;

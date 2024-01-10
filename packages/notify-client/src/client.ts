@@ -37,7 +37,6 @@ export class NotifyClient extends INotifyClient {
   public registrationData: INotifyClient["registrationData"];
   public identityKeys: INotifyClient["identityKeys"];
 
-
   static async init(opts: NotifyClientTypes.ClientOptions) {
     const client = new NotifyClient(opts);
     await client.initialize();
@@ -109,9 +108,10 @@ export class NotifyClient extends INotifyClient {
 
   // ---------- Engine ----------------------------------------------- //
 
-  public hasFinishedInitialLoad: INotifyClient["hasFinishedInitialLoad"] = () => {
-    return this.engine.hasFinishedInitialLoad();
-  }
+  public hasFinishedInitialLoad: INotifyClient["hasFinishedInitialLoad"] =
+    () => {
+      return this.engine.hasFinishedInitialLoad();
+    };
 
   public subscribe: INotifyClient["subscribe"] = async (params) => {
     try {

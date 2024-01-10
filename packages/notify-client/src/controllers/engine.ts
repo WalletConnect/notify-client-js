@@ -65,9 +65,10 @@ export class NotifyEngine extends INotifyEngine {
 
   // ---------- Public --------------------------------------- //
 
-  public hasFinishedInitialLoad: INotifyEngine["hasFinishedInitialLoad"] = () => {
-    return this.finishedInitialLoad
-  }
+  public hasFinishedInitialLoad: INotifyEngine["hasFinishedInitialLoad"] =
+    () => {
+      return this.finishedInitialLoad;
+    };
 
   public prepareRegistration: INotifyEngine["prepareRegistration"] = async ({
     account,
@@ -895,7 +896,7 @@ export class NotifyEngine extends INotifyEngine {
           subscriptions,
         });
 
-	this.finishedInitialLoad = true;
+        this.finishedInitialLoad = true;
 
         this.client.emit("notify_subscriptions_changed", {
           id: payload.id,
