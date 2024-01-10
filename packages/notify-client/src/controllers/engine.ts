@@ -906,7 +906,7 @@ export class NotifyEngine extends INotifyEngine {
           },
         });
       } else if (isJsonRpcError(payload)) {
-	// Even if there was an error, loading is technically complete
+        // Even if there was an error, loading is technically complete
         this.finishedInitialLoad = true;
 
         this.client.logger.error({
