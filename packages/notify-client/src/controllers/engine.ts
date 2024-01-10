@@ -896,6 +896,9 @@ export class NotifyEngine extends INotifyEngine {
           subscriptions,
         });
 
+	// Flag is used for consumers of the SDK to know if notify client finished loading
+	// since the event below might be emitted before `init` resolves.
+	
         this.finishedInitialLoad = true;
 
         this.client.emit("notify_subscriptions_changed", {
@@ -906,6 +909,9 @@ export class NotifyEngine extends INotifyEngine {
           },
         });
       } else if (isJsonRpcError(payload)) {
+	// Even if there was an error, loading is technically complete
+        this.finishedInitialLoad = true;
+
         this.client.logger.error({
           event: "onNotifyWatchSubscriptionsResponse",
           topic,
