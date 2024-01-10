@@ -63,12 +63,11 @@ export class NotifyEngine extends INotifyEngine {
     }
   };
 
-  public hasFinishedInitialLoad() {
+  // ---------- Public --------------------------------------- //
+
+  public hasFinishedInitialLoad: INotifyEngine["hasFinishedInitialLoad"] = () => {
     return this.finishedInitialLoad
   }
-
-
-  // ---------- Public --------------------------------------- //
 
   public prepareRegistration: INotifyEngine["prepareRegistration"] = async ({
     account,
