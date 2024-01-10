@@ -288,6 +288,7 @@ export abstract class INotifyClient {
   public abstract readonly keyserverUrl: string;
   public abstract readonly notifyServerUrl: string;
 
+
   public abstract core: ICore;
   public abstract events: EventEmitter;
   public abstract logger: Logger;
@@ -340,6 +341,7 @@ export abstract class INotifyClient {
   public abstract getNotificationHistory: INotifyEngine["getNotificationHistory"];
   public abstract getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"];
   public abstract deleteSubscription: INotifyEngine["deleteSubscription"];
+  public abstract hasFinishedInitialLoad: INotifyEngine["hasFinishedInitialLoad"];
 
   // ---------- Event Handlers ------------------------------------------------------- //
 

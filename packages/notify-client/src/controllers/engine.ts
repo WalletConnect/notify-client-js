@@ -42,6 +42,8 @@ export class NotifyEngine extends INotifyEngine {
   public name = "notifyEngine";
   private initialized = false;
 
+  private finishedInitialLoad = false;
+
   private didDocMap = new Map<string, NotifyClientTypes.NotifyDidDocument>();
 
   constructor(client: INotifyEngine["client"]) {
@@ -60,6 +62,11 @@ export class NotifyEngine extends INotifyEngine {
       this.initialized = true;
     }
   };
+
+  public hasFinishedInitialLoad() {
+    return this.finishedInitialLoad
+  }
+
 
   // ---------- Public --------------------------------------- //
 
@@ -888,6 +895,8 @@ export class NotifyEngine extends INotifyEngine {
           id: payload.id,
           subscriptions,
         });
+
+	this.finishedInitialLoad = true;
 
         this.client.emit("notify_subscriptions_changed", {
           id: payload.id,
