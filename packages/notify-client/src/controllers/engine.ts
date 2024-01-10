@@ -42,6 +42,8 @@ export class NotifyEngine extends INotifyEngine {
   public name = "notifyEngine";
   private initialized = false;
 
+  private finishedInitialLoad = false;
+
   private didDocMap = new Map<string, NotifyClientTypes.NotifyDidDocument>();
 
   constructor(client: INotifyEngine["client"]) {
@@ -62,6 +64,11 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   // ---------- Public --------------------------------------- //
+
+  public hasFinishedInitialLoad: INotifyEngine["hasFinishedInitialLoad"] =
+    () => {
+      return this.finishedInitialLoad;
+    };
 
   public prepareRegistration: INotifyEngine["prepareRegistration"] = async ({
     account,
@@ -889,6 +896,8 @@ export class NotifyEngine extends INotifyEngine {
           subscriptions,
         });
 
+        this.finishedInitialLoad = true;
+
         this.client.emit("notify_subscriptions_changed", {
           id: payload.id,
           topic,
@@ -897,6 +906,9 @@ export class NotifyEngine extends INotifyEngine {
           },
         });
       } else if (isJsonRpcError(payload)) {
+        // Even if there was an error, loading is technically complete
+        this.finishedInitialLoad = true;
+
         this.client.logger.error({
           event: "onNotifyWatchSubscriptionsResponse",
           topic,

@@ -46,6 +46,8 @@ export abstract class INotifyEngine {
 
   // ---------- Public Methods ------------------------------------------ //
 
+  public abstract hasFinishedInitialLoad(): boolean;
+
   public abstract prepareRegistration(params: {
     account: string;
     domain: string;

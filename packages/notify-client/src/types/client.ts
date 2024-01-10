@@ -341,6 +341,10 @@ export abstract class INotifyClient {
   public abstract getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"];
   public abstract deleteSubscription: INotifyEngine["deleteSubscription"];
 
+  // Flag is used for consumers of the SDK to know if notify client finished loading
+  // since the event below might be emitted before `init` resolves.
+  public abstract hasFinishedInitialLoad: INotifyEngine["hasFinishedInitialLoad"];
+
   // ---------- Event Handlers ------------------------------------------------------- //
 
   public abstract emit: <E extends NotifyClientTypes.Event>(

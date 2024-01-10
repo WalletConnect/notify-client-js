@@ -108,6 +108,11 @@ export class NotifyClient extends INotifyClient {
 
   // ---------- Engine ----------------------------------------------- //
 
+  public hasFinishedInitialLoad: INotifyClient["hasFinishedInitialLoad"] =
+    () => {
+      return this.engine.hasFinishedInitialLoad();
+    };
+
   public subscribe: INotifyClient["subscribe"] = async (params) => {
     try {
       return await this.engine.subscribe(params);

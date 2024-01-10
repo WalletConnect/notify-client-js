@@ -591,6 +591,8 @@ describe("Notify", () => {
         await waitForEvent(() => gotNotifyUpdateResponse);
         await waitForEvent(() => updatedCount === 3);
 
+        expect(wallet.hasFinishedInitialLoad()).toEqual(true);
+
         expect(updateEvent.topic).toBe(subscriptions[0].topic);
       });
 
