@@ -135,12 +135,15 @@ export class NotifyEngine extends INotifyEngine {
 
   public unregister: INotifyEngine["unregister"] = async ({ account }) => {
     try {
-      // Get information about watching subscriptions of account
 
       if (!(await this.client.identityKeys.hasIdentity({ account }))) {
         return;
       }
 
+      // If user has watched their subscriptions before, stop watching.
+      // We can not assume that every registerd user has a watchedAccount
+      // due to the fact that the stores for watchedAccounts and identityKeys
+      // are entirely separate.
       if (this.client.watchedAccounts.keys.includes(account)) {
         const watchedAccount = this.client.watchedAccounts.get(account);
 
@@ -185,6 +188,8 @@ export class NotifyEngine extends INotifyEngine {
       // unregister from identity server
       await this.client.identityKeys.unregisterIdentity({ account });
 
+      // If user has registration data, clear it to prevent false
+      // data regarding staleness of identity
       if (this.client.registrationData.keys.includes(account)) {
         this.client.registrationData.delete(account, {
           code: -1,
