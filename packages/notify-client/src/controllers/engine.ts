@@ -488,7 +488,7 @@ export class NotifyEngine extends INotifyEngine {
     });
 
     return new Promise<void>((resolve, reject) => {
-      this.client.on("notify_subscription", (args) => {
+      this.client.on("notify_delete", (args) => {
         if (args.params.error) {
           reject(args.params.error);
         } else {
