@@ -163,9 +163,6 @@ export class NotifyEngine extends INotifyEngine {
 
           // If account was the last to be watched
           if (watchedAccount.lastWatched) {
-            this.client.logger.info(
-              `[Notify] unregister > account ${watchedAccount.account} was last to be watched. Unmarking as last watched`
-            );
             // Remove last watched flag, to prevent watching on next init.
             await this.client.watchedAccounts.update(watchedAccount.account, {
               lastWatched: false,
