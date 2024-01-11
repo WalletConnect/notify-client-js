@@ -648,8 +648,6 @@ export class NotifyEngine extends INotifyEngine {
     switch (reqMethod) {
       case "wc_notifyMessage":
         return this.onNotifyMessageRequest(topic, payload, publishedAt);
-      case "wc_notifyDelete":
-        return this.onNotifyDeleteRequest(topic, payload);
       case "wc_notifySubscriptionsChanged":
         return this.onNotifySubscriptionsChangedRequest(topic, payload);
       default:
@@ -872,22 +870,6 @@ export class NotifyEngine extends INotifyEngine {
           topic,
           payload.error
         );
-      }
-    };
-
-  protected onNotifyDeleteRequest: INotifyEngine["onNotifyDeleteRequest"] =
-    async (topic, payload) => {
-      const { id } = payload;
-      this.client.logger.info(
-        "[Notify] Engine.onNotifyDeleteRequest",
-        topic,
-        payload
-      );
-      try {
-        this.client.events.emit("notify_delete", { id, topic });
-      } catch (err: any) {
-        this.client.logger.error(err);
-        await this.sendError(id, topic, err);
       }
     };
 
