@@ -135,7 +135,6 @@ export class NotifyEngine extends INotifyEngine {
 
   public unregister: INotifyEngine["unregister"] = async ({ account }) => {
     try {
-
       if (!(await this.client.identityKeys.hasIdentity({ account }))) {
         return;
       }
