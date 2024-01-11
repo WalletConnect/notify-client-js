@@ -135,39 +135,44 @@ export class NotifyEngine extends INotifyEngine {
 
   public unregister: INotifyEngine["unregister"] = async ({ account }) => {
     try {
-      // Get information about watching subscriptions of account
-      const watchedAccount = this.client.watchedAccounts.get(account);
-
-      // If account was watched
-      if (watchedAccount) {
-        this.client.logger.info(
-          `[Notify] unregister > account ${watchedAccount.account} was previously watched. Unsubscribing from watch topics`
-        );
-        // and subscribed to a notify server watch topic
-        if (
-          await this.client.core.relayer.subscriber.isSubscribed(
-            watchedAccount.resTopic
-          )
-        ) {
-          // unsubscribe from watch topic
-          await this.client.core.relayer.unsubscribe(watchedAccount.resTopic);
-        }
-
-        // If account was the last to be watched
-        if (watchedAccount.lastWatched) {
-          this.client.logger.info(
-            `[Notify] unregister > account ${watchedAccount.account} was last to be watched. Unmarking as last watched`
-          );
-          // Remove last watched flag, to prevent watching on next init.
-          await this.client.watchedAccounts.update(watchedAccount.account, {
-            lastWatched: false,
-          });
-        }
+      if (!(await this.client.identityKeys.hasIdentity({ account }))) {
+        return;
       }
 
-      this.client.logger.info(
-        `[Notify] unregister > account ${watchedAccount.account} was last to be watched. Unmarking as last watched`
-      );
+      // If user has watched their subscriptions before, stop watching.
+      // We can not assume that every registered user has a watchedAccount
+      // due to the fact that the stores for watchedAccounts and identityKeys
+      // are entirely separate.
+      if (this.client.watchedAccounts.keys.includes(account)) {
+        const watchedAccount = this.client.watchedAccounts.get(account);
+
+        // If account was watched: stop watching it.
+        if (watchedAccount) {
+          this.client.logger.info(
+            `[Notify] unregister > account ${watchedAccount.account} was previously watched. Unsubscribing from watch topics`
+          );
+          // and subscribed to a notify server watch topic
+          if (
+            await this.client.core.relayer.subscriber.isSubscribed(
+              watchedAccount.resTopic
+            )
+          ) {
+            // unsubscribe from watch topic
+            await this.client.core.relayer.unsubscribe(watchedAccount.resTopic);
+          }
+
+          // If account was the last to be watched
+          if (watchedAccount.lastWatched) {
+            // Remove last watched flag, to prevent watching on next init.
+            await this.client.watchedAccounts.update(watchedAccount.account, {
+              lastWatched: false,
+            });
+            this.client.logger.info(
+              `[Notify] unregister > account ${watchedAccount.account} was last to be watched. Unmarking as last watched`
+            );
+          }
+        }
+      }
 
       // Unsubscribe from subscription topics
       for (const sub of Object.values(
@@ -176,11 +181,17 @@ export class NotifyEngine extends INotifyEngine {
         await this.client.core.relayer.unsubscribe(sub.topic);
       }
 
-      this.client.logger.info(
-        `[Notify] unregister > account ${watchedAccount.account} was last to be watched. Unmarking as last watched`
-      );
       // unregister from identity server
       await this.client.identityKeys.unregisterIdentity({ account });
+
+      // If user has registration data, clear it to prevent false
+      // data regarding staleness of identity
+      if (this.client.registrationData.keys.includes(account)) {
+        this.client.registrationData.delete(account, {
+          code: -1,
+          message: "Wallet was unregistered",
+        });
+      }
 
       this.client.logger.info(
         `Engine.unregister > Successfully unregistered account ${account}`
