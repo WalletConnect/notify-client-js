@@ -238,13 +238,13 @@ describe("Notify", () => {
 
         expect(wallet.subscriptions.keys.length).toBe(0);
 
-	// subscribers jwt update should account for the update
+        // subscribers jwt update should account for the update
         const subscriptionSucceeded = await wallet.subscribe({
           account,
           appDomain: testDappMetadata.appDomain,
         });
 
-	expect(subscriptionSucceeded).toEqual(true);
+        expect(subscriptionSucceeded).toEqual(true);
 
         // Check that wallet is in expected state.
         expect(wallet.subscriptions.keys.length).toBe(1);
@@ -318,7 +318,7 @@ describe("Notify", () => {
 
           // Ensure `axios.get` was only called once to resolve the dapp's did.json
           // We have to account for the initial calls that happened during watchSubscriptions on init
-	  // Also have to account for the jwt update that happens when creating a subscription
+          // Also have to account for the jwt update that happens when creating a subscription
           expect(axiosSpy).toHaveBeenCalledTimes(
             INITIAL_CALLS_FETCH_ACCOUNT + 2
           );
@@ -491,8 +491,10 @@ describe("Notify", () => {
           limit: 2,
         });
 
-	// notifications come in reverse order (latest to oldest)
-        expect(history.notifications.map((n) => n.body)).toEqual(notifications.reverse());
+        // notifications come in reverse order (latest to oldest)
+        expect(history.notifications.map((n) => n.body)).toEqual(
+          notifications.reverse()
+        );
 
         expect(history.notifications[0].sentAt).toBeTypeOf("number");
 
@@ -516,9 +518,7 @@ describe("Notify", () => {
           gotNotifyDeleteResponse = true;
         });
 
-	console.log("deleting...")
         await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
-	console.log("deleted...")
 
         await waitForEvent(() => gotNotifyDeleteResponse);
 

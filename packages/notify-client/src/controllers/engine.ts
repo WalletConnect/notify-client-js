@@ -985,7 +985,6 @@ export class NotifyEngine extends INotifyEngine {
         // Even if there was an error, loading is technically complete
         this.finishedInitialLoad = true;
 
-	console.log("Watch already stopped >>>> ")
         this.client.logger.error({
           event: "onNotifyWatchSubscriptionsResponse",
           topic,
