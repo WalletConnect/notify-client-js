@@ -140,7 +140,7 @@ export class NotifyEngine extends INotifyEngine {
       }
 
       // If user has watched their subscriptions before, stop watching.
-      // We can not assume that every registerd user has a watchedAccount
+      // We can not assume that every registered user has a watchedAccount
       // due to the fact that the stores for watchedAccounts and identityKeys
       // are entirely separate.
       if (this.client.watchedAccounts.keys.includes(account)) {
