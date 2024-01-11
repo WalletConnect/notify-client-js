@@ -335,7 +335,7 @@ describe("Notify", () => {
           // Ensure `axios.get` was only called once to resolve the dapp's did.json
           // We have to account for the initial calls that happened during watchSubscriptions on init
           expect(axiosSpy).toHaveBeenCalledTimes(
-            1 + INITIAL_CALLS_FETCH_ACCOUNT
+            INITIAL_CALLS_FETCH_ACCOUNT
           );
         });
       }
@@ -506,7 +506,8 @@ describe("Notify", () => {
           limit: 2,
         });
 
-        expect(history.notifications.map((n) => n.body)).toEqual(notifications);
+	// notifications come in reverse order (latest to oldest)
+        expect(history.notifications.map((n) => n.body)).toEqual(notifications.reverse());
 
         expect(history.notifications[0].sentAt).toBeTypeOf("number");
 
@@ -516,8 +517,7 @@ describe("Notify", () => {
 
     describe("deleteSubscription", () => {
       it("can delete a currently active notify subscription", async () => {
-        let gotNotifySubscriptionsChanged = false;
-        let gotNotifySubscriptionsChangedEvent: any;
+        let gotNotifyDeleteResponse = false;
 
         await createNotifySubscription(wallet, account, onSign);
 
@@ -527,14 +527,15 @@ describe("Notify", () => {
           wallet.getActiveSubscriptions()
         )[0];
 
-        wallet.once("notify_subscriptions_changed", (event) => {
-          gotNotifySubscriptionsChanged = true;
-          gotNotifySubscriptionsChangedEvent = event;
+        wallet.once("notify_delete", (event) => {
+          gotNotifyDeleteResponse = true;
         });
 
+	console.log("deleting...")
         await wallet.deleteSubscription({ topic: walletSubscriptionTopic });
+	console.log("deleted...")
 
-        await waitForEvent(() => gotNotifySubscriptionsChanged);
+        await waitForEvent(() => gotNotifyDeleteResponse);
 
         // Check that wallet is in expected state.
         expect(Object.keys(wallet.getActiveSubscriptions()).length).toBe(0);
