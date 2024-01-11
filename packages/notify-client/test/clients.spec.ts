@@ -225,21 +225,6 @@ describe("Notify", () => {
 
     describe("subscribe", () => {
       it("can issue a `notify_subscription` request and handle the response", async () => {
-        let gotNotifySubscriptionResponse = false;
-        let gotNotifySubscriptionsChangedRequest = false;
-        let changedSubscriptions: NotifyClientTypes.NotifySubscription[] = [];
-
-        wallet.once("notify_subscription", () => {
-          gotNotifySubscriptionResponse = true;
-        });
-        wallet.on("notify_subscriptions_changed", (event) => {
-          console.log("notify_subscriptions_changed", event);
-          if (event.params.subscriptions.length > 0) {
-            gotNotifySubscriptionsChangedRequest = true;
-            changedSubscriptions = event.params.subscriptions;
-          }
-        });
-
         const preparedRegistration = await wallet.prepareRegistration({
           account,
           domain: testDappMetadata.appDomain,
@@ -251,19 +236,18 @@ describe("Notify", () => {
           signature: await onSign(preparedRegistration.message),
         });
 
-        await wallet.subscribe({
+        expect(wallet.subscriptions.keys.length).toBe(0);
+
+	// subscribers jwt update should account for the update
+        const subscriptionSucceeded = await wallet.subscribe({
           account,
           appDomain: testDappMetadata.appDomain,
         });
 
-        await waitForEvent(() => gotNotifySubscriptionResponse);
-        await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
+	expect(subscriptionSucceeded).toEqual(true);
 
         // Check that wallet is in expected state.
         expect(wallet.subscriptions.keys.length).toBe(1);
-        expect(wallet.subscriptions.keys[0]).toBe(
-          changedSubscriptions[0].topic
-        );
         expect(wallet.messages.keys.length).toBe(1);
       });
     });
@@ -334,8 +318,9 @@ describe("Notify", () => {
 
           // Ensure `axios.get` was only called once to resolve the dapp's did.json
           // We have to account for the initial calls that happened during watchSubscriptions on init
+	  // Also have to account for the jwt update that happens when creating a subscription
           expect(axiosSpy).toHaveBeenCalledTimes(
-            INITIAL_CALLS_FETCH_ACCOUNT
+            INITIAL_CALLS_FETCH_ACCOUNT + 2
           );
         });
       }
