@@ -219,7 +219,7 @@ export declare namespace NotifyClientTypes {
 
   interface SubscriptionResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_subscription_response";
-    sbs: NotifyServerSubscription[];
+    sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
   }
 
   interface UpdateResponseJWTClaims extends CommonResponseJWTClaims {
