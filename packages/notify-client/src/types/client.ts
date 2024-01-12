@@ -22,6 +22,7 @@ export declare namespace NotifyClientTypes {
     | "notify_subscriptions_changed";
 
   type NotifyResponseEventArgs = {
+    allSubscriptions?: NotifyClientTypes.NotifySubscription[];
     error?: ErrorResponse;
   };
 
@@ -42,10 +43,18 @@ export declare namespace NotifyClientTypes {
   }
 
   interface EventArguments {
-    notify_subscription: BaseEventArgs<NotifyResponseEventArgs>;
+    notify_subscription: BaseEventArgs<
+      NotifyResponseEventArgs & {
+        subscription?: NotifyClientTypes.NotifySubscription;
+      }
+    >;
     notify_message: BaseEventArgs<NotifyMessageRequestEventArgs>;
-    notify_delete: BaseEventArgs<NotifyDeleteRequestEventArgs>;
-    notify_update: BaseEventArgs<NotifyResponseEventArgs>;
+    notify_delete: BaseEventArgs<NotifyResponseEventArgs>;
+    notify_update: BaseEventArgs<
+      NotifyResponseEventArgs & {
+        subscription?: NotifyClientTypes.NotifySubscription;
+      }
+    >;
     notify_subscriptions_changed: BaseEventArgs<NotifySubscriptionsChangedEventArgs>;
   }
 
@@ -210,14 +219,17 @@ export declare namespace NotifyClientTypes {
 
   interface SubscriptionResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_subscription_response";
+    sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
   }
 
   interface UpdateResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_update_response";
+    sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
   }
 
   interface DeleteResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_delete_response";
+    sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
   }
 
   interface GetNotificationsResponseClaims extends BaseJwtClaims {

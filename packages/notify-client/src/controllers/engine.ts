@@ -284,34 +284,41 @@ export class NotifyEngine extends INotifyEngine {
       `[Notify] subscribe > sending wc_notifySubscribe request on topic ${subscribeTopic}...`
     );
 
-    // SPEC: Wallet sends wc_notifySubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
-    const id = await this.sendRequest<"wc_notifySubscribe">(
-      subscribeTopic,
-      "wc_notifySubscribe",
-      {
-        subscriptionAuth,
-      },
-      {
-        type: TYPE_1,
-        senderPublicKey: selfPublicKey,
-        receiverPublicKey: dappPublicKey,
-      }
-    );
-
-    this.client.logger.info({
-      action: "sendRequest",
-      method: "wc_notifySubscribe",
-      id,
-      topic: subscribeTopic,
-      subscriptionAuth,
-      params: {
-        type: TYPE_1,
-        senderPublicKey: selfPublicKey,
-        receiverPublicKey: dappPublicKey,
-      },
+    return new Promise<boolean>((resolve) => {
+      this.client.once("notify_subscription", (args) => {
+        if (args.params.error) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
+      // SPEC: Wallet sends wc_notifySubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
+      this.sendRequest<"wc_notifySubscribe">(
+        subscribeTopic,
+        "wc_notifySubscribe",
+        {
+          subscriptionAuth,
+        },
+        {
+          type: TYPE_1,
+          senderPublicKey: selfPublicKey,
+          receiverPublicKey: dappPublicKey,
+        }
+      ).then((id) => {
+        this.client.logger.info({
+          action: "sendRequest",
+          method: "wc_notifySubscribe",
+          id,
+          topic: subscribeTopic,
+          subscriptionAuth,
+          params: {
+            type: TYPE_1,
+            senderPublicKey: selfPublicKey,
+            receiverPublicKey: dappPublicKey,
+          },
+        });
+      });
     });
-
-    return { id, subscriptionAuth };
   };
 
   public update: INotifyEngine["update"] = async ({ topic, scope }) => {
@@ -340,19 +347,27 @@ export class NotifyEngine extends INotifyEngine {
       `[Notify] update > generated updateAuth JWT: ${updateAuth}`
     );
 
-    const id = await this.sendRequest(topic, "wc_notifyUpdate", {
-      updateAuth,
-    });
+    return new Promise<boolean>((resolve, reject) => {
+      this.client.once("notify_update", (args) => {
+        if (args.params.error) {
+          reject(args.params.error);
+        } else {
+          resolve(true);
+        }
+      });
 
-    this.client.logger.info({
-      action: "sendRequest",
-      method: "wc_notifyUpdate",
-      id,
-      topic,
-      updateAuth,
+      this.sendRequest(topic, "wc_notifyUpdate", {
+        updateAuth,
+      }).then((id) => {
+        this.client.logger.info({
+          action: "sendRequest",
+          method: "wc_notifyUpdate",
+          id,
+          topic,
+          updateAuth,
+        });
+      });
     });
-
-    return true;
   };
 
   public getNotificationHistory: INotifyEngine["getNotificationHistory"] =
@@ -472,11 +487,21 @@ export class NotifyEngine extends INotifyEngine {
       topic,
     });
 
-    await this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
+    return new Promise<void>((resolve, reject) => {
+      this.client.once("notify_delete", (args) => {
+        if (args.params.error) {
+          reject(args.params.error);
+        } else {
+          resolve();
+        }
+      });
 
-    this.client.logger.info(
-      `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
-    );
+      this.sendRequest(topic, "wc_notifyDelete", { deleteAuth }).then(() => {
+        this.client.logger.info(
+          `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
+        );
+      });
+    });
   };
 
   public deleteNotifyMessage: INotifyEngine["deleteNotifyMessage"] = ({
@@ -623,8 +648,6 @@ export class NotifyEngine extends INotifyEngine {
     switch (reqMethod) {
       case "wc_notifyMessage":
         return this.onNotifyMessageRequest(topic, payload, publishedAt);
-      case "wc_notifyDelete":
-        return this.onNotifyDeleteRequest(topic, payload);
       case "wc_notifySubscriptionsChanged":
         return this.onNotifySubscriptionsChangedRequest(topic, payload);
       default:
@@ -688,6 +711,46 @@ export class NotifyEngine extends INotifyEngine {
           response,
         });
 
+        const allSubscriptions = await this.updateSubscriptionsUsingJwt(
+          response.result.responseAuth,
+          "notify_subscription_response"
+        );
+
+        const claims =
+          this.decodeAndValidateJwtAuth<NotifyClientTypes.SubscriptionResponseJWTClaims>(
+            response.result.responseAuth,
+            "notify_subscription_response"
+          );
+
+        const subscription = allSubscriptions.find(
+          (sub) => `did:web:${sub.metadata.appDomain}` === claims.app
+        );
+
+        if (subscription) {
+          this.client.emit("notify_subscription", {
+            id: response.id,
+            topic: responseTopic,
+            params: {
+              allSubscriptions: Object.values(
+                this.client.getActiveSubscriptions({
+                  account: subscription.account,
+                })
+              ),
+              subscription,
+            },
+          });
+        } else {
+          this.client.emit("notify_subscription", {
+            id: response.id,
+            topic: responseTopic,
+            params: {
+              error: {
+                code: -1,
+                message: "Subscription not found",
+              },
+            },
+          });
+        }
         // Emit the NotifySubscription at client level.
         this.client.emit("notify_subscription", {
           id: response.id,
@@ -810,22 +873,6 @@ export class NotifyEngine extends INotifyEngine {
       }
     };
 
-  protected onNotifyDeleteRequest: INotifyEngine["onNotifyDeleteRequest"] =
-    async (topic, payload) => {
-      const { id } = payload;
-      this.client.logger.info(
-        "[Notify] Engine.onNotifyDeleteRequest",
-        topic,
-        payload
-      );
-      try {
-        this.client.events.emit("notify_delete", { id, topic });
-      } catch (err: any) {
-        this.client.logger.error(err);
-        await this.sendError(id, topic, err);
-      }
-    };
-
   protected onNotifyDeleteResponse: INotifyEngine["onNotifyDeleteResponse"] =
     async (topic, payload) => {
       if (isJsonRpcResult(payload)) {
@@ -834,12 +881,30 @@ export class NotifyEngine extends INotifyEngine {
           topic,
           payload
         );
+
+        await this.updateSubscriptionsUsingJwt(
+          payload.result.responseAuth,
+          "notify_delete_response"
+        );
+
+        this.client.emit("notify_delete", {
+          id: payload.id,
+          topic,
+          params: {},
+        });
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error(
           "[Notify] Engine.onNotifyDeleteResponse > error:",
           topic,
           payload.error
         );
+        this.client.emit("notify_delete", {
+          id: payload.id,
+          topic,
+          params: {
+            error: payload.error,
+          },
+        });
       }
     };
 
@@ -966,11 +1031,46 @@ export class NotifyEngine extends INotifyEngine {
           result: payload,
         });
 
-        this.client.events.emit("notify_update", {
-          id: payload.id,
-          topic,
-          params: {},
-        });
+        const allSubscriptions = await this.updateSubscriptionsUsingJwt(
+          payload.result.responseAuth,
+          "notify_update_response"
+        );
+
+        const claims =
+          this.decodeAndValidateJwtAuth<NotifyClientTypes.UpdateResponseJWTClaims>(
+            payload.result.responseAuth,
+            "notify_update_response"
+          );
+
+        const subscription = allSubscriptions.find(
+          (sub) => `did:web:${sub.metadata.appDomain}` === claims.app
+        );
+
+        if (subscription) {
+          this.client.emit("notify_update", {
+            id: payload.id,
+            topic,
+            params: {
+              subscription,
+              allSubscriptions: Object.values(
+                this.client.getActiveSubscriptions({
+                  account: subscription.account,
+                })
+              ),
+            },
+          });
+        } else {
+          this.client.events.emit("notify_update", {
+            id: payload.id,
+            topic,
+            params: {
+              error: {
+                code: -1,
+                message: "Subscription not found",
+              },
+            },
+          });
+        }
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error({
           event: "onNotifyUpdateResponse",
@@ -1131,10 +1231,16 @@ export class NotifyEngine extends INotifyEngine {
     act:
       | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims["act"]
       | NotifyClientTypes.NotifySubscriptionsChangedClaims["act"]
+      | NotifyClientTypes.SubscriptionResponseJWTClaims["act"]
+      | NotifyClientTypes.DeleteResponseJWTClaims["act"]
+      | NotifyClientTypes.UpdateResponseJWTClaims["act"]
   ) => {
     const claims = this.decodeAndValidateJwtAuth<
       | NotifyClientTypes.NotifyWatchSubscriptionsResponseClaims
       | NotifyClientTypes.NotifySubscriptionsChangedClaims
+      | NotifyClientTypes.SubscriptionResponseJWTClaims
+      | NotifyClientTypes.DeleteResponseJWTClaims
+      | NotifyClientTypes.UpdateResponseJWTClaims
     >(jwt, act);
 
     this.client.logger.info("updateSubscriptionsUsingJwt > claims", claims);
@@ -1190,7 +1296,7 @@ export class NotifyEngine extends INotifyEngine {
 
       await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
 
-      if (!(await this.client.core.relayer.subscriber.isSubscribed(sbTopic))) {
+      if (!this.client.core.relayer.subscriber.topics.includes(sbTopic)) {
         try {
           await this.client.core.relayer.subscribe(sbTopic);
         } catch (e) {

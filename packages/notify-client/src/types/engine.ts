@@ -73,7 +73,7 @@ export abstract class INotifyEngine {
   public abstract subscribe(params: {
     appDomain: string;
     account: string;
-  }): Promise<{ id: number; subscriptionAuth: string }>;
+  }): Promise<boolean>;
 
   public abstract update(params: {
     topic: string;
@@ -158,11 +158,6 @@ export abstract class INotifyEngine {
       | JsonRpcResult<JsonRpcTypes.Results["wc_notifyMessage"]>
       | JsonRpcError
   ): void;
-
-  protected abstract onNotifyDeleteRequest(
-    topic: string,
-    payload: JsonRpcRequest<JsonRpcTypes.RequestParams["wc_notifyDelete"]>
-  ): Promise<void>;
 
   protected abstract onNotifyDeleteResponse(
     topic: string,
