@@ -1296,7 +1296,7 @@ export class NotifyEngine extends INotifyEngine {
 
       await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
 
-      if (!(this.client.core.relayer.subscriber.topics.includes(sbTopic))) {
+      if (!this.client.core.relayer.subscriber.topics.includes(sbTopic)) {
         try {
           await this.client.core.relayer.subscribe(sbTopic);
         } catch (e) {
