@@ -496,11 +496,11 @@ export class NotifyEngine extends INotifyEngine {
         }
       });
 
-      this.sendRequest(topic, "wc_notifyDelete", { deleteAuth });
-
-      this.client.logger.info(
-        `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
-      );
+      this.sendRequest(topic, "wc_notifyDelete", { deleteAuth }).then(() => {
+        this.client.logger.info(
+          `[Notify] Engine.delete > deleted notify subscription on topic ${topic}`
+        );
+      });
     });
   };
 
