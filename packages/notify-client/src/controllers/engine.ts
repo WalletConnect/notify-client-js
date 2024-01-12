@@ -285,7 +285,7 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     return new Promise<boolean>((resolve) => {
-      this.client.on("notify_subscription", (args) => {
+      this.client.once("notify_subscription", (args) => {
         if (args.params.error) {
           resolve(false);
         } else {
@@ -348,7 +348,7 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     return new Promise<boolean>((resolve, reject) => {
-      this.client.on("notify_update", (args) => {
+      this.client.once("notify_update", (args) => {
         if (args.params.error) {
           reject(args.params.error);
         } else {
@@ -488,7 +488,7 @@ export class NotifyEngine extends INotifyEngine {
     });
 
     return new Promise<void>((resolve, reject) => {
-      this.client.on("notify_delete", (args) => {
+      this.client.once("notify_delete", (args) => {
         if (args.params.error) {
           reject(args.params.error);
         } else {
