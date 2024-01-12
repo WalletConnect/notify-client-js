@@ -711,7 +711,7 @@ export class NotifyEngine extends INotifyEngine {
           response,
         });
 
-        await this.updateSubscriptionsUsingJwt(
+        const allSubscriptions = await this.updateSubscriptionsUsingJwt(
           response.result.responseAuth,
           "notify_subscription_response"
         );
@@ -722,9 +722,9 @@ export class NotifyEngine extends INotifyEngine {
             "notify_subscription_response"
           );
 
-        const subscription = this.client.subscriptions
-          .getAll()
-          .find((sub) => `did:web:${sub.metadata.appDomain}` === claims.app);
+        const subscription = allSubscriptions.find(
+          (sub) => `did:web:${sub.metadata.appDomain}` === claims.app
+        );
 
         if (subscription) {
           this.client.emit("notify_subscription", {
@@ -1031,7 +1031,7 @@ export class NotifyEngine extends INotifyEngine {
           result: payload,
         });
 
-        await this.updateSubscriptionsUsingJwt(
+        const allSubscriptions = await this.updateSubscriptionsUsingJwt(
           payload.result.responseAuth,
           "notify_update_response"
         );
@@ -1042,9 +1042,9 @@ export class NotifyEngine extends INotifyEngine {
             "notify_update_response"
           );
 
-        const subscription = this.client.subscriptions
-          .getAll()
-          .find((sub) => `did:web:${sub.metadata.appDomain}` === claims.app);
+        const subscription = allSubscriptions.find(
+          (sub) => `did:web:${sub.metadata.appDomain}` === claims.app
+        );
 
         if (subscription) {
           this.client.emit("notify_update", {
