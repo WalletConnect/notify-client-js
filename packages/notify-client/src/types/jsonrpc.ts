@@ -6,7 +6,10 @@ export declare namespace JsonRpcTypes {
     | "wc_notifyWatchSubscription"
     | "wc_notifySubscriptionsChanged"
     | "wc_notifyUpdate"
-    | "wc_notifyGetNotifications";
+    | "wc_notifyGetNotifications"
+    | "wc_notifyReadNotification"
+    | "wc_notifyNotificationChanged";
+    
 
   // ---- JSON-RPC Requests -----------------------------
   export interface RequestParams {
@@ -31,6 +34,12 @@ export declare namespace JsonRpcTypes {
     wc_notifyGetNotifications: {
       auth: string;
     };
+    wc_notifyNotificationChanged: {
+      auth: string;
+    };
+    wc_notifyReadNotification: {
+      auth: string;
+    };
   }
 
   // ---- JSON-RPC Responses -----------------------------
@@ -52,6 +61,12 @@ export declare namespace JsonRpcTypes {
       responseAuth: string;
     };
     wc_notifyGetNotifications: {
+      auth: string;
+    };
+    wc_notifyNotificationChanged: {
+      auth: string;
+    };
+    wc_notifyReadNotification: {
       auth: string;
     };
   }
