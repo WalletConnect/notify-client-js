@@ -123,6 +123,7 @@ export declare namespace NotifyClientTypes {
     id: string;
     url: string;
     type: string;
+    read: boolean
   }
 
   interface NotifyMessage {
@@ -132,6 +133,7 @@ export declare namespace NotifyClientTypes {
     id: string;
     url: string;
     type: string;
+    read: boolean;
   }
 
   interface NotifyMessageRecord {

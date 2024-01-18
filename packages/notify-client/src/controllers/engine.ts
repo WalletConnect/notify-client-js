@@ -845,7 +845,8 @@ export class NotifyEngine extends INotifyEngine {
 	    sentAt: n.sent_at,
 	    title: n.title,
 	    url: n.url,
-	    type: n.type
+	    type: n.type,
+	    read: n.read
 	  }))
 	}
       })
@@ -908,6 +909,7 @@ export class NotifyEngine extends INotifyEngine {
             title: nf.title,
             url: nf.url,
             type: nf.type,
+	    read: nf.read
           }));
 
         this.emit("notify_get_notifications_response", {
