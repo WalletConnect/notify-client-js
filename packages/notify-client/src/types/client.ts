@@ -208,6 +208,7 @@ export declare namespace NotifyClientTypes {
     aud: string; // did:pkh blockchain account that notify subscription is associated with
     sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
+    seq: number
   }
 
   interface CommonResponseJWTClaims extends BaseJwtClaims {
@@ -220,16 +221,19 @@ export declare namespace NotifyClientTypes {
   interface SubscriptionResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_subscription_response";
     sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
+    seq: number
   }
 
   interface UpdateResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_update_response";
     sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
+    seq: number
   }
 
   interface DeleteResponseJWTClaims extends CommonResponseJWTClaims {
     act: "notify_delete_response";
     sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
+    seq: number
   }
 
   interface GetNotificationsResponseClaims extends BaseJwtClaims {
@@ -247,6 +251,7 @@ export declare namespace NotifyClientTypes {
     aud: string; // did:key of client identity key
     sub: string; // did:key of the public key used for key agreement on the Notify topic
     sbs: NotifyServerSubscription[]; // array of [Notify Server Subscriptions]
+    seq: number
   }
 
   interface NotifySubscriptionsChangedResponseClaims extends BaseJwtClaims {
