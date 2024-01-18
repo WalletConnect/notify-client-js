@@ -1253,7 +1253,7 @@ export class NotifyEngine extends INotifyEngine {
       return this.client.subscriptions.getAll();
     }
 
-    await this.client.clientStateMaintenance.update("stateMaintenance", {
+    await this.client.clientStateMaintenance.set("stateMaintenance", {
       latestSubscriptionSequence: claims.seq,
     });
 
