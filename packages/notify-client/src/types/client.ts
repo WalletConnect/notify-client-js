@@ -336,6 +336,13 @@ export abstract class INotifyClient {
     }
   >;
 
+  public abstract clientStateMaintenance: IStore<
+    "stateMaintenance",
+    {
+      latestSubscriptionSequence: number;
+    }
+  >;
+
   public abstract identityKeys: IdentityKeys;
 
   public abstract subscriptions: IStore<

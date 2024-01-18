@@ -1243,6 +1243,20 @@ export class NotifyEngine extends INotifyEngine {
       | NotifyClientTypes.UpdateResponseJWTClaims
     >(jwt, act);
 
+    // TODO: enable this when seq property is in notify server
+    // const latestSubscriptionSequence =
+    //   this.client.clientStateMaintenance.get(
+    //     "stateMaintenance"
+    //   ).latestSubscriptionSequence;
+
+    // if (latestSubscriptionSequence && latestSubscriptionSequence > claims.seq) {
+    //   return this.client.subscriptions.getAll();
+    // }
+
+    // await this.client.clientStateMaintenance.update("stateMaintenance", {
+    //   latestSubscriptionSequence: claims.seq,
+    // });
+
     this.client.logger.info("updateSubscriptionsUsingJwt > claims", claims);
 
     // Clean up any subscriptions that are no longer valid.
