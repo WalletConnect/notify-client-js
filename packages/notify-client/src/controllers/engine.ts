@@ -370,6 +370,52 @@ export class NotifyEngine extends INotifyEngine {
     });
   };
 
+  public markNotificationsAsRead: INotifyEngine["markNotificationsAsRead"] =
+    async ({ notificationIds, topic }) => {
+      const subExists = this.client.subscriptions.keys.includes(topic);
+
+      if(!subExists) {
+	throw new Error(`No subscription with topic ${topic} found`)
+      }
+
+      const subscription = this.client.subscriptions.get(topic);
+      
+      const issuedAt = Math.round(Date.now() / 1000);
+      const expiry =
+        issuedAt + ENGINE_RPC_OPTS["wc_notifyGetNotifications"].req.ttl;
+
+      const identityKey = encodeEd25519Key(
+        await this.client.identityKeys.getIdentity({
+          account: subscription.account,
+        })
+      );
+
+      const cachedKey = this.getCachedDappKey(subscription);
+      const dappUrl = getDappUrl(subscription.metadata.appDomain);
+      const { dappIdentityKey } = cachedKey
+        ? { dappIdentityKey: cachedKey }
+        : await this.resolveKeys(dappUrl);
+
+      const claims: NotifyClientTypes.MarkNotificationQAsReadClaims = {
+	act: "notify_read_notifications",
+	app: `did:web:${subscription.metadata.appDomain}`,
+        aud: encodeEd25519Key(dappIdentityKey),
+	exp: expiry,
+	iat: issuedAt,
+	ids: notificationIds,
+	iss: identityKey,
+        sub: composeDidPkh(subscription.account),
+        ksu: this.client.keyserverUrl,
+      }
+
+      const auth = await this.client.identityKeys.generateIdAuth(
+        subscription.account,
+        claims
+      );
+
+      await this.sendRequest(topic, "wc_notifyReadNotification", { auth })
+    };
+
   public getNotificationHistory: INotifyEngine["getNotificationHistory"] =
     async ({ topic, limit, startingAfter, unreadFirst }) => {
       this.isInitialized();

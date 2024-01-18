@@ -99,6 +99,12 @@ export abstract class INotifyEngine {
     hasMore: boolean;
     hasMoreUnread: boolean;
   }>;
+
+  public abstract markNotificationsAsRead(params: {
+    notificationIds: string[]
+    topic: string
+  }): Promise<void>;
+
   // query all active subscriptions
   public abstract getActiveSubscriptions(params?: {
     account: string;
