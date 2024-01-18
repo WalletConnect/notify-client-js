@@ -374,12 +374,12 @@ export class NotifyEngine extends INotifyEngine {
     async ({ notificationIds, topic }) => {
       const subExists = this.client.subscriptions.keys.includes(topic);
 
-      if(!subExists) {
-	throw new Error(`No subscription with topic ${topic} found`)
+      if (!subExists) {
+        throw new Error(`No subscription with topic ${topic} found`);
       }
 
       const subscription = this.client.subscriptions.get(topic);
-      
+
       const issuedAt = Math.round(Date.now() / 1000);
       const expiry =
         issuedAt + ENGINE_RPC_OPTS["wc_notifyGetNotifications"].req.ttl;
@@ -397,23 +397,23 @@ export class NotifyEngine extends INotifyEngine {
         : await this.resolveKeys(dappUrl);
 
       const claims: NotifyClientTypes.MarkNotificationQAsReadClaims = {
-	act: "notify_read_notifications",
-	app: `did:web:${subscription.metadata.appDomain}`,
+        act: "notify_read_notifications",
+        app: `did:web:${subscription.metadata.appDomain}`,
         aud: encodeEd25519Key(dappIdentityKey),
-	exp: expiry,
-	iat: issuedAt,
-	ids: notificationIds,
-	iss: identityKey,
+        exp: expiry,
+        iat: issuedAt,
+        ids: notificationIds,
+        iss: identityKey,
         sub: composeDidPkh(subscription.account),
         ksu: this.client.keyserverUrl,
-      }
+      };
 
       const auth = await this.client.identityKeys.generateIdAuth(
         subscription.account,
         claims
       );
 
-      await this.sendRequest(topic, "wc_notifyReadNotification", { auth })
+      await this.sendRequest(topic, "wc_notifyReadNotification", { auth });
     };
 
   public getNotificationHistory: INotifyEngine["getNotificationHistory"] =
@@ -868,34 +868,38 @@ export class NotifyEngine extends INotifyEngine {
 
   protected onNotifyNotificationChanged: INotifyEngine["onNotifyNotificationChanged"] =
     async (topic, payload) => {
-      const { auth } = payload.params
+      const { auth } = payload.params;
 
-      if(this.client.subscriptions.keys.includes(topic)) {
+      if (this.client.subscriptions.keys.includes(topic)) {
         this.client.logger.error(
           "[Notify] Engine.onNotifyNotificationsChanged > error:",
           topic,
-	  `No subscription found for topic ${topic}`
+          `No subscription found for topic ${topic}`
         );
-	return;
+        return;
       }
 
-      const decodedClaims = this.decodeAndValidateJwtAuth<NotifyClientTypes.NotificationChangedClaims>(auth, "notify_notification_changed")
+      const decodedClaims =
+        this.decodeAndValidateJwtAuth<NotifyClientTypes.NotificationChangedClaims>(
+          auth,
+          "notify_notification_changed"
+        );
 
       this.client.emit("notify_notifications_changed", {
-	id: payload.id,
-	topic,
-	params: {
-	  notifications: decodedClaims.nfn.map(n => ({
-	    body: n.body,
-	    id: n.id,
-	    sentAt: n.sent_at,
-	    title: n.title,
-	    url: n.url,
-	    type: n.type,
-	    read: n.read
-	  }))
-	}
-      })
+        id: payload.id,
+        topic,
+        params: {
+          notifications: decodedClaims.nfn.map((n) => ({
+            body: n.body,
+            id: n.id,
+            sentAt: n.sent_at,
+            title: n.title,
+            url: n.url,
+            type: n.type,
+            read: n.read,
+          })),
+        },
+      });
     };
 
   protected onNotifyDeleteResponse: INotifyEngine["onNotifyDeleteResponse"] =
@@ -955,7 +959,7 @@ export class NotifyEngine extends INotifyEngine {
             title: nf.title,
             url: nf.url,
             type: nf.type,
-	    read: nf.read
+            read: nf.read,
           }));
 
         this.emit("notify_get_notifications_response", {

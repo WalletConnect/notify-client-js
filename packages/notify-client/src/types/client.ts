@@ -57,7 +57,9 @@ export declare namespace NotifyClientTypes {
       }
     >;
     notify_subscriptions_changed: BaseEventArgs<NotifySubscriptionsChangedEventArgs>;
-    notify_notifications_changed: BaseEventArgs<{notifications: NotifyMessage[]}>;
+    notify_notifications_changed: BaseEventArgs<{
+      notifications: NotifyMessage[];
+    }>;
   }
 
   interface BaseJwtClaims {
@@ -123,7 +125,7 @@ export declare namespace NotifyClientTypes {
     id: string;
     url: string;
     type: string;
-    read: boolean
+    read: boolean;
   }
 
   interface NotifyMessage {
@@ -215,13 +217,13 @@ export declare namespace NotifyClientTypes {
   }
 
   interface MarkNotificationQAsReadClaims extends BaseJwtClaims {
-    act: "notify_read_notifications",
+    act: "notify_read_notifications";
     iss: string; // did:key of client identity key
     ksu: string; // keyserver url
-    aud: string  // did:key of dapp authentication key
-    app: string  // did:web of app domain that this request is associated with 
+    aud: string; // did:key of dapp authentication key
+    app: string; // did:web of app domain that this request is associated with
     sub: string; // did:pkh of blockchain account that this notify subscription is associated with
-    ids: string[]  // array of notification IDs to mark as read, max 1000 items
+    ids: string[]; // array of notification IDs to mark as read, max 1000 items
   }
 
   interface CommonResponseJWTClaims extends BaseJwtClaims {
@@ -259,7 +261,7 @@ export declare namespace NotifyClientTypes {
     act: "notify_notification_changed";
     iss: string; // did:key of notify server identity key
     aud: string; // did:key of client identity key
-    nfn: NotifyServerMessage[]
+    nfn: NotifyServerMessage[];
   }
 
   interface NotifyWatchSubscriptionsResponseClaims extends BaseJwtClaims {

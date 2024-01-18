@@ -9,7 +9,6 @@ export declare namespace JsonRpcTypes {
     | "wc_notifyGetNotifications"
     | "wc_notifyReadNotification"
     | "wc_notifyNotificationChanged";
-    
 
   // ---- JSON-RPC Requests -----------------------------
   export interface RequestParams {

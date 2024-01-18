@@ -102,5 +102,5 @@ export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
       ttl: FIVE_MINUTES,
       tag: 4021,
     },
-  }
+  },
 };

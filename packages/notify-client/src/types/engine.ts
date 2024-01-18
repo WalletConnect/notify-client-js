@@ -93,7 +93,7 @@ export abstract class INotifyEngine {
     topic: string;
     limit?: number;
     startingAfter?: string;
-    unreadFirst?: boolean
+    unreadFirst?: boolean;
   }): Promise<{
     notifications: NotifyClientTypes.NotifyMessage[];
     hasMore: boolean;
@@ -101,8 +101,8 @@ export abstract class INotifyEngine {
   }>;
 
   public abstract markNotificationsAsRead(params: {
-    notificationIds: string[]
-    topic: string
+    notificationIds: string[];
+    topic: string;
   }): Promise<void>;
 
   // query all active subscriptions
