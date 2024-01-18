@@ -93,9 +93,11 @@ export abstract class INotifyEngine {
     topic: string;
     limit?: number;
     startingAfter?: string;
+    unreadFirst?: boolean
   }): Promise<{
     notifications: NotifyClientTypes.NotifyMessage[];
     hasMore: boolean;
+    hasMoreUnread: boolean;
   }>;
   // query all active subscriptions
   public abstract getActiveSubscriptions(params?: {

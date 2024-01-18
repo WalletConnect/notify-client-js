@@ -371,7 +371,7 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   public getNotificationHistory: INotifyEngine["getNotificationHistory"] =
-    async ({ topic, limit, startingAfter }) => {
+    async ({ topic, limit, startingAfter, unreadFirst }) => {
       this.isInitialized();
 
       if (!this.client.subscriptions.keys.includes(topic)) {
@@ -409,7 +409,7 @@ export class NotifyEngine extends INotifyEngine {
           app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
           lmt: limit ?? 50,
           // TODO: adapt to unread capabilities when available on Notify server
-          urf: false,
+          urf: unreadFirst ?? false,
         };
 
       const auth = await this.client.identityKeys.generateIdAuth(
