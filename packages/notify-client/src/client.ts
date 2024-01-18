@@ -32,7 +32,6 @@ export class NotifyClient extends INotifyClient {
   public events: INotifyClient["events"] = new EventEmitter();
   public engine: INotifyClient["engine"];
   public subscriptions: INotifyClient["subscriptions"];
-  public messages: INotifyClient["messages"];
   public watchedAccounts: INotifyClient["watchedAccounts"];
   public registrationData: INotifyClient["registrationData"];
   public identityKeys: INotifyClient["identityKeys"];
@@ -76,12 +75,6 @@ export class NotifyClient extends INotifyClient {
       this.core,
       this.logger,
       "subscriptions",
-      NOTIFY_CLIENT_STORAGE_PREFIX
-    );
-    this.messages = new Store(
-      this.core,
-      this.logger,
-      "messages",
       NOTIFY_CLIENT_STORAGE_PREFIX
     );
 
@@ -240,7 +233,6 @@ export class NotifyClient extends INotifyClient {
     try {
       await this.core.start();
       await this.subscriptions.init();
-      await this.messages.init();
       await this.registrationData.init();
       await this.identityKeys.init();
       await this.watchedAccounts.init();

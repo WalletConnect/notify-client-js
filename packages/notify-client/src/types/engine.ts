@@ -89,8 +89,6 @@ export abstract class INotifyEngine {
   // delete active subscription
   public abstract deleteSubscription(params: { topic: string }): Promise<void>;
 
-  public abstract deleteNotifyMessage(params: { id: number }): void;
-
   public abstract getNotificationHistory(params: {
     topic: string;
     limit?: number;
@@ -177,6 +175,13 @@ export abstract class INotifyEngine {
     topic: string,
     payload: JsonRpcRequest<
       JsonRpcTypes.RequestParams["wc_notifySubscriptionsChanged"]
+    >
+  ): Promise<void>;
+
+  protected abstract onNotifyNotificationChanged(
+    topic: string,
+    payload: JsonRpcRequest<
+      JsonRpcTypes.RequestParams["wc_notifyNotificationChanged"]
     >
   ): Promise<void>;
 

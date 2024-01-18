@@ -19,6 +19,7 @@ export declare namespace NotifyClientTypes {
     | "notify_message"
     | "notify_delete"
     | "notify_update"
+    | "notify_notifications_changed"
     | "notify_subscriptions_changed";
 
   type NotifyResponseEventArgs = {
@@ -56,6 +57,7 @@ export declare namespace NotifyClientTypes {
       }
     >;
     notify_subscriptions_changed: BaseEventArgs<NotifySubscriptionsChangedEventArgs>;
+    notify_notifications_changed: BaseEventArgs<{notifications: NotifyMessage[]}>;
   }
 
   interface BaseJwtClaims {
@@ -120,7 +122,7 @@ export declare namespace NotifyClientTypes {
     body: string;
     id: string;
     url: string;
-    type?: string;
+    type: string;
   }
 
   interface NotifyMessage {
@@ -129,7 +131,7 @@ export declare namespace NotifyClientTypes {
     body: string;
     id: string;
     url: string;
-    type?: string;
+    type: string;
   }
 
   interface NotifyMessageRecord {
@@ -241,6 +243,13 @@ export declare namespace NotifyClientTypes {
     nfs: NotifyServerMessage[];
   }
 
+  interface NotificationChangedClaims extends BaseJwtClaims {
+    act: "notify_notification_changed";
+    iss: string; // did:key of notify server identity key
+    aud: string; // did:key of client identity key
+    nfn: NotifyServerMessage[]
+  }
+
   interface NotifyWatchSubscriptionsResponseClaims extends BaseJwtClaims {
     act: "notify_watch_subscriptions_response";
     iss: string; // did:key of notify server identity key
@@ -304,14 +313,6 @@ export abstract class INotifyClient {
   public abstract events: EventEmitter;
   public abstract logger: Logger;
   public abstract engine: INotifyEngine;
-
-  public abstract messages: IStore<
-    string,
-    {
-      topic: string;
-      messages: Record<number, NotifyClientTypes.NotifyMessageRecord>;
-    }
-  >;
 
   public abstract registrationData: IStore<
     string,

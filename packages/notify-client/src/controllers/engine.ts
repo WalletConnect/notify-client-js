@@ -504,26 +504,6 @@ export class NotifyEngine extends INotifyEngine {
     });
   };
 
-  public deleteNotifyMessage: INotifyEngine["deleteNotifyMessage"] = ({
-    id,
-  }) => {
-    this.isInitialized();
-
-    const targetRecord = this.client.messages
-      .getAll()
-      .find((record) => record.messages[id]);
-
-    if (!targetRecord) {
-      throw new Error(
-        `No message with id ${id} found in notify message history.`
-      );
-    }
-
-    delete targetRecord.messages[id];
-
-    this.client.messages.update(targetRecord.topic, targetRecord);
-  };
-
   public getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"] = (
     params
   ) => {
@@ -650,6 +630,8 @@ export class NotifyEngine extends INotifyEngine {
         return this.onNotifyMessageRequest(topic, payload, publishedAt);
       case "wc_notifySubscriptionsChanged":
         return this.onNotifySubscriptionsChangedRequest(topic, payload);
+      case "wc_notifyNotificationChanged":
+        return this.onNotifyNotificationChanged(topic, payload);
       default:
         return this.client.logger.info(
           `[Notify] Unsupported request method ${reqMethod}`
@@ -793,41 +775,6 @@ export class NotifyEngine extends INotifyEngine {
         return;
       }
 
-      // To account for data races occuring from history injection of notify messages
-      if (!this.client.messages.keys.some((key) => key === topic)) {
-        await this.client.messages.set(topic, {
-          messages: {},
-          topic,
-        });
-      }
-
-      const currentMessages = this.client.messages.get(topic).messages;
-
-      const messageIdAlreadyReceived = Object.values(currentMessages).some(
-        (msg) => msg.message.id === messageClaims.msg.id
-      );
-
-      if (messageIdAlreadyReceived) {
-        this.client.logger.warn(
-          `[Notify] Message with id ${messageClaims.msg.id} already received. Ignoring.`
-        );
-        return;
-      }
-
-      await this.client.messages.update(topic, {
-        messages: {
-          ...currentMessages,
-          [payload.id]: {
-            id: payload.id,
-            topic,
-            message: messageClaims.msg,
-            // Not using publishedAt as these messages can be coming from Archive API
-            // Multiplying by 1000 to get the timestamp in ms, instead of seconds
-            publishedAt: messageClaims.iat * 1000,
-          },
-        },
-      });
-
       try {
         const responseAuth = await this.generateMessageResponseAuth({
           topic,
@@ -871,6 +818,37 @@ export class NotifyEngine extends INotifyEngine {
           payload.error
         );
       }
+    };
+
+  protected onNotifyNotificationChanged: INotifyEngine["onNotifyNotificationChanged"] =
+    async (topic, payload) => {
+      const { auth } = payload.params
+
+      if(this.client.subscriptions.keys.includes(topic)) {
+        this.client.logger.error(
+          "[Notify] Engine.onNotifyNotificationsChanged > error:",
+          topic,
+	  `No subscription found for topic ${topic}`
+        );
+	return;
+      }
+
+      const decodedClaims = this.decodeAndValidateJwtAuth<NotifyClientTypes.NotificationChangedClaims>(auth, "notify_notification_changed")
+
+      this.client.emit("notify_notifications_changed", {
+	id: payload.id,
+	topic,
+	params: {
+	  notifications: decodedClaims.nfn.map(n => ({
+	    body: n.body,
+	    id: n.id,
+	    sentAt: n.sent_at,
+	    title: n.title,
+	    url: n.url,
+	    type: n.type
+	  }))
+	}
+      })
     };
 
   protected onNotifyDeleteResponse: INotifyEngine["onNotifyDeleteResponse"] =
@@ -1303,14 +1281,6 @@ export class NotifyEngine extends INotifyEngine {
           this.client.logger.error("Failed to subscribe from claims.sbs", e);
         }
       }
-
-      if (!this.client.messages.keys.includes(sbTopic)) {
-        // Set up a store for messages sent to this notify topic.
-        await this.client.messages.set(sbTopic, {
-          topic: sbTopic,
-          messages: {},
-        });
-      }
     });
 
     const newSubscriptions = claims.sbs.filter(
@@ -1340,10 +1310,6 @@ export class NotifyEngine extends INotifyEngine {
     await this.client.core.relayer.unsubscribe(topic);
     await Promise.all([
       this.client.subscriptions.delete(topic, {
-        code: -1,
-        message: "Deleted subscription.",
-      }),
-      this.client.messages.delete(topic, {
         code: -1,
         message: "Deleted subscription.",
       }),
