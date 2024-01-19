@@ -1741,7 +1741,7 @@ export class NotifyEngine extends INotifyEngine {
         await this.watchSubscriptions(account, appDomain, allApps);
       } catch (error: any) {
         this.client.logger.error(
-          `[Notify] Engine.watchLastWatchedAccountIfExists > Failed to watch subscriptions for account ${account} > ${error.message}`
+          `[Notify] Engine.watchLastWatchedAccountIfExists > Failed to watch subscriptions for account ${account} > ${error?.message}`
         );
       }
     }
