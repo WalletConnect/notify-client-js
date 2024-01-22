@@ -114,13 +114,13 @@ export declare namespace NotifyClientTypes {
     expiry: number;
   }
 
-  interface NotifyServerMessage {
+  interface NotifyServerNotification {
     title: string;
     sent_at: number;
     body: string;
     id: string;
-    url: string;
-    type?: string;
+    url?: string;
+    type: string;
   }
 
   interface NotifyNotification {
@@ -128,7 +128,7 @@ export declare namespace NotifyClientTypes {
     sentAt: number;
     body: string;
     id: string;
-    url?: string;
+    url: string | null;
     type: string;
   }
 
@@ -238,7 +238,7 @@ export declare namespace NotifyClientTypes {
     aud: string; // did:key of client identity key
     mur: boolean; // more unread
     mre: boolean; // more pages
-    nfs: NotifyServerMessage[];
+    nfs: NotifyServerNotification[];
   }
 
   interface NotifyWatchSubscriptionsResponseClaims extends BaseJwtClaims {
