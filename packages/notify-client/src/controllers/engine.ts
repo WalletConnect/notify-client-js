@@ -928,7 +928,7 @@ export class NotifyEngine extends INotifyEngine {
             id: nf.id,
             sentAt: nf.sent_at,
             title: nf.title,
-            url: nf.url ?? null,
+            url: nf.url || null,
             type: nf.type,
           }));
 

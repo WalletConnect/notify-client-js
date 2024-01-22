@@ -119,7 +119,7 @@ export declare namespace NotifyClientTypes {
     sent_at: number;
     body: string;
     id: string;
-    url?: string;
+    url: string | null;
     type: string;
   }
 
