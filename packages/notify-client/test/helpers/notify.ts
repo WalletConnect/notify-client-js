@@ -1,8 +1,5 @@
 import axios from "axios";
-import {
-  DEFAULT_NOTIFY_SERVER_URL,
-  INotifyClient,
-} from "../../src";
+import { DEFAULT_NOTIFY_SERVER_URL, INotifyClient } from "../../src";
 import { testDappMetadata, gmHackersMetadata } from "./mocks";
 
 const NOTIFY_SERVER_URL =
@@ -14,7 +11,6 @@ export const createNotifySubscription = async (
   onSign: (message: string) => Promise<string>,
   differentSubscription?: boolean
 ) => {
-
   const domain = differentSubscription
     ? gmHackersMetadata.appDomain
     : testDappMetadata.appDomain;
@@ -36,7 +32,6 @@ export const createNotifySubscription = async (
     appDomain: domain,
     account,
   });
-
 };
 
 export const sendNotifyMessage = async (
