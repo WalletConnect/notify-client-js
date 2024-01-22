@@ -922,7 +922,7 @@ export class NotifyEngine extends INotifyEngine {
             "notify_get_notifications_response"
           );
 
-        const mappedNotifications: NotifyClientTypes.NotifyMessage[] =
+        const mappedNotifications: NotifyClientTypes.NotifyNotification[] =
           claims.nfs.map((nf) => ({
             body: nf.body,
             id: nf.id,
