@@ -26,15 +26,11 @@ export const createNotifySubscription = async (
       allApps: true,
     });
 
-    console.log(">> about to register")
-
     await wallet.register({
       registerParams: preparedRegistration.registerParams,
       signature: await onSign(preparedRegistration.message),
     });
   }
-
-  console.log(">> registered, about to subscribe")
 
   return wallet.subscribe({
     appDomain: domain,
