@@ -729,6 +729,8 @@ describe("Notify", () => {
         // Create inconsistent state
         await wallet1.core.relayer.subscriber.unsubscribe(subTopic);
 
+
+	console.log("subbing to 2>>>>>")
         // Subscribe to a different dapp to trigger subscriptions changed
         await createNotifySubscription(
           wallet1,
