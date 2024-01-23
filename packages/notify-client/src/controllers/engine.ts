@@ -556,8 +556,8 @@ export class NotifyEngine extends INotifyEngine {
     this.client.logger.info({
       action: "sendRequest",
       id: payload.id,
-      messageHash: message
-    })
+      messageHash: message,
+    });
 
     return payload.id;
   };
