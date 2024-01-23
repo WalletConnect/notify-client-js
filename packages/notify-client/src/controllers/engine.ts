@@ -553,6 +553,12 @@ export class NotifyEngine extends INotifyEngine {
     this.client.core.history.set(topic, payload);
     await this.client.core.relayer.publish(topic, message, rpcOpts);
 
+    this.client.logger.info({
+      action: "sendRequest",
+      id: payload.id,
+      messageHash: message
+    })
+
     return payload.id;
   };
 
