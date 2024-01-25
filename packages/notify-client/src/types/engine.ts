@@ -32,7 +32,7 @@ export declare namespace NotifyEngineTypes {
 
   interface EventArguments {
     notify_get_notifications_response: EventResponseOrError<{
-      notifications: NotifyClientTypes.NotifyMessage[];
+      notifications: NotifyClientTypes.NotifyNotification[];
       hasMore: boolean;
       hasMoreUnread: boolean;
     }>;
@@ -84,7 +84,7 @@ export abstract class INotifyEngine {
   public abstract decryptMessage(params: {
     topic: string;
     encryptedMessage: string;
-  }): Promise<NotifyClientTypes.NotifyMessage>;
+  }): Promise<NotifyClientTypes.NotifyNotification>;
 
   // delete active subscription
   public abstract deleteSubscription(params: { topic: string }): Promise<void>;
@@ -96,7 +96,7 @@ export abstract class INotifyEngine {
     limit?: number;
     startingAfter?: string;
   }): Promise<{
-    notifications: NotifyClientTypes.NotifyMessage[];
+    notifications: NotifyClientTypes.NotifyNotification[];
     hasMore: boolean;
   }>;
   // query all active subscriptions

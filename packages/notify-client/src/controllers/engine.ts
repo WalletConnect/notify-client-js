@@ -553,6 +553,12 @@ export class NotifyEngine extends INotifyEngine {
     this.client.core.history.set(topic, payload);
     await this.client.core.relayer.publish(topic, message, rpcOpts);
 
+    this.client.logger.info({
+      action: "sendRequest",
+      id: payload.id,
+      messageHash: message,
+    });
+
     return payload.id;
   };
 
@@ -922,13 +928,13 @@ export class NotifyEngine extends INotifyEngine {
             "notify_get_notifications_response"
           );
 
-        const mappedNotifications: NotifyClientTypes.NotifyMessage[] =
+        const mappedNotifications: NotifyClientTypes.NotifyNotification[] =
           claims.nfs.map((nf) => ({
             body: nf.body,
             id: nf.id,
             sentAt: nf.sent_at,
             title: nf.title,
-            url: nf.url,
+            url: nf.url || null,
             type: nf.type,
           }));
 

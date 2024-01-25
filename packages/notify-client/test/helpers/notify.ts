@@ -1,10 +1,5 @@
 import axios from "axios";
-import {
-  DEFAULT_NOTIFY_SERVER_URL,
-  INotifyClient,
-  NotifyClientTypes,
-} from "../../src";
-import { waitForEvent } from "./async";
+import { DEFAULT_NOTIFY_SERVER_URL, INotifyClient } from "../../src";
 import { testDappMetadata, gmHackersMetadata } from "./mocks";
 
 const NOTIFY_SERVER_URL =
@@ -16,23 +11,6 @@ export const createNotifySubscription = async (
   onSign: (message: string) => Promise<string>,
   differentSubscription?: boolean
 ) => {
-  let gotNotifySubscriptionResponse = false;
-  let notifySubscriptionEvent: NotifyClientTypes.BaseEventArgs<NotifyClientTypes.NotifyResponseEventArgs>;
-  let gotNotifySubscriptionsChangedRequest = false;
-  let changedSubscriptions: NotifyClientTypes.NotifySubscription[] = [];
-
-  wallet.once("notify_subscription", (event) => {
-    gotNotifySubscriptionResponse = true;
-    notifySubscriptionEvent = event;
-  });
-  wallet.on("notify_subscriptions_changed", (event) => {
-    console.log("notify_subscriptions_changed", event);
-    if (event.params.subscriptions.length > 0) {
-      gotNotifySubscriptionsChangedRequest = true;
-      changedSubscriptions = event.params.subscriptions;
-    }
-  });
-
   const domain = differentSubscription
     ? gmHackersMetadata.appDomain
     : testDappMetadata.appDomain;
@@ -50,15 +28,10 @@ export const createNotifySubscription = async (
     });
   }
 
-  await wallet.subscribe({
+  return wallet.subscribe({
     appDomain: domain,
     account,
   });
-
-  await waitForEvent(() => gotNotifySubscriptionResponse);
-  await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
-
-  return { notifySubscriptionEvent: notifySubscriptionEvent! };
 };
 
 export const sendNotifyMessage = async (

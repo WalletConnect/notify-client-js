@@ -31,7 +31,7 @@ export declare namespace NotifyClientTypes {
   };
 
   type NotifyMessageRequestEventArgs = {
-    message: NotifyClientTypes.NotifyMessage;
+    message: NotifyClientTypes.NotifyNotification;
   };
 
   type NotifyDeleteRequestEventArgs = { id: number; topic: string };
@@ -114,28 +114,28 @@ export declare namespace NotifyClientTypes {
     expiry: number;
   }
 
-  interface NotifyServerMessage {
+  interface NotifyServerNotification {
     title: string;
     sent_at: number;
     body: string;
     id: string;
-    url: string;
-    type?: string;
+    url: string | null;
+    type: string;
   }
 
-  interface NotifyMessage {
+  interface NotifyNotification {
     title: string;
     sentAt: number;
     body: string;
     id: string;
-    url: string;
-    type?: string;
+    url: string | null;
+    type: string;
   }
 
-  interface NotifyMessageRecord {
+  interface NotifyNotificationRecord {
     id: number;
     topic: string;
-    message: NotifyMessage;
+    message: NotifyNotification;
     publishedAt: number;
   }
 
@@ -165,7 +165,7 @@ export declare namespace NotifyClientTypes {
     iss: string; // public key of cast server (did:key)
     sub: string; // did:pkh of blockchain account that this notify subscription is associated with
     app: string; // dapp domain url,
-    msg: NotifyMessage;
+    msg: NotifyNotification;
   }
 
   interface MessageResponseJWTClaims extends BaseJwtClaims {
@@ -238,7 +238,7 @@ export declare namespace NotifyClientTypes {
     aud: string; // did:key of client identity key
     mur: boolean; // more unread
     mre: boolean; // more pages
-    nfs: NotifyServerMessage[];
+    nfs: NotifyServerNotification[];
   }
 
   interface NotifyWatchSubscriptionsResponseClaims extends BaseJwtClaims {
@@ -309,7 +309,7 @@ export abstract class INotifyClient {
     string,
     {
       topic: string;
-      messages: Record<number, NotifyClientTypes.NotifyMessageRecord>;
+      messages: Record<number, NotifyClientTypes.NotifyNotificationRecord>;
     }
   >;
 
