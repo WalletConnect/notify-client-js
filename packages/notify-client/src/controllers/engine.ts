@@ -287,13 +287,20 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     return new Promise<boolean>((resolve) => {
-      this.client.once("notify_subscription", (args) => {
+      const listener = (args: NotifyClientTypes.EventArguments['notify_subscription']) => {
+	if(args.topic === subscribeTopic)  {
+	  return
+	}
+	this.client.off("notify_subscription", listener);
         if (args.params.error) {
-          resolve(false);
+	  resolve(false)
         } else {
           resolve(true);
         }
-      });
+      }
+
+      this.client.on("notify_subscription", listener)
+
       // SPEC: Wallet sends wc_notifySubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
       this.sendRequest<"wc_notifySubscribe">(
         subscribeTopic,
@@ -350,13 +357,19 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     return new Promise<boolean>((resolve, reject) => {
-      this.client.once("notify_update", (args) => {
+      const listener = (args: NotifyClientTypes.EventArguments['notify_update']) => {
+	if(args.topic === topic)  {
+	  return
+	}
+	this.client.off("notify_update", listener);
         if (args.params.error) {
           reject(args.params.error);
         } else {
           resolve(true);
         }
-      });
+      }
+
+      this.client.on("notify_update", listener);
 
       this.sendRequest(topic, "wc_notifyUpdate", {
         updateAuth,
@@ -490,13 +503,19 @@ export class NotifyEngine extends INotifyEngine {
     });
 
     return new Promise<void>((resolve, reject) => {
-      this.client.once("notify_delete", (args) => {
+      const listener = (args: NotifyClientTypes.EventArguments['notify_delete']) => {
+	if(args.topic === topic)  {
+	  return
+	}
+	this.client.off("notify_delete", listener);
         if (args.params.error) {
           reject(args.params.error);
         } else {
           resolve();
         }
-      });
+      }
+
+      this.client.on("notify_delete", listener)
 
       this.sendRequest(topic, "wc_notifyDelete", { deleteAuth }).then(() => {
         this.client.logger.info(
@@ -941,6 +960,7 @@ export class NotifyEngine extends INotifyEngine {
           }));
 
         this.emit("notify_get_notifications_response", {
+	  topic,
           hasMore: claims.mre ?? false,
           hasMoreUnread: claims.mur ?? false,
           error: null,
@@ -954,6 +974,7 @@ export class NotifyEngine extends INotifyEngine {
         );
 
         this.emit("notify_get_notifications_response", {
+	  topic,
           error: payload.error.message,
         });
       }
