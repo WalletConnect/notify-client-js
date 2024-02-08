@@ -16,7 +16,7 @@ import {
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
 import { FIVE_MINUTES } from "@walletconnect/time";
-import { JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
+import { EngineTypes, JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
   deriveSymKey,
@@ -34,7 +34,7 @@ import {
   NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS,
   NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
 } from "../constants";
-import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
+import { INotifyEngine, JsonRpcTypes, NotifyClientTypes, NotifyEngineTypes } from "../types";
 import { getCaip10FromDidPkh } from "../utils/address";
 import { getDappUrl } from "../utils/formats";
 
@@ -433,13 +433,21 @@ export class NotifyEngine extends INotifyEngine {
       );
 
       return new Promise((resolve, reject) => {
-        this.once("notify_get_notifications_response", (args) => {
+	const listener = (args: NotifyEngineTypes.EventArguments["notify_get_notifications_response"]) => {
+	  if(args.topic !== topic) {
+	    return;
+	  }
+
+	  this.off("notify_get_notifications_response", listener)
+
           if (args.error === null) {
             resolve(args);
           } else {
             reject(new Error(args.error));
           }
-        });
+	}
+
+        this.on("notify_get_notifications_response", listener);
 
         // Add timeout to prevent memory leaks with unresolving promises
         setTimeout(() => {
