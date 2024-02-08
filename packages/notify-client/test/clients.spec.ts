@@ -857,82 +857,97 @@ describe("Notify", () => {
           signature: await onSign(preparedRegistration.message),
         });
 
-	await wallet.subscribe({appDomain: testDappMetadata.appDomain, account})
+        await wallet.subscribe({
+          appDomain: testDappMetadata.appDomain,
+          account,
+        });
 
-	expect(wallet.subscriptions.length).toEqual(1)
-	expect(wallet.subscriptions.getAll()[0].metadata.appDomain).toEqual(testDappMetadata.appDomain)
+        expect(wallet.subscriptions.length).toEqual(1);
+        expect(wallet.subscriptions.getAll()[0].metadata.appDomain).toEqual(
+          testDappMetadata.appDomain
+        );
       });
 
-      it.skipIf(!hasTestProjectSecret)("Only resolves when topic accurate response is issued", async () => {
-        const preparedRegistration = await wallet.prepareRegistration({
-          account,
-          domain: testDappMetadata.appDomain,
-          allApps: true,
-        });
+      it.skipIf(!hasTestProjectSecret)(
+        "Only resolves when topic accurate response is issued",
+        async () => {
+          const preparedRegistration = await wallet.prepareRegistration({
+            account,
+            domain: testDappMetadata.appDomain,
+            allApps: true,
+          });
 
-        await wallet.register({
-          registerParams: preparedRegistration.registerParams,
-          signature: await onSign(preparedRegistration.message),
-        });
+          await wallet.register({
+            registerParams: preparedRegistration.registerParams,
+            signature: await onSign(preparedRegistration.message),
+          });
 
-	await wallet.subscribe({appDomain: testDappMetadata.appDomain, account})
-	
-	expect(wallet.subscriptions.length).toEqual(1)
-	expect(wallet.subscriptions.getAll()[0].metadata.appDomain).toEqual(testDappMetadata.appDomain)
+          await wallet.subscribe({
+            appDomain: testDappMetadata.appDomain,
+            account,
+          });
 
-	const app1Topic = wallet.subscriptions.getAll()[0].topic
+          expect(wallet.subscriptions.length).toEqual(1);
+          expect(wallet.subscriptions.getAll()[0].metadata.appDomain).toEqual(
+            testDappMetadata.appDomain
+          );
 
-	let gotMessage = false;
+          const app1Topic = wallet.subscriptions.getAll()[0].topic;
 
-	// send messages to app1
-        await sendNotifyMessage(account, "Test1");
+          let gotMessage = false;
 
-	console.log(">>>>>>>>>> sent message")
+          // send messages to app1
+          await sendNotifyMessage(account, "Test1");
 
-	wallet.on("notify_message", () => {
-	  gotMessage = true;
-	})
+          console.log(">>>>>>>>>> sent message");
 
-	await waitForEvent(() => gotMessage)
+          wallet.on("notify_message", () => {
+            gotMessage = true;
+          });
 
-	console.log(">>>>>>>>>> got message")
+          await waitForEvent(() => gotMessage);
 
-	const notifs1 = wallet.getNotificationHistory({topic: app1Topic, limit: 5});
+          console.log(">>>>>>>>>> got message");
 
-	// close transport to prevent getting a real response from the relay
-	await wallet.core.relayer.transportClose()
+          const notifs1 = wallet.getNotificationHistory({
+            topic: app1Topic,
+            limit: 5,
+          });
 
-	const emptyNotif = {
-	    body: '',
-	    id: '',
-	    sentAt: Date.now(),
-	    title: '',
-	    type: '',
-	    url: ''
-	  }
+          // close transport to prevent getting a real response from the relay
+          await wallet.core.relayer.transportClose();
 
+          const emptyNotif = {
+            body: "",
+            id: "",
+            sentAt: Date.now(),
+            title: "",
+            type: "",
+            url: "",
+          };
 
-	wallet.engine['emit']("notify_get_notifications_response", {
-	  topic: "wrong_topic",
-	  error: null,
-	  hasMore: false,
-	  hasMoreUnread: false,
-	  notifications: []
-	})
+          wallet.engine["emit"]("notify_get_notifications_response", {
+            topic: "wrong_topic",
+            error: null,
+            hasMore: false,
+            hasMoreUnread: false,
+            notifications: [],
+          });
 
-	wallet.engine['emit']("notify_get_notifications_response", {
-	  topic: app1Topic,
-	  error: null,
-	  hasMore: false,
-	  hasMoreUnread: false,
-	  notifications: [emptyNotif, emptyNotif]
-	})
+          wallet.engine["emit"]("notify_get_notifications_response", {
+            topic: app1Topic,
+            error: null,
+            hasMore: false,
+            hasMoreUnread: false,
+            notifications: [emptyNotif, emptyNotif],
+          });
 
-	expect(notifs1).resolves.toSatisfy((resolved: any) => {
-	  console.log("Resolved is!", resolved)
-	  return resolved.notifications.length === 2
-	})
-      })
+          expect(notifs1).resolves.toSatisfy((resolved: any) => {
+            console.log("Resolved is!", resolved);
+            return resolved.notifications.length === 2;
+          });
+        }
+      );
     });
 
     describe.skipIf(!hasTestProjectSecret)("Message Deduping", () => {
