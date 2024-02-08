@@ -16,7 +16,7 @@ import {
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
 import { FIVE_MINUTES } from "@walletconnect/time";
-import { EngineTypes, JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
+import { JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
   deriveSymKey,
