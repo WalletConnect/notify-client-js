@@ -367,10 +367,11 @@ export class NotifyEngine extends INotifyEngine {
       const listener = (
         args: NotifyClientTypes.EventArguments["notify_update"]
       ) => {
-        if (args.topic === topic) {
+        if (args.topic !== topic) {
           return;
         }
         this.client.off("notify_update", listener);
+
         if (args.params.error) {
           reject(args.params.error);
         } else {
@@ -525,7 +526,7 @@ export class NotifyEngine extends INotifyEngine {
       const listener = (
         args: NotifyClientTypes.EventArguments["notify_delete"]
       ) => {
-        if (args.topic === topic) {
+        if (args.topic !== topic) {
           return;
         }
         this.client.off("notify_delete", listener);
