@@ -34,7 +34,12 @@ import {
   NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS,
   NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
 } from "../constants";
-import { INotifyEngine, JsonRpcTypes, NotifyClientTypes, NotifyEngineTypes } from "../types";
+import {
+  INotifyEngine,
+  JsonRpcTypes,
+  NotifyClientTypes,
+  NotifyEngineTypes,
+} from "../types";
 import { getCaip10FromDidPkh } from "../utils/address";
 import { getDappUrl } from "../utils/formats";
 
@@ -287,19 +292,21 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     return new Promise<boolean>((resolve) => {
-      const listener = (args: NotifyClientTypes.EventArguments['notify_subscription']) => {
-	if(args.topic === subscribeTopic)  {
-	  return
-	}
-	this.client.off("notify_subscription", listener);
+      const listener = (
+        args: NotifyClientTypes.EventArguments["notify_subscription"]
+      ) => {
+        if (args.topic === subscribeTopic) {
+          return;
+        }
+        this.client.off("notify_subscription", listener);
         if (args.params.error) {
-	  resolve(false)
+          resolve(false);
         } else {
           resolve(true);
         }
-      }
+      };
 
-      this.client.on("notify_subscription", listener)
+      this.client.on("notify_subscription", listener);
 
       // SPEC: Wallet sends wc_notifySubscribe request (type 1 envelope) on subscribe topic with subscriptionAuth
       this.sendRequest<"wc_notifySubscribe">(
@@ -357,17 +364,19 @@ export class NotifyEngine extends INotifyEngine {
     );
 
     return new Promise<boolean>((resolve, reject) => {
-      const listener = (args: NotifyClientTypes.EventArguments['notify_update']) => {
-	if(args.topic === topic)  {
-	  return
-	}
-	this.client.off("notify_update", listener);
+      const listener = (
+        args: NotifyClientTypes.EventArguments["notify_update"]
+      ) => {
+        if (args.topic === topic) {
+          return;
+        }
+        this.client.off("notify_update", listener);
         if (args.params.error) {
           reject(args.params.error);
         } else {
           resolve(true);
         }
-      }
+      };
 
       this.client.on("notify_update", listener);
 
@@ -433,19 +442,21 @@ export class NotifyEngine extends INotifyEngine {
       );
 
       return new Promise((resolve, reject) => {
-	const listener = (args: NotifyEngineTypes.EventArguments["notify_get_notifications_response"]) => {
-	  if(args.topic !== topic) {
-	    return;
-	  }
+        const listener = (
+          args: NotifyEngineTypes.EventArguments["notify_get_notifications_response"]
+        ) => {
+          if (args.topic !== topic) {
+            return;
+          }
 
-	  this.off("notify_get_notifications_response", listener)
+          this.off("notify_get_notifications_response", listener);
 
           if (args.error === null) {
             resolve(args);
           } else {
             reject(new Error(args.error));
           }
-	}
+        };
 
         this.on("notify_get_notifications_response", listener);
 
@@ -511,19 +522,21 @@ export class NotifyEngine extends INotifyEngine {
     });
 
     return new Promise<void>((resolve, reject) => {
-      const listener = (args: NotifyClientTypes.EventArguments['notify_delete']) => {
-	if(args.topic === topic)  {
-	  return
-	}
-	this.client.off("notify_delete", listener);
+      const listener = (
+        args: NotifyClientTypes.EventArguments["notify_delete"]
+      ) => {
+        if (args.topic === topic) {
+          return;
+        }
+        this.client.off("notify_delete", listener);
         if (args.params.error) {
           reject(args.params.error);
         } else {
           resolve();
         }
-      }
+      };
 
-      this.client.on("notify_delete", listener)
+      this.client.on("notify_delete", listener);
 
       this.sendRequest(topic, "wc_notifyDelete", { deleteAuth }).then(() => {
         this.client.logger.info(
@@ -968,7 +981,7 @@ export class NotifyEngine extends INotifyEngine {
           }));
 
         this.emit("notify_get_notifications_response", {
-	  topic,
+          topic,
           hasMore: claims.mre ?? false,
           hasMoreUnread: claims.mur ?? false,
           error: null,
@@ -982,7 +995,7 @@ export class NotifyEngine extends INotifyEngine {
         );
 
         this.emit("notify_get_notifications_response", {
-	  topic,
+          topic,
           error: payload.error.message,
         });
       }
