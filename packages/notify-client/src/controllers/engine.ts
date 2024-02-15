@@ -37,6 +37,7 @@ import {
 import { INotifyEngine, JsonRpcTypes, NotifyClientTypes } from "../types";
 import { getCaip10FromDidPkh } from "../utils/address";
 import { getDappUrl } from "../utils/formats";
+import { isEip191Signature } from "../utils/signature";
 
 export class NotifyEngine extends INotifyEngine {
   public name = "notifyEngine";
@@ -109,10 +110,17 @@ export class NotifyEngine extends INotifyEngine {
     registerParams,
     signature,
   }) => {
+    // Assume signature is eip1271 if not eip191 so as to not cause a breaking change
+    // in the API requiring signature type to be passed via, for example, CacaoSignature type.
+    // This is a stop gap measure until v2
+    const signatureType = isEip191Signature(signature)? 'eip191' : 'eip1271';
     // Retrieve existing identity or register a new one for this account on this device.
     const identity = await this.registerIdentity({
       registerParams,
-      signature,
+      {
+	s: signature,
+	t: signatureType
+      },
     });
 
     const allApps =
