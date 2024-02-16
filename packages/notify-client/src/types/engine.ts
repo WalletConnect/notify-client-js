@@ -16,7 +16,7 @@ export interface RpcOpts {
   res: { ttl: number; tag: number };
 }
 
-export type SupportedSignatureTypes = CacaoSignature['t'];
+export type SupportedSignatureTypes = CacaoSignature["t"];
 
 export declare namespace NotifyEngineTypes {
   interface EventCallback<T extends JsonRpcRequest | JsonRpcResponse> {
