@@ -1530,6 +1530,7 @@ export class NotifyEngine extends INotifyEngine {
 
   private registerIdentity: INotifyEngine["register"] = async ({
     signature,
+    signatureType,
     registerParams,
   }) => {
     const accountId = getCaip10FromDidPkh(registerParams.cacaoPayload.iss);
@@ -1554,7 +1555,10 @@ export class NotifyEngine extends INotifyEngine {
     }
 
     const registeredIdentity = await this.client.identityKeys.registerIdentity({
-      signature,
+      signature: {
+	s: signature,
+	t: signatureType ?? "eip191"
+      },
       registerParams,
     });
 
