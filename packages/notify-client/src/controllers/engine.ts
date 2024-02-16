@@ -108,13 +108,13 @@ export class NotifyEngine extends INotifyEngine {
   public register: INotifyEngine["register"] = async ({
     registerParams,
     signature,
-    signatureType
+    signatureType,
   }) => {
     // Retrieve existing identity or register a new one for this account on this device.
     const identity = await this.registerIdentity({
       registerParams,
       signature,
-      signatureType
+      signatureType,
     });
 
     const allApps =
@@ -1556,8 +1556,8 @@ export class NotifyEngine extends INotifyEngine {
 
     const registeredIdentity = await this.client.identityKeys.registerIdentity({
       signature: {
-	s: signature,
-	t: signatureType ?? "eip191"
+        s: signature,
+        t: signatureType ?? "eip191",
       },
       registerParams,
     });

@@ -15,7 +15,7 @@ export interface RpcOpts {
   res: { ttl: number; tag: number };
 }
 
-export type SupportedSignatureTypes = "eip191" | "eip1271"
+export type SupportedSignatureTypes = "eip191" | "eip1271";
 
 export declare namespace NotifyEngineTypes {
   interface EventCallback<T extends JsonRpcRequest | JsonRpcResponse> {
@@ -62,7 +62,7 @@ export abstract class INotifyEngine {
   public abstract register(params: {
     registerParams: NotifyClientTypes.NotifyRegistrationParams;
     signature: string;
-    signatureType?: SupportedSignatureTypes
+    signatureType?: SupportedSignatureTypes;
   }): Promise<string>;
 
   public abstract isRegistered(params: {
