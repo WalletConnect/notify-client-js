@@ -35,6 +35,7 @@ export class NotifyClient extends INotifyClient {
   public messages: INotifyClient["messages"];
   public watchedAccounts: INotifyClient["watchedAccounts"];
   public registrationData: INotifyClient["registrationData"];
+  public clientStateMaintenance: INotifyClient["clientStateMaintenance"];
   public identityKeys: INotifyClient["identityKeys"];
 
   static async init(opts: NotifyClientTypes.ClientOptions) {
@@ -95,6 +96,15 @@ export class NotifyClient extends INotifyClient {
 
     this.identityKeys =
       opts.identityKeys ?? new IdentityKeys(this.core, this.keyserverUrl);
+
+    this.clientStateMaintenance = new Store(
+      this.core,
+      this.logger,
+      "clientStateMaintenance",
+      NOTIFY_CLIENT_STORAGE_PREFIX,
+      () => "stateMaintenance"
+    );
+
     this.engine = new NotifyEngine(this);
   }
 
@@ -244,6 +254,7 @@ export class NotifyClient extends INotifyClient {
       await this.registrationData.init();
       await this.identityKeys.init();
       await this.watchedAccounts.init();
+      await this.clientStateMaintenance.init();
       await this.engine.init();
 
       this.logger.info(`NotifyClient Initialization Success`);

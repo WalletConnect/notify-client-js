@@ -1249,6 +1249,20 @@ export class NotifyEngine extends INotifyEngine {
       | NotifyClientTypes.UpdateResponseJWTClaims
     >(jwt, act);
 
+    const latestSubscriptionSequence = this.client.clientStateMaintenance.length
+      ? this.client.clientStateMaintenance.get("stateMaintenance")
+          .latestSubscriptionSequence
+      : 0;
+
+    const incomingMessageIsOld = latestSubscriptionSequence > claims.seq;
+    if (incomingMessageIsOld) {
+      return this.client.subscriptions.getAll();
+    }
+
+    await this.client.clientStateMaintenance.set("stateMaintenance", {
+      latestSubscriptionSequence: claims.seq,
+    });
+
     this.client.logger.info("updateSubscriptionsUsingJwt > claims", claims);
 
     // Clean up any subscriptions that are no longer valid.
