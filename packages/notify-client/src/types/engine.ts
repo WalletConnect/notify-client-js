@@ -9,11 +9,14 @@ import { CryptoTypes } from "@walletconnect/types";
 import { INotifyClient, NotifyClientTypes } from "./client";
 import { JsonRpcTypes } from "./jsonrpc";
 import EventEmitter from "events";
+import { CacaoSignature } from "@walletconnect/cacao";
 
 export interface RpcOpts {
   req: { ttl: number; tag: number };
   res: { ttl: number; tag: number };
 }
+
+export type SupportedSignatureTypes = CacaoSignature["t"];
 
 export declare namespace NotifyEngineTypes {
   interface EventCallback<T extends JsonRpcRequest | JsonRpcResponse> {
@@ -60,6 +63,7 @@ export abstract class INotifyEngine {
   public abstract register(params: {
     registerParams: NotifyClientTypes.NotifyRegistrationParams;
     signature: string;
+    signatureType?: SupportedSignatureTypes;
   }): Promise<string>;
 
   public abstract isRegistered(params: {
