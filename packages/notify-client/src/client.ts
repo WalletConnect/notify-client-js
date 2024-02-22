@@ -94,7 +94,7 @@ export class NotifyClient extends INotifyClient {
     );
 
     this.identityKeys =
-      opts.identityKeys ?? new IdentityKeys(this.core, this.keyserverUrl);
+      opts.identityKeys ?? new IdentityKeys(this.core, opts.projectId, this.keyserverUrl);
     this.engine = new NotifyEngine(this);
   }
 
