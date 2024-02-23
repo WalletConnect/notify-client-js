@@ -93,8 +93,15 @@ export class NotifyClient extends INotifyClient {
       ({ account }: { account: string }) => account
     );
 
+    const projectId = opts.projectId ?? this.core.projectId;
+
+    if (!projectId) {
+      throw new Error("Project ID is required for notify client");
+    }
+
     this.identityKeys =
-      opts.identityKeys ?? new IdentityKeys(this.core, this.keyserverUrl);
+      opts.identityKeys ??
+      new IdentityKeys(this.core, projectId, this.keyserverUrl);
     this.engine = new NotifyEngine(this);
   }
 
