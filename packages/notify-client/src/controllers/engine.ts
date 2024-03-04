@@ -295,7 +295,7 @@ export class NotifyEngine extends INotifyEngine {
       const listener = (
         args: NotifyClientTypes.EventArguments["notify_subscription"]
       ) => {
-        if (args.topic !== subscribeTopic) {
+        if (args.topic !== responseTopic) {
           return;
         }
         this.client.off("notify_subscription", listener);
