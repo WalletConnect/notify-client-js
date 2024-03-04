@@ -1,7 +1,7 @@
 {
   "name": "notify-client-js",
   "description": "Repository for all packages related to the WalletConnect Notify Client",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "author": "WalletConnect, Inc. <walletconnect.com>",
   "homepage": "https://github.com/walletconnect/notify-client-js/",
