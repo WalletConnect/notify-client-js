@@ -25,11 +25,12 @@ export declare namespace NotifyEngineTypes {
     publishedAt: number;
   }
 
-  type EventResponseOrError<T> =
+  type EventResponseOrError<T> = { topic: string } & (
     | (T & { error: null })
     | {
         error: string;
-      };
+      }
+  );
 
   type Event = "notify_get_notifications_response";
 

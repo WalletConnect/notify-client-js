@@ -13,7 +13,7 @@ import {
   NotifyClientTypes,
 } from "../src/";
 import { waitForEvent } from "./helpers/async";
-import { testDappMetadata } from "./helpers/mocks";
+import { gmHackersMetadata, testDappMetadata } from "./helpers/mocks";
 import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
 import { disconnectSocket } from "./helpers/ws";
 import axios from "axios";
@@ -842,6 +842,112 @@ describe("Notify", () => {
 
         expect(Object.keys(wallet3.getActiveSubscriptions()).length).toEqual(0);
       });
+    });
+
+    describe("Blocking functions", () => {
+      it("Subscribe only resolves once a subscription succeeded and is stored", async () => {
+        const preparedRegistration = await wallet.prepareRegistration({
+          account,
+          domain: testDappMetadata.appDomain,
+          allApps: true,
+        });
+
+        await wallet.register({
+          registerParams: preparedRegistration.registerParams,
+          signature: await onSign(preparedRegistration.message),
+        });
+
+        await wallet.subscribe({
+          appDomain: testDappMetadata.appDomain,
+          account,
+        });
+
+        expect(wallet.subscriptions.length).toEqual(1);
+        expect(wallet.subscriptions.getAll()[0].metadata.appDomain).toEqual(
+          testDappMetadata.appDomain
+        );
+      });
+
+      it.skipIf(!hasTestProjectSecret)(
+        "Only resolves when topic accurate response is issued",
+        async () => {
+          const preparedRegistration = await wallet.prepareRegistration({
+            account,
+            domain: testDappMetadata.appDomain,
+            allApps: true,
+          });
+
+          await wallet.register({
+            registerParams: preparedRegistration.registerParams,
+            signature: await onSign(preparedRegistration.message),
+          });
+
+          await wallet.subscribe({
+            appDomain: testDappMetadata.appDomain,
+            account,
+          });
+
+          expect(wallet.subscriptions.length).toEqual(1);
+          expect(wallet.subscriptions.getAll()[0].metadata.appDomain).toEqual(
+            testDappMetadata.appDomain
+          );
+
+          const app1Topic = wallet.subscriptions.getAll()[0].topic;
+
+          let gotMessage = false;
+
+          // send messages to app1
+          await sendNotifyMessage(account, "Test1");
+
+          console.log(">>>>>>>>>> sent message");
+
+          wallet.on("notify_message", () => {
+            gotMessage = true;
+          });
+
+          await waitForEvent(() => gotMessage);
+
+          console.log(">>>>>>>>>> got message");
+
+          const notifs1 = wallet.getNotificationHistory({
+            topic: app1Topic,
+            limit: 5,
+          });
+
+          // close transport to prevent getting a real response from the relay
+          await wallet.core.relayer.transportClose();
+
+          const emptyNotif = {
+            body: "",
+            id: "",
+            sentAt: Date.now(),
+            title: "",
+            type: "",
+            url: "",
+          };
+
+          wallet.engine["emit"]("notify_get_notifications_response", {
+            topic: "wrong_topic",
+            error: null,
+            hasMore: false,
+            hasMoreUnread: false,
+            notifications: [],
+          });
+
+          wallet.engine["emit"]("notify_get_notifications_response", {
+            topic: app1Topic,
+            error: null,
+            hasMore: false,
+            hasMoreUnread: false,
+            notifications: [emptyNotif, emptyNotif],
+          });
+
+          expect(notifs1).resolves.toSatisfy((resolved: any) => {
+            console.log("Resolved is!", resolved);
+            return resolved.notifications.length === 2;
+          });
+        }
+      );
     });
 
     describe.skipIf(!hasTestProjectSecret)("Message Deduping", () => {
