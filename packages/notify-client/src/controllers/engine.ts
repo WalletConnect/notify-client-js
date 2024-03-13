@@ -1771,6 +1771,7 @@ export class NotifyEngine extends INotifyEngine {
     const lastWatched = this.client.watchedAccounts
       .getAll()
       .find((acc) => acc.lastWatched);
+
     // If an account was previously watched
     if (lastWatched) {
       const { account, appDomain, allApps } = lastWatched;
@@ -1799,6 +1800,8 @@ export class NotifyEngine extends INotifyEngine {
           `[Notify] Engine.watchLastWatchedAccountIfExists > Failed to watch subscriptions for account ${account} > ${error.message}`
         );
       }
+    } else {
+      this.finishedInitialLoad = true;
     }
   };
 }
