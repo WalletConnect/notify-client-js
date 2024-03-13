@@ -1799,6 +1799,8 @@ export class NotifyEngine extends INotifyEngine {
           `[Notify] Engine.watchLastWatchedAccountIfExists > Failed to watch subscriptions for account ${account} > ${error.message}`
         );
       }
+    } else {
+      this.finishedInitialLoad = true;
     }
   };
 }
