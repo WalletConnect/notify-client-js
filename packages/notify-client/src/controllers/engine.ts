@@ -1767,10 +1767,13 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   private watchLastWatchedAccountIfExists = async () => {
+    console.log(">>> watching last account")
     // Get account that was watched
     const lastWatched = this.client.watchedAccounts
       .getAll()
       .find((acc) => acc.lastWatched);
+
+    console.log(">>> watching last account", { lastWatched})
     // If an account was previously watched
     if (lastWatched) {
       const { account, appDomain, allApps } = lastWatched;
@@ -1800,6 +1803,7 @@ export class NotifyEngine extends INotifyEngine {
         );
       }
     } else {
+      console.log(">>> Has finished initial load due to no account")
       this.finishedInitialLoad = true;
     }
   };
