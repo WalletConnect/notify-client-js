@@ -903,6 +903,11 @@ export class NotifyEngine extends INotifyEngine {
         topic,
         params: { message: messageClaims.msg },
       });
+      this.client.emit("notify_notification", {
+        id: payload.id,
+        topic,
+        params: { notification: messageClaims.msg },
+      });
     };
 
   protected onNotifyMessageResponse: INotifyEngine["onNotifyMessageResponse"] =
