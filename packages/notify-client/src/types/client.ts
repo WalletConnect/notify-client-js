@@ -36,7 +36,7 @@ export declare namespace NotifyClientTypes {
   };
 
   type NotifyNotificationRequestEventArgs = {
-    message: NotifyClientTypes.NotifyNotification;
+    notification: NotifyClientTypes.NotifyNotification;
   };
 
   type NotifyDeleteRequestEventArgs = { id: number; topic: string };
