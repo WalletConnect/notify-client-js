@@ -261,7 +261,7 @@ describe("Notify", () => {
           let gotNotifyMessageResponse = false;
           let notifyMessageEvent: any;
 
-	  let gotNotifyNotificationResponse = false;
+          let gotNotifyNotificationResponse = false;
           let notifyNotificationEvent: any;
 
           wallet.once("notify_message", (event) => {
@@ -272,7 +272,7 @@ describe("Notify", () => {
 
           wallet.once("notify_notification", (event) => {
             gotNotifyNotificationResponse = true;
-	    notifyNotificationEvent = event;
+            notifyNotificationEvent = event;
           });
 
           const sendResponse = await sendNotifyMessage(account, "Test");
