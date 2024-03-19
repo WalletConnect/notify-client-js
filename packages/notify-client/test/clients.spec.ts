@@ -261,10 +261,18 @@ describe("Notify", () => {
           let gotNotifyMessageResponse = false;
           let notifyMessageEvent: any;
 
+	  let gotNotifyNotificationResponse = false;
+          let notifyNotificationEvent: any;
+
           wallet.once("notify_message", (event) => {
             console.log("notify_message", event);
             gotNotifyMessageResponse = true;
             notifyMessageEvent = event;
+          });
+
+          wallet.once("notify_notification", (event) => {
+            gotNotifyNotificationResponse = true;
+	    notifyNotificationEvent = event;
           });
 
           const sendResponse = await sendNotifyMessage(account, "Test");
@@ -272,8 +280,10 @@ describe("Notify", () => {
           expect(sendResponse.status).toBe(200);
 
           await waitForEvent(() => gotNotifyMessageResponse);
+          await waitForEvent(() => gotNotifyNotificationResponse);
 
           expect(notifyMessageEvent.params.message.body).toBe("Test");
+          expect(notifyNotificationEvent.params.notification.body).toBe("Test");
         });
 
         it("reads the dapp's did.json from memory after the initial fetch", async () => {
