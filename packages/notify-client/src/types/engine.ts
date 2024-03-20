@@ -32,9 +32,11 @@ export declare namespace NotifyEngineTypes {
       }
   );
 
-  type Event = "notify_get_notifications_response";
+  type Event = "notify_get_notifications_response" |  "notify_mark_notifications_as_read_response";
 
   interface EventArguments {
+    notify_mark_notifications_as_read_response: EventResponseOrError<{
+    }>;
     notify_get_notifications_response: EventResponseOrError<{
       notifications: NotifyClientTypes.NotifyNotification[];
       hasMore: boolean;

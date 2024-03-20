@@ -478,57 +478,13 @@ export class NotifyEngine extends INotifyEngine {
     topic,
     notificationIds
   }) => {
-    this.isInitialized();
-
-    if (!this.client.subscriptions.keys.includes(topic)) {
-      throw new Error(`No subscription with topic ${topic} exists`);
-    }
-
-    const subscription = this.client.subscriptions.get(topic);
-
-    const identityKey = encodeEd25519Key(
-      await this.client.identityKeys.getIdentity({
-        account: subscription.account,
-      })
-    );
-
-    const issuedAt = Math.round(Date.now() / 1000);
-    const expiry =
-      issuedAt + ENGINE_RPC_OPTS["wc_markNotificationsAsRead"].req.ttl;
-
-    
-    const cachedKey = this.getCachedDappKey(subscription);
-    const dappUrl = getDappUrl(subscription.metadata.appDomain);
-    const { dappIdentityKey } = cachedKey
-      ? { dappIdentityKey: cachedKey }
-      : await this.resolveKeys(dappUrl);
-
-    const markNotificationsAsReadClaims: NotifyClientTypes.MarkNotificationsAsReadJwtClaims = {
-      act: "notify_mark_notifications_as_read",
-      iss: identityKey,
-      ksu: this.client.keyserverUrl,
-      aud: encodeEd25519Key(dappIdentityKey),
-      app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
-      all: false,
-      ids: notificationIds
-    }
-
-    const auth = await this.client.identityKeys.generateIdAuth(
-      subscription.account,
-      markNotificationsAsReadClaims
-    )
-
-    return new Promise((resolve, reject) => {
-      const listener = (
-        args: NotifyEngineTypes.EventArguments['notify_mark_notifications_as_read_response']
-	) => {
-	  if(args.topic !== topic) {
-	    return;
-	  }
-
-	  this.off('notify_mark_notifications_as_read_response')
-	}
-    })
+    return this.readNotifications({topic, notificationIds, all: false})
+  }
+  
+  public markAllNotificationsAsRead: INotifyEngine['markAllNotificationsAsRead'] = async ({
+    topic,
+  }) => {
+    return this.readNotifications({topic, notificationIds: [], all: true})
   }
 
   public decryptMessage: INotifyEngine["decryptMessage"] = async ({
@@ -1866,4 +1822,85 @@ export class NotifyEngine extends INotifyEngine {
       this.finishedInitialLoad = true;
     }
   };
+
+  private readNotifications = async ({topic, notificationIds, all}: {
+    topic: string,
+    notificationIds: string[],
+    all: boolean
+  }): Promise<void> => {
+
+    this.isInitialized();
+
+    if (!this.client.subscriptions.keys.includes(topic)) {
+      throw new Error(`No subscription with topic ${topic} exists`);
+    }
+
+    const subscription = this.client.subscriptions.get(topic);
+
+    const identityKey = encodeEd25519Key(
+      await this.client.identityKeys.getIdentity({
+        account: subscription.account,
+      })
+    );
+
+    const issuedAt = Math.round(Date.now() / 1000);
+    const expiry =
+      issuedAt + ENGINE_RPC_OPTS["wc_markNotificationsAsRead"].req.ttl;
+
+    
+    const cachedKey = this.getCachedDappKey(subscription);
+    const dappUrl = getDappUrl(subscription.metadata.appDomain);
+    const { dappIdentityKey } = cachedKey
+      ? { dappIdentityKey: cachedKey }
+      : await this.resolveKeys(dappUrl);
+
+    const markNotificationsAsReadClaims: NotifyClientTypes.MarkNotificationsAsReadJwtClaims = {
+      act: "notify_mark_notifications_as_read",
+      iss: identityKey,
+      ksu: this.client.keyserverUrl,
+      aud: encodeEd25519Key(dappIdentityKey),
+      app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
+      all,
+      ids: notificationIds,
+      sub: composeDidPkh(subscription.account),
+      iat: issuedAt,
+      exp: expiry,
+    }
+
+    const auth = await this.client.identityKeys.generateIdAuth(
+      subscription.account,
+      markNotificationsAsReadClaims
+    )
+
+    return new Promise((resolve, reject) => {
+      const listener = (
+        args: NotifyEngineTypes.EventArguments['notify_mark_notifications_as_read_response']
+	) => {
+	  if(args.topic !== topic) {
+	    return;
+	  }
+
+	  this.off('notify_mark_notifications_as_read_response', listener)
+
+          if (args.error === null) {
+            resolve();
+          } else {
+            reject(new Error(args.error));
+          }
+	};
+
+        this.on('notify_mark_notifications_as_read_response', listener);
+
+        setTimeout(() => {
+          reject(
+            new Error("markNotificationsAsRead timed out waiting for a response")
+          );
+          // Using five minutes as it is the TTL of wc_getNotificationHistory
+          // The FIVE_MINUTES const is in seconds, not ms.
+        }, FIVE_MINUTES * 1000);
+
+      this.sendRequest(topic, "wc_notifyMarkNotificationsAsRead", { auth })
+    })
+    
+  }
 }

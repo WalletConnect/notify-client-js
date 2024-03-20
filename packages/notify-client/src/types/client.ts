@@ -156,6 +156,17 @@ export declare namespace NotifyClientTypes {
     aft: string | null; // notification to start returning messages after,
   }
 
+  interface MarkNotificationsAsReadJwtClaims extends BaseJwtClaims {
+    act: string
+    iss: string // did:key of identity
+    ksu: string // keyserver url
+    aud: string // did:key client identity key
+    app: string // did web domain
+    all: boolean // all notifications, negates ids
+    ids: string[] // notification ids to read
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
+  }
+
   interface SubscriptionJWTClaims extends BaseJwtClaims {
     act: "notify_subscription"; // action intent (must be "notify_subscription")
     iss: string; // did:key of client identity key
