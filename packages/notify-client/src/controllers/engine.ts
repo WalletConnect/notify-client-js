@@ -1026,6 +1026,7 @@ export class NotifyEngine extends INotifyEngine {
             title: nf.title,
             url: nf.url || null,
             type: nf.type,
+	    isRead: nf.is_read
           }));
 
         this.emit("notify_get_notifications_response", {
@@ -1877,7 +1878,7 @@ export class NotifyEngine extends INotifyEngine {
 
     const issuedAt = Math.round(Date.now() / 1000);
     const expiry =
-      issuedAt + ENGINE_RPC_OPTS["wc_markNotificationsAsRead"].req.ttl;
+      issuedAt + ENGINE_RPC_OPTS["wc_notifyMarkNotificationsAsRead"].req.ttl;
 
     const cachedKey = this.getCachedDappKey(subscription);
     const dappUrl = getDappUrl(subscription.metadata.appDomain);

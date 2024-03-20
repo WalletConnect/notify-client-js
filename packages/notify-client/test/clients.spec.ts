@@ -13,7 +13,7 @@ import {
   NotifyClientTypes,
 } from "../src/";
 import { waitForEvent } from "./helpers/async";
-import { gmHackersMetadata, testDappMetadata } from "./helpers/mocks";
+import { testDappMetadata } from "./helpers/mocks";
 import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
 import { disconnectSocket } from "./helpers/ws";
 import axios from "axios";
@@ -524,7 +524,7 @@ describe("Notify", () => {
           wallet.getActiveSubscriptions()
         )[0];
 
-        wallet.once("notify_delete", (event) => {
+        wallet.once("notify_delete", () => {
           gotNotifyDeleteResponse = true;
         });
 
@@ -934,6 +934,7 @@ describe("Notify", () => {
             title: "",
             type: "",
             url: "",
+	    isRead: false
           };
 
           wallet.engine["emit"]("notify_get_notifications_response", {
@@ -959,6 +960,42 @@ describe("Notify", () => {
         }
       );
     });
+
+    describe.skipIf(!hasTestProjectSecret)("Read Unread", () => {
+      it("Correctly marks messages as read", async () => {
+        await createNotifySubscription(wallet, account, onSign);
+
+        expect(wallet.subscriptions.getAll().length).toEqual(1);
+
+        const testSub = wallet.subscriptions.getAll()[0];
+
+        expect(
+          Object.keys(wallet.messages.get(testSub.topic).messages).length
+        ).toEqual(0);
+
+        let messagesReceived = 0;
+
+        wallet.on("notify_message", () => {
+          messagesReceived++;
+        });
+
+        await sendNotifyMessage(account, "Test");
+
+	await waitForEvent(() => Boolean(messagesReceived))
+
+	const messagesFetchPre = await wallet.getNotificationHistory({topic: testSub.topic, limit: 10});
+	expect(messagesFetchPre.notifications.length).toEqual(1)
+	const messagePre = messagesFetchPre.notifications[0];
+	expect(messagePre.isRead).toEqual(false)
+
+	await wallet.markNotificationsAsRead({topic: testSub.topic, notificationIds: [messagePre.id]})
+
+	const messagesFetchPost = await wallet.getNotificationHistory({topic: testSub.topic, limit: 10});
+	expect(messagesFetchPost.notifications.length).toEqual(1)
+	const messagePost = messagesFetchPost.notifications[0];
+	expect(messagePost.isRead).toEqual(true)
+      })
+    })
 
     describe.skipIf(!hasTestProjectSecret)("Message Deduping", () => {
       it("dedups messages based on notify message id", async () => {
