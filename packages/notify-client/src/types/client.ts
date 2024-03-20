@@ -369,6 +369,8 @@ export abstract class INotifyClient {
   public abstract getNotificationHistory: INotifyEngine["getNotificationHistory"];
   public abstract getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"];
   public abstract deleteSubscription: INotifyEngine["deleteSubscription"];
+  public abstract markNotificationsAsRead: INotifyEngine["markNotificationsAsRead"];
+  public abstract markAllNotificationsAsRead: INotifyEngine["markAllNotificationsAsRead"];
 
   // Flag is used for consumers of the SDK to know if notify client finished loading
   // since the event below might be emitted before `init` resolves.

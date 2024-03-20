@@ -218,6 +218,24 @@ export class NotifyClient extends INotifyClient {
     }
   };
 
+  public markNotificationsAsRead: INotifyClient['markNotificationsAsRead'] = async (params) => {
+    try {
+      return await this.engine.markNotificationsAsRead(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  }
+
+  public markAllNotificationsAsRead: INotifyClient['markAllNotificationsAsRead'] = async (params) => {
+    try {
+      return await this.engine.markAllNotificationsAsRead(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  }
+
   // ---------- Events ----------------------------------------------- //
 
   public emit: INotifyClient["emit"] = (name, listener) => {
