@@ -86,11 +86,11 @@ export const ENGINE_RPC_OPTS: Record<JsonRpcTypes.WcMethod, RpcOpts> = {
   wc_notifyMarkNotificationsAsRead: {
     req: {
       ttl: FIVE_MINUTES,
-      tag: 4016
+      tag: 4016,
     },
     res: {
       ttl: FIVE_MINUTES,
-      tag: 4017
-    }
-  }
+      tag: 4017,
+    },
+  },
 };

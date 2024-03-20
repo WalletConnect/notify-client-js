@@ -32,11 +32,12 @@ export declare namespace NotifyEngineTypes {
       }
   );
 
-  type Event = "notify_get_notifications_response" |  "notify_mark_notifications_as_read_response";
+  type Event =
+    | "notify_get_notifications_response"
+    | "notify_mark_notifications_as_read_response";
 
   interface EventArguments {
-    notify_mark_notifications_as_read_response: EventResponseOrError<{
-    }>;
+    notify_mark_notifications_as_read_response: EventResponseOrError<{}>;
     notify_get_notifications_response: EventResponseOrError<{
       notifications: NotifyClientTypes.NotifyNotification[];
       hasMore: boolean;
@@ -94,13 +95,13 @@ export abstract class INotifyEngine {
   }): Promise<NotifyClientTypes.NotifyNotification>;
 
   public abstract markNotificationsAsRead(params: {
-    topic: string,
-    notificationIds: string[]
-  }): Promise<void>
+    topic: string;
+    notificationIds: string[];
+  }): Promise<void>;
 
   public abstract markAllNotificationsAsRead(params: {
-    topic: string,
-  }): Promise<void>
+    topic: string;
+  }): Promise<void>;
 
   // delete active subscription
   public abstract deleteSubscription(params: { topic: string }): Promise<void>;

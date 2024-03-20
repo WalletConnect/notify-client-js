@@ -34,7 +34,7 @@ export declare namespace JsonRpcTypes {
     };
     wc_notifyMarkNotificationsAsRead: {
       auth: string;
-    }
+    };
   }
 
   // ---- JSON-RPC Responses -----------------------------
@@ -60,6 +60,6 @@ export declare namespace JsonRpcTypes {
     };
     wc_notifyMarkNotificationsAsRead: {
       auth: string;
-    }
+    };
   }
 }
