@@ -127,7 +127,7 @@ export declare namespace NotifyClientTypes {
     id: string;
     url: string | null;
     type: string;
-    is_read: boolean
+    is_read: boolean;
   }
 
   interface NotifyNotification {

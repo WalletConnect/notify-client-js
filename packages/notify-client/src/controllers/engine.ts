@@ -1026,7 +1026,7 @@ export class NotifyEngine extends INotifyEngine {
             title: nf.title,
             url: nf.url || null,
             type: nf.type,
-	    isRead: nf.is_read
+            isRead: nf.is_read,
           }));
 
         this.emit("notify_get_notifications_response", {

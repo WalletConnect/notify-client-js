@@ -934,7 +934,7 @@ describe("Notify", () => {
             title: "",
             type: "",
             url: "",
-	    isRead: false
+            isRead: false,
           };
 
           wallet.engine["emit"]("notify_get_notifications_response", {
@@ -981,21 +981,30 @@ describe("Notify", () => {
 
         await sendNotifyMessage(account, "Test");
 
-	await waitForEvent(() => Boolean(messagesReceived))
+        await waitForEvent(() => Boolean(messagesReceived));
 
-	const messagesFetchPre = await wallet.getNotificationHistory({topic: testSub.topic, limit: 10});
-	expect(messagesFetchPre.notifications.length).toEqual(1)
-	const messagePre = messagesFetchPre.notifications[0];
-	expect(messagePre.isRead).toEqual(false)
+        const messagesFetchPre = await wallet.getNotificationHistory({
+          topic: testSub.topic,
+          limit: 10,
+        });
+        expect(messagesFetchPre.notifications.length).toEqual(1);
+        const messagePre = messagesFetchPre.notifications[0];
+        expect(messagePre.isRead).toEqual(false);
 
-	await wallet.markNotificationsAsRead({topic: testSub.topic, notificationIds: [messagePre.id]})
+        await wallet.markNotificationsAsRead({
+          topic: testSub.topic,
+          notificationIds: [messagePre.id],
+        });
 
-	const messagesFetchPost = await wallet.getNotificationHistory({topic: testSub.topic, limit: 10});
-	expect(messagesFetchPost.notifications.length).toEqual(1)
-	const messagePost = messagesFetchPost.notifications[0];
-	expect(messagePost.isRead).toEqual(true)
-      })
-    })
+        const messagesFetchPost = await wallet.getNotificationHistory({
+          topic: testSub.topic,
+          limit: 10,
+        });
+        expect(messagesFetchPost.notifications.length).toEqual(1);
+        const messagePost = messagesFetchPost.notifications[0];
+        expect(messagePost.isRead).toEqual(true);
+      });
+    });
 
     describe.skipIf(!hasTestProjectSecret)("Message Deduping", () => {
       it("dedups messages based on notify message id", async () => {
