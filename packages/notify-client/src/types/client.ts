@@ -17,6 +17,7 @@ export declare namespace NotifyClientTypes {
   type Event =
     | "notify_subscription"
     | "notify_message"
+    | "notify_notification"
     | "notify_delete"
     | "notify_update"
     | "notify_subscriptions_changed";
@@ -34,6 +35,10 @@ export declare namespace NotifyClientTypes {
     message: NotifyClientTypes.NotifyNotification;
   };
 
+  type NotifyNotificationRequestEventArgs = {
+    notification: NotifyClientTypes.NotifyNotification;
+  };
+
   type NotifyDeleteRequestEventArgs = { id: number; topic: string };
 
   interface BaseEventArgs<T = unknown> {
@@ -49,6 +54,7 @@ export declare namespace NotifyClientTypes {
       }
     >;
     notify_message: BaseEventArgs<NotifyMessageRequestEventArgs>;
+    notify_notification: BaseEventArgs<NotifyNotificationRequestEventArgs>;
     notify_delete: BaseEventArgs<NotifyResponseEventArgs>;
     notify_update: BaseEventArgs<
       NotifyResponseEventArgs & {
