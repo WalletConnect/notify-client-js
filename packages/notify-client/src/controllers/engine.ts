@@ -474,6 +474,63 @@ export class NotifyEngine extends INotifyEngine {
       });
     };
 
+  public markNotificationsAsRead: INotifyEngine['markNotificationsAsRead'] = async ({
+    topic,
+    notificationIds
+  }) => {
+    this.isInitialized();
+
+    if (!this.client.subscriptions.keys.includes(topic)) {
+      throw new Error(`No subscription with topic ${topic} exists`);
+    }
+
+    const subscription = this.client.subscriptions.get(topic);
+
+    const identityKey = encodeEd25519Key(
+      await this.client.identityKeys.getIdentity({
+        account: subscription.account,
+      })
+    );
+
+    const issuedAt = Math.round(Date.now() / 1000);
+    const expiry =
+      issuedAt + ENGINE_RPC_OPTS["wc_markNotificationsAsRead"].req.ttl;
+
+    
+    const cachedKey = this.getCachedDappKey(subscription);
+    const dappUrl = getDappUrl(subscription.metadata.appDomain);
+    const { dappIdentityKey } = cachedKey
+      ? { dappIdentityKey: cachedKey }
+      : await this.resolveKeys(dappUrl);
+
+    const markNotificationsAsReadClaims: NotifyClientTypes.MarkNotificationsAsReadJwtClaims = {
+      act: "notify_mark_notifications_as_read",
+      iss: identityKey,
+      ksu: this.client.keyserverUrl,
+      aud: encodeEd25519Key(dappIdentityKey),
+      app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
+      all: false,
+      ids: notificationIds
+    }
+
+    const auth = await this.client.identityKeys.generateIdAuth(
+      subscription.account,
+      markNotificationsAsReadClaims
+    )
+
+    return new Promise((resolve, reject) => {
+      const listener = (
+        args: NotifyEngineTypes.EventArguments['notify_mark_notifications_as_read_response']
+	) => {
+	  if(args.topic !== topic) {
+	    return;
+	  }
+
+	  this.off('notify_mark_notifications_as_read_response')
+	}
+    })
+  }
+
   public decryptMessage: INotifyEngine["decryptMessage"] = async ({
     topic,
     encryptedMessage,

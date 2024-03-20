@@ -91,6 +91,15 @@ export abstract class INotifyEngine {
     encryptedMessage: string;
   }): Promise<NotifyClientTypes.NotifyNotification>;
 
+  public abstract markNotificationsAsRead(params: {
+    topic: string,
+    notificationIds: string[]
+  }): Promise<void>
+
+  public abstract markAllNotificationsAsRead(params: {
+    topic: string,
+  }): Promise<void>
+
   // delete active subscription
   public abstract deleteSubscription(params: { topic: string }): Promise<void>;
 
