@@ -211,6 +211,13 @@ export abstract class INotifyEngine {
       | JsonRpcError
   ): Promise<void>;
 
+  protected abstract onNotifyMarkNotificationsAsReadResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyMarkNotificationsAsRead"]>
+      | JsonRpcError
+  ): Promise<void>;
+
   protected abstract on: <E extends NotifyEngineTypes.Event>(
     event: E,
     listener: (args: NotifyEngineTypes.EventArguments[E]) => void
