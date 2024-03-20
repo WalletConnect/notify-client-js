@@ -745,8 +745,8 @@ export class NotifyEngine extends INotifyEngine {
           return this.onNotifyWatchSubscriptionsResponse(topic, payload);
         case "wc_notifyGetNotifications":
           return this.onNotifyGetNotificationsResponse(topic, payload);
-        case 'wc_notifyMarkNotificationsAsRead':
-          return this.onNotifyMarkNotificationsAsReadResponse(topic, payload)
+        case "wc_notifyMarkNotificationsAsRead":
+          return this.onNotifyMarkNotificationsAsReadResponse(topic, payload);
         default:
           return this.client.logger.info(
             `[Notify] Unsupported response method ${resMethod}`
@@ -974,7 +974,7 @@ export class NotifyEngine extends INotifyEngine {
       }
     };
 
-  protected onNotifyMarkNotificationsAsReadResponse: INotifyEngine['onNotifyMarkNotificationsAsReadResponse'] =
+  protected onNotifyMarkNotificationsAsReadResponse: INotifyEngine["onNotifyMarkNotificationsAsReadResponse"] =
     async (topic, payload) => {
       if (isJsonRpcResult(payload)) {
         this.client.logger.info(
@@ -983,14 +983,13 @@ export class NotifyEngine extends INotifyEngine {
           payload
         );
 
-	// Contents of the JWT don't matter as we only care about whether or not
-	// the success was successful or failed
+        // Contents of the JWT don't matter as we only care about whether or not
+        // the success was successful or failed
 
         this.emit("notify_mark_notifications_as_read_response", {
-	  topic,
-	  error: null
-	});
-
+          topic,
+          error: null,
+        });
       } else if (isJsonRpcError(payload)) {
         this.client.logger.error(
           "[Notify] Engine.onNotifyGetNotificationsResponse  > error:",
@@ -1003,7 +1002,7 @@ export class NotifyEngine extends INotifyEngine {
           error: payload.error.message,
         });
       }
-    }
+    };
 
   protected onNotifyGetNotificationsResponse: INotifyEngine["onNotifyGetNotificationsResponse"] =
     async (topic, payload) => {
