@@ -542,22 +542,28 @@ describe("Notify", () => {
           limit: 1,
         });
 
-	expect(history.notifications.length).toEqual(1);
-	expect(history.hasMoreUnread).toEqual(true);
-	expect(history.notifications[0].isRead).toEqual(false);
+        expect(history.notifications.length).toEqual(1);
+        expect(history.hasMoreUnread).toEqual(true);
+        expect(history.notifications[0].isRead).toEqual(false);
 
-	await wallet.markNotificationsAsRead({topic: testSub.topic, notificationIds: [history.notifications[0].id]})
-
-	const historyAfterReadingFirstNotif = await wallet.getNotificationHistory({
+        await wallet.markNotificationsAsRead({
           topic: testSub.topic,
-          limit: 2,
-	  unreadFirst: true
+          notificationIds: [history.notifications[0].id],
         });
 
-	expect(historyAfterReadingFirstNotif.notifications.length).toEqual(2)
+        const historyAfterReadingFirstNotif =
+          await wallet.getNotificationHistory({
+            topic: testSub.topic,
+            limit: 2,
+            unreadFirst: true,
+          });
 
-	expect(historyAfterReadingFirstNotif.notifications[0].isRead).toEqual(false);
-      })
+        expect(historyAfterReadingFirstNotif.notifications.length).toEqual(2);
+
+        expect(historyAfterReadingFirstNotif.notifications[0].isRead).toEqual(
+          false
+        );
+      });
     });
 
     describe("deleteSubscription", () => {

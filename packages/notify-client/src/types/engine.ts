@@ -112,7 +112,7 @@ export abstract class INotifyEngine {
     topic: string;
     limit?: number;
     startingAfter?: string;
-    unreadFirst?: boolean
+    unreadFirst?: boolean;
   }): Promise<{
     notifications: NotifyClientTypes.NotifyNotification[];
     hasMore: boolean;
