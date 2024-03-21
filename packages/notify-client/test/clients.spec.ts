@@ -510,6 +510,54 @@ describe("Notify", () => {
 
         expect(history.hasMore).toEqual(false);
       });
+      it("fetches unread first", async () => {
+        let totalMessages = 0;
+        await createNotifySubscription(wallet, account, onSign);
+
+        expect(wallet.subscriptions.getAll().length).toEqual(1);
+
+        const testSub = wallet.subscriptions.getAll()[0];
+
+        expect(
+          Object.keys(wallet.messages.get(testSub.topic).messages).length
+        ).toEqual(0);
+
+        const now = Date.now();
+
+        await waitForEvent(() => Date.now() - now > 1_000);
+
+        wallet.on("notify_message", () => {
+          totalMessages++;
+        });
+
+        const notifications = [0, 1].map((num) => `${num}Test`);
+        for (const notification of notifications) {
+          await sendNotifyMessage(account, notification);
+        }
+
+        await waitForEvent(() => totalMessages === 2);
+
+        const history = await wallet.getNotificationHistory({
+          topic: testSub.topic,
+          limit: 1,
+        });
+
+	expect(history.notifications.length).toEqual(1);
+	expect(history.hasMoreUnread).toEqual(true);
+	expect(history.notifications[0].isRead).toEqual(false);
+
+	await wallet.markNotificationsAsRead({topic: testSub.topic, notificationIds: [history.notifications[0].id]})
+
+	const historyAfterReadingFirstNotif = await wallet.getNotificationHistory({
+          topic: testSub.topic,
+          limit: 2,
+	  unreadFirst: true
+        });
+
+	expect(historyAfterReadingFirstNotif.notifications.length).toEqual(2)
+
+	expect(historyAfterReadingFirstNotif.notifications[0].isRead).toEqual(false);
+      })
     });
 
     describe("deleteSubscription", () => {
