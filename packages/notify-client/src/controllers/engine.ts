@@ -1390,7 +1390,7 @@ export class NotifyEngine extends INotifyEngine {
         relay: {
           protocol: RELAYER_DEFAULT_PROTOCOL,
         },
-	unreadNotificationCount: sub.unreadNotificationCount
+        unreadNotificationCount: sub.unreadNotificationCount,
       });
 
       await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);

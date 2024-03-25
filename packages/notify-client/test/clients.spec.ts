@@ -567,8 +567,7 @@ describe("Notify", () => {
 
         const storageLoc2 = generateClientDbName("notifyTestAutomatic");
 
-
-	const wallet2 = await NotifyClient.init({
+        const wallet2 = await NotifyClient.init({
           name: "testNotifyClient2",
           logger: "error",
           keyserverUrl: DEFAULT_KEYSERVER_URL,
@@ -578,12 +577,12 @@ describe("Notify", () => {
             storageOptions: { database: storageLoc2 },
           }),
           projectId,
-	})
+        });
 
-	let subsChangedWallet2: NotifyClientTypes.NotifySubscription[] = []
-	wallet2.on('notify_subscriptions_changed', (args) => {
-	  subsChangedWallet2 = args.params.subscriptions
-	})
+        let subsChangedWallet2: NotifyClientTypes.NotifySubscription[] = [];
+        wallet2.on("notify_subscriptions_changed", (args) => {
+          subsChangedWallet2 = args.params.subscriptions;
+        });
 
         const preparedRegistration = await wallet2.prepareRegistration({
           account,
@@ -596,12 +595,12 @@ describe("Notify", () => {
           signature: await onSign(preparedRegistration.message),
         });
 
-	await waitForEvent(() => Boolean(subsChangedWallet2.length))
+        await waitForEvent(() => Boolean(subsChangedWallet2.length));
 
-	expect(subsChangedWallet2.length).toEqual(1)
+        expect(subsChangedWallet2.length).toEqual(1);
 
-	expect(subsChangedWallet2[0].unreadNotificationCount).toEqual(1)
-      })
+        expect(subsChangedWallet2[0].unreadNotificationCount).toEqual(1);
+      });
 
       it("fetches unread first", async () => {
         let totalMessages = 0;
