@@ -1,7 +1,7 @@
 {
   "name": "@walletconnect/notify-client",
   "description": "WalletConnect Notify Client",
-  "version": "1.1.4",
+  "version": "1.2.1",
   "author": "WalletConnect, Inc. <walletconnect.com>",
   "homepage": "https://github.com/walletconnect/notify-client-js/",
   "license": "Apache-2.0",
