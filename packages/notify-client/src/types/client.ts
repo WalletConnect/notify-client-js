@@ -109,6 +109,7 @@ export declare namespace NotifyClientTypes {
     scope: ScopeMap;
     expiry: number;
     symKey: string;
+    unreadNotificationCount: number;
   }
 
   interface NotifyServerSubscription {
@@ -118,6 +119,7 @@ export declare namespace NotifyClientTypes {
     account: string;
     symKey: string;
     expiry: number;
+    unreadNotificationCount: number;
   }
 
   interface NotifyServerNotification {
