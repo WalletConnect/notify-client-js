@@ -1863,7 +1863,7 @@ export class NotifyEngine extends INotifyEngine {
     all,
   }: {
     topic: string;
-    notificationIds: string[];
+    notificationIds: string[] | null;
     all: boolean;
   }): Promise<void> => {
     this.isInitialized();
