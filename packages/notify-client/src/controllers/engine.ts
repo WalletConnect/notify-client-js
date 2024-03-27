@@ -480,7 +480,11 @@ export class NotifyEngine extends INotifyEngine {
 
   public markAllNotificationsAsRead: INotifyEngine["markAllNotificationsAsRead"] =
     async ({ topic }) => {
-      return this.readNotifications({ topic, notificationIds: null, all: true });
+      return this.readNotifications({
+        topic,
+        notificationIds: null,
+        all: true,
+      });
     };
 
   public decryptMessage: INotifyEngine["decryptMessage"] = async ({

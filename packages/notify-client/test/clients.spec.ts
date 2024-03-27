@@ -439,7 +439,7 @@ describe("Notify", () => {
       it("can filter currently active notify subscriptions", async () => {
         [1, 2].forEach((num) => {
           wallet.subscriptions.set(`topic${num}`, {
-	    unreadNotificationCount: 0,
+            unreadNotificationCount: 0,
             account: `account${num}`,
             expiry: Date.now(),
             appAuthenticationKey: "",
@@ -1159,7 +1159,7 @@ describe("Notify", () => {
 
         expect(messagePost1.isRead).toEqual(true);
         expect(messagePost2.isRead).toEqual(true);
-      })
+      });
 
       it("Correctly marks messages as read", async () => {
         await createNotifySubscription(wallet, account, onSign);
