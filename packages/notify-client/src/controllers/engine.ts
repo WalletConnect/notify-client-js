@@ -396,7 +396,7 @@ export class NotifyEngine extends INotifyEngine {
   };
 
   public getNotificationHistory: INotifyEngine["getNotificationHistory"] =
-    async ({ topic, limit, startingAfter }) => {
+    async ({ topic, limit, startingAfter, unreadFirst }) => {
       this.isInitialized();
 
       if (!this.client.subscriptions.keys.includes(topic)) {
@@ -433,8 +433,7 @@ export class NotifyEngine extends INotifyEngine {
           aud: encodeEd25519Key(dappIdentityKey),
           app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
           lmt: limit ?? 50,
-          // TODO: adapt to unread capabilities when available on Notify server
-          urf: false,
+          urf: unreadFirst ?? true,
         };
 
       const auth = await this.client.identityKeys.generateIdAuth(
@@ -471,6 +470,20 @@ export class NotifyEngine extends INotifyEngine {
         }, FIVE_MINUTES * 1000);
 
         this.sendRequest(topic, "wc_notifyGetNotifications", { auth });
+      });
+    };
+
+  public markNotificationsAsRead: INotifyEngine["markNotificationsAsRead"] =
+    async ({ topic, notificationIds }) => {
+      return this.readNotifications({ topic, notificationIds, all: false });
+    };
+
+  public markAllNotificationsAsRead: INotifyEngine["markAllNotificationsAsRead"] =
+    async ({ topic }) => {
+      return this.readNotifications({
+        topic,
+        notificationIds: null,
+        all: true,
       });
     };
 
@@ -735,6 +748,8 @@ export class NotifyEngine extends INotifyEngine {
           return this.onNotifyWatchSubscriptionsResponse(topic, payload);
         case "wc_notifyGetNotifications":
           return this.onNotifyGetNotificationsResponse(topic, payload);
+        case "wc_notifyMarkNotificationsAsRead":
+          return this.onNotifyMarkNotificationsAsReadResponse(topic, payload);
         default:
           return this.client.logger.info(
             `[Notify] Unsupported response method ${resMethod}`
@@ -962,6 +977,36 @@ export class NotifyEngine extends INotifyEngine {
       }
     };
 
+  protected onNotifyMarkNotificationsAsReadResponse: INotifyEngine["onNotifyMarkNotificationsAsReadResponse"] =
+    async (topic, payload) => {
+      if (isJsonRpcResult(payload)) {
+        this.client.logger.info(
+          "[Notify] Engine.onNotifyGetNotificationsResponse > result:",
+          topic,
+          payload
+        );
+
+        // Contents of the JWT don't matter as we only care about whether or not
+        // the success was successful or failed
+
+        this.emit("notify_mark_notifications_as_read_response", {
+          topic,
+          error: null,
+        });
+      } else if (isJsonRpcError(payload)) {
+        this.client.logger.error(
+          "[Notify] Engine.onNotifyGetNotificationsResponse  > error:",
+          topic,
+          payload.error
+        );
+
+        this.emit("notify_mark_notifications_as_read_response", {
+          topic,
+          error: payload.error.message,
+        });
+      }
+    };
+
   protected onNotifyGetNotificationsResponse: INotifyEngine["onNotifyGetNotificationsResponse"] =
     async (topic, payload) => {
       if (isJsonRpcResult(payload)) {
@@ -984,6 +1029,7 @@ export class NotifyEngine extends INotifyEngine {
             title: nf.title,
             url: nf.url || null,
             type: nf.type,
+            isRead: nf.is_read,
           }));
 
         this.emit("notify_get_notifications_response", {
@@ -1348,6 +1394,7 @@ export class NotifyEngine extends INotifyEngine {
         relay: {
           protocol: RELAYER_DEFAULT_PROTOCOL,
         },
+        unreadNotificationCount: sub.unreadNotificationCount,
       });
 
       await this.client.core.crypto.setSymKey(sub.symKey, sbTopic);
@@ -1808,5 +1855,88 @@ export class NotifyEngine extends INotifyEngine {
     } else {
       this.finishedInitialLoad = true;
     }
+  };
+
+  private readNotifications = async ({
+    topic,
+    notificationIds,
+    all,
+  }: {
+    topic: string;
+    notificationIds: string[] | null;
+    all: boolean;
+  }): Promise<void> => {
+    this.isInitialized();
+
+    if (!this.client.subscriptions.keys.includes(topic)) {
+      throw new Error(`No subscription with topic ${topic} exists`);
+    }
+
+    const subscription = this.client.subscriptions.get(topic);
+
+    const identityKey = encodeEd25519Key(
+      await this.client.identityKeys.getIdentity({
+        account: subscription.account,
+      })
+    );
+
+    const issuedAt = Math.round(Date.now() / 1000);
+    const expiry =
+      issuedAt + ENGINE_RPC_OPTS["wc_notifyMarkNotificationsAsRead"].req.ttl;
+
+    const cachedKey = this.getCachedDappKey(subscription);
+    const dappUrl = getDappUrl(subscription.metadata.appDomain);
+    const { dappIdentityKey } = cachedKey
+      ? { dappIdentityKey: cachedKey }
+      : await this.resolveKeys(dappUrl);
+
+    const markNotificationsAsReadClaims: NotifyClientTypes.MarkNotificationsAsReadJwtClaims =
+      {
+        act: "notify_mark_notifications_as_read",
+        iss: identityKey,
+        ksu: this.client.keyserverUrl,
+        aud: encodeEd25519Key(dappIdentityKey),
+        app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
+        all,
+        ids: notificationIds,
+        sub: composeDidPkh(subscription.account),
+        iat: issuedAt,
+        exp: expiry,
+      };
+
+    const auth = await this.client.identityKeys.generateIdAuth(
+      subscription.account,
+      markNotificationsAsReadClaims
+    );
+
+    return new Promise((resolve, reject) => {
+      const listener = (
+        args: NotifyEngineTypes.EventArguments["notify_mark_notifications_as_read_response"]
+      ) => {
+        if (args.topic !== topic) {
+          return;
+        }
+
+        this.off("notify_mark_notifications_as_read_response", listener);
+
+        if (args.error === null) {
+          resolve();
+        } else {
+          reject(new Error(args.error));
+        }
+      };
+
+      this.on("notify_mark_notifications_as_read_response", listener);
+
+      setTimeout(() => {
+        reject(
+          new Error("markNotificationsAsRead timed out waiting for a response")
+        );
+        // Using five minutes as it is the TTL of wc_getNotificationHistory
+        // The FIVE_MINUTES const is in seconds, not ms.
+      }, FIVE_MINUTES * 1000);
+
+      this.sendRequest(topic, "wc_notifyMarkNotificationsAsRead", { auth });
+    });
   };
 }

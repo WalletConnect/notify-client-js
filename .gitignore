@@ -36,3 +36,6 @@ setup
 result*
 ops/grafana/grafana.ini
 .rollup.cache
+
+# Test runs
+packages/notify-client/test/tmp

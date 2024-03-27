@@ -109,6 +109,7 @@ export declare namespace NotifyClientTypes {
     scope: ScopeMap;
     expiry: number;
     symKey: string;
+    unreadNotificationCount: number;
   }
 
   interface NotifyServerSubscription {
@@ -118,6 +119,7 @@ export declare namespace NotifyClientTypes {
     account: string;
     symKey: string;
     expiry: number;
+    unreadNotificationCount: number;
   }
 
   interface NotifyServerNotification {
@@ -127,6 +129,7 @@ export declare namespace NotifyClientTypes {
     id: string;
     url: string | null;
     type: string;
+    is_read: boolean;
   }
 
   interface NotifyNotification {
@@ -135,6 +138,7 @@ export declare namespace NotifyClientTypes {
     body: string;
     id: string;
     url: string | null;
+    isRead: boolean;
     type: string;
   }
 
@@ -154,6 +158,17 @@ export declare namespace NotifyClientTypes {
     urf: boolean; // unread first
     lmt: number; // max number of notifications
     aft: string | null; // notification to start returning messages after,
+  }
+
+  interface MarkNotificationsAsReadJwtClaims extends BaseJwtClaims {
+    act: string;
+    iss: string; // did:key of identity
+    ksu: string; // keyserver url
+    aud: string; // did:key client identity key
+    app: string; // did web domain
+    all: boolean; // all notifications, negates ids
+    ids: string[] | null; // notification ids to read
+    sub: string; // did:pkh of blockchain account that this notify subscription is associated with
   }
 
   interface SubscriptionJWTClaims extends BaseJwtClaims {
@@ -358,6 +373,8 @@ export abstract class INotifyClient {
   public abstract getNotificationHistory: INotifyEngine["getNotificationHistory"];
   public abstract getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"];
   public abstract deleteSubscription: INotifyEngine["deleteSubscription"];
+  public abstract markNotificationsAsRead: INotifyEngine["markNotificationsAsRead"];
+  public abstract markAllNotificationsAsRead: INotifyEngine["markAllNotificationsAsRead"];
 
   // Flag is used for consumers of the SDK to know if notify client finished loading
   // since the event below might be emitted before `init` resolves.

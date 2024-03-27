@@ -13,7 +13,7 @@ import {
   NotifyClientTypes,
 } from "../src/";
 import { waitForEvent } from "./helpers/async";
-import { gmHackersMetadata, testDappMetadata } from "./helpers/mocks";
+import { testDappMetadata } from "./helpers/mocks";
 import { createNotifySubscription, sendNotifyMessage } from "./helpers/notify";
 import { disconnectSocket } from "./helpers/ws";
 import axios from "axios";
@@ -439,6 +439,7 @@ describe("Notify", () => {
       it("can filter currently active notify subscriptions", async () => {
         [1, 2].forEach((num) => {
           wallet.subscriptions.set(`topic${num}`, {
+            unreadNotificationCount: 0,
             account: `account${num}`,
             expiry: Date.now(),
             appAuthenticationKey: "",
@@ -510,6 +511,152 @@ describe("Notify", () => {
 
         expect(history.hasMore).toEqual(false);
       });
+
+      it("It fetches unread count in subscriptions", async () => {
+        let totalMessages = 0;
+        await createNotifySubscription(wallet, account, onSign);
+
+        expect(wallet.subscriptions.getAll().length).toEqual(1);
+
+        const testSub = wallet.subscriptions.getAll()[0];
+
+        expect(
+          Object.keys(wallet.messages.get(testSub.topic).messages).length
+        ).toEqual(0);
+
+        const now = Date.now();
+
+        await waitForEvent(() => Date.now() - now > 1_000);
+
+        wallet.on("notify_message", () => {
+          totalMessages++;
+        });
+
+        const notifications = [0, 1].map((num) => `${num}Test`);
+        for (const notification of notifications) {
+          await sendNotifyMessage(account, notification);
+        }
+
+        await waitForEvent(() => totalMessages === 2);
+
+        const history = await wallet.getNotificationHistory({
+          topic: testSub.topic,
+          limit: 1,
+        });
+
+        expect(history.notifications.length).toEqual(1);
+        expect(history.hasMoreUnread).toEqual(true);
+        expect(history.notifications[0].isRead).toEqual(false);
+
+        await wallet.markNotificationsAsRead({
+          topic: testSub.topic,
+          notificationIds: [history.notifications[0].id],
+        });
+
+        const historyAfterReadingFirstNotif =
+          await wallet.getNotificationHistory({
+            topic: testSub.topic,
+            limit: 2,
+            unreadFirst: true,
+          });
+
+        expect(historyAfterReadingFirstNotif.notifications.length).toEqual(2);
+
+        expect(historyAfterReadingFirstNotif.notifications[0].isRead).toEqual(
+          false
+        );
+
+        const storageLoc2 = generateClientDbName("notifyTestAutomatic");
+
+        const wallet2 = await NotifyClient.init({
+          name: "testNotifyClient2",
+          logger: "error",
+          keyserverUrl: DEFAULT_KEYSERVER_URL,
+          relayUrl: DEFAULT_RELAY_URL,
+          core: new Core({
+            projectId,
+            storageOptions: { database: storageLoc2 },
+          }),
+          projectId,
+        });
+
+        let subsChangedWallet2: NotifyClientTypes.NotifySubscription[] = [];
+        wallet2.on("notify_subscriptions_changed", (args) => {
+          subsChangedWallet2 = args.params.subscriptions;
+        });
+
+        const preparedRegistration = await wallet2.prepareRegistration({
+          account,
+          domain: testDappMetadata.appDomain,
+          allApps: true,
+        });
+
+        await wallet2.register({
+          registerParams: preparedRegistration.registerParams,
+          signature: await onSign(preparedRegistration.message),
+        });
+
+        await waitForEvent(() => Boolean(subsChangedWallet2.length));
+
+        expect(subsChangedWallet2.length).toEqual(1);
+
+        expect(subsChangedWallet2[0].unreadNotificationCount).toEqual(1);
+      });
+
+      it("fetches unread first", async () => {
+        let totalMessages = 0;
+        await createNotifySubscription(wallet, account, onSign);
+
+        expect(wallet.subscriptions.getAll().length).toEqual(1);
+
+        const testSub = wallet.subscriptions.getAll()[0];
+
+        expect(
+          Object.keys(wallet.messages.get(testSub.topic).messages).length
+        ).toEqual(0);
+
+        const now = Date.now();
+
+        await waitForEvent(() => Date.now() - now > 1_000);
+
+        wallet.on("notify_message", () => {
+          totalMessages++;
+        });
+
+        const notifications = [0, 1].map((num) => `${num}Test`);
+        for (const notification of notifications) {
+          await sendNotifyMessage(account, notification);
+        }
+
+        await waitForEvent(() => totalMessages === 2);
+
+        const history = await wallet.getNotificationHistory({
+          topic: testSub.topic,
+          limit: 1,
+        });
+
+        expect(history.notifications.length).toEqual(1);
+        expect(history.hasMoreUnread).toEqual(true);
+        expect(history.notifications[0].isRead).toEqual(false);
+
+        await wallet.markNotificationsAsRead({
+          topic: testSub.topic,
+          notificationIds: [history.notifications[0].id],
+        });
+
+        const historyAfterReadingFirstNotif =
+          await wallet.getNotificationHistory({
+            topic: testSub.topic,
+            limit: 2,
+            unreadFirst: true,
+          });
+
+        expect(historyAfterReadingFirstNotif.notifications.length).toEqual(2);
+
+        expect(historyAfterReadingFirstNotif.notifications[0].isRead).toEqual(
+          false
+        );
+      });
     });
 
     describe("deleteSubscription", () => {
@@ -524,7 +671,7 @@ describe("Notify", () => {
           wallet.getActiveSubscriptions()
         )[0];
 
-        wallet.once("notify_delete", (event) => {
+        wallet.once("notify_delete", () => {
           gotNotifyDeleteResponse = true;
         });
 
@@ -934,6 +1081,7 @@ describe("Notify", () => {
             title: "",
             type: "",
             url: "",
+            isRead: false,
           };
 
           wallet.engine["emit"]("notify_get_notifications_response", {
@@ -958,6 +1106,103 @@ describe("Notify", () => {
           });
         }
       );
+    });
+
+    describe.skipIf(!hasTestProjectSecret)("Read Unread", () => {
+      it("Marks all messages as read", async () => {
+        await createNotifySubscription(wallet, account, onSign);
+
+        expect(wallet.subscriptions.getAll().length).toEqual(1);
+
+        const testSub = wallet.subscriptions.getAll()[0];
+
+        expect(
+          Object.keys(wallet.messages.get(testSub.topic).messages).length
+        ).toEqual(0);
+
+        let messagesReceived = 0;
+
+        wallet.on("notify_message", () => {
+          messagesReceived++;
+        });
+
+        await sendNotifyMessage(account, "Test");
+        await sendNotifyMessage(account, "Test2");
+
+        await waitForEvent(() => Boolean(messagesReceived));
+
+        const messagesFetchPre = await wallet.getNotificationHistory({
+          topic: testSub.topic,
+          limit: 10,
+        });
+        expect(messagesFetchPre.notifications.length).toEqual(2);
+
+        const messagePre1 = messagesFetchPre.notifications[0];
+        const messagePre2 = messagesFetchPre.notifications[1];
+
+        expect(messagePre1.isRead).toEqual(false);
+        expect(messagePre2.isRead).toEqual(false);
+
+        await wallet.markAllNotificationsAsRead({
+          topic: testSub.topic,
+        });
+
+        const messagesFetchPost = await wallet.getNotificationHistory({
+          topic: testSub.topic,
+          limit: 10,
+        });
+
+        expect(messagesFetchPost.notifications.length).toEqual(2);
+
+        const messagePost1 = messagesFetchPost.notifications[0];
+        const messagePost2 = messagesFetchPost.notifications[1];
+
+        expect(messagePost1.isRead).toEqual(true);
+        expect(messagePost2.isRead).toEqual(true);
+      });
+
+      it("Correctly marks messages as read", async () => {
+        await createNotifySubscription(wallet, account, onSign);
+
+        expect(wallet.subscriptions.getAll().length).toEqual(1);
+
+        const testSub = wallet.subscriptions.getAll()[0];
+
+        expect(
+          Object.keys(wallet.messages.get(testSub.topic).messages).length
+        ).toEqual(0);
+
+        let messagesReceived = 0;
+
+        wallet.on("notify_message", () => {
+          messagesReceived++;
+        });
+
+        await sendNotifyMessage(account, "Test");
+
+        await waitForEvent(() => Boolean(messagesReceived));
+
+        const messagesFetchPre = await wallet.getNotificationHistory({
+          topic: testSub.topic,
+          limit: 10,
+        });
+        expect(messagesFetchPre.notifications.length).toEqual(1);
+        const messagePre = messagesFetchPre.notifications[0];
+        expect(messagePre.isRead).toEqual(false);
+
+        await wallet.markNotificationsAsRead({
+          topic: testSub.topic,
+          notificationIds: [messagePre.id],
+        });
+
+        const messagesFetchPost = await wallet.getNotificationHistory({
+          topic: testSub.topic,
+          limit: 10,
+        });
+        expect(messagesFetchPost.notifications.length).toEqual(1);
+        const messagePost = messagesFetchPost.notifications[0];
+        expect(messagePost.isRead).toEqual(true);
+      });
     });
 
     describe.skipIf(!hasTestProjectSecret)("Message Deduping", () => {

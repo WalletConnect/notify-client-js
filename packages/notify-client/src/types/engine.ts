@@ -32,9 +32,12 @@ export declare namespace NotifyEngineTypes {
       }
   );
 
-  type Event = "notify_get_notifications_response";
+  type Event =
+    | "notify_get_notifications_response"
+    | "notify_mark_notifications_as_read_response";
 
   interface EventArguments {
+    notify_mark_notifications_as_read_response: EventResponseOrError<{}>;
     notify_get_notifications_response: EventResponseOrError<{
       notifications: NotifyClientTypes.NotifyNotification[];
       hasMore: boolean;
@@ -91,6 +94,15 @@ export abstract class INotifyEngine {
     encryptedMessage: string;
   }): Promise<NotifyClientTypes.NotifyNotification>;
 
+  public abstract markNotificationsAsRead(params: {
+    topic: string;
+    notificationIds: string[];
+  }): Promise<void>;
+
+  public abstract markAllNotificationsAsRead(params: {
+    topic: string;
+  }): Promise<void>;
+
   // delete active subscription
   public abstract deleteSubscription(params: { topic: string }): Promise<void>;
 
@@ -100,9 +112,11 @@ export abstract class INotifyEngine {
     topic: string;
     limit?: number;
     startingAfter?: string;
+    unreadFirst?: boolean;
   }): Promise<{
     notifications: NotifyClientTypes.NotifyNotification[];
     hasMore: boolean;
+    hasMoreUnread: boolean;
   }>;
   // query all active subscriptions
   public abstract getActiveSubscriptions(params?: {
@@ -196,6 +210,13 @@ export abstract class INotifyEngine {
     topic: string,
     payload:
       | JsonRpcResult<JsonRpcTypes.Results["wc_notifyGetNotifications"]>
+      | JsonRpcError
+  ): Promise<void>;
+
+  protected abstract onNotifyMarkNotificationsAsReadResponse(
+    topic: string,
+    payload:
+      | JsonRpcResult<JsonRpcTypes.Results["wc_notifyMarkNotificationsAsRead"]>
       | JsonRpcError
   ): Promise<void>;
 
