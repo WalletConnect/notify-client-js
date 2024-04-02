@@ -69,12 +69,18 @@ export declare namespace NotifyClientTypes {
     iat: number; // issued at
     exp: number; // expiry
     ksu: string; // key server url
+    mjv: string; // major version on the protocol level
+    sdk: {
+      packageManager: "npm" | "kotlin" | "swift";
+      packages: Record<string, string>;
+    }; // sdk version
   }
 
   interface ClientOptions extends CoreTypes.Options {
     core?: ICore;
     keyserverUrl?: string;
     identityKeys?: IdentityKeys;
+    sdkVersionMapEntries?: Record<string, string>;
   }
 
   interface Metadata {
@@ -320,6 +326,7 @@ export abstract class INotifyClient {
   public abstract readonly name: string;
   public abstract readonly keyserverUrl: string;
   public abstract readonly notifyServerUrl: string;
+  public abstract readonly sdkVersionMap: Record<string, string>;
 
   public abstract core: ICore;
   public abstract events: EventEmitter;

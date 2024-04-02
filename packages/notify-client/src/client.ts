@@ -1,4 +1,7 @@
 import { Core, Store } from "@walletconnect/core";
+import { version as coreVersion } from "@walletconnect/core/package.json";
+// @ts-ignore
+import { version as notifyVersion } from "../package.json";
 import {
   generateChildLogger,
   getDefaultLoggerOptions,
@@ -24,6 +27,7 @@ export class NotifyClient extends INotifyClient {
   public readonly version = NOTIFY_CLIENT_VERSION;
   public readonly name: INotifyClient["name"] =
     NOTIFY_WALLET_CLIENT_DEFAULT_NAME;
+  public readonly sdkVersionMap: INotifyClient["sdkVersionMap"];
   public readonly keyserverUrl: INotifyClient["keyserverUrl"];
   public readonly notifyServerUrl: INotifyClient["notifyServerUrl"];
 
@@ -102,6 +106,13 @@ export class NotifyClient extends INotifyClient {
     this.identityKeys =
       opts.identityKeys ??
       new IdentityKeys(this.core, projectId, this.keyserverUrl);
+
+    this.sdkVersionMap = {
+      "@walletconnect/core": coreVersion,
+      "@walletconnect/notify-client": notifyVersion,
+      ...opts.sdkVersionMapEntries,
+    };
+
     this.engine = new NotifyEngine(this);
   }
 

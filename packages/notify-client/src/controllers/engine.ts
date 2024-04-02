@@ -33,6 +33,7 @@ import {
   JWT_SCP_SEPARATOR,
   NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS,
   NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN,
+  NOTIFY_CLIENT_PACKAGE_MANAGER,
 } from "../constants";
 import {
   INotifyEngine,
@@ -253,6 +254,7 @@ export class NotifyEngine extends INotifyEngine {
       notifyConfig?.notificationTypes
         .map((type) => type.id)
         .join(JWT_SCP_SEPARATOR) ?? "";
+
     const payload: NotifyClientTypes.SubscriptionJWTClaims = {
       iat: issuedAt,
       exp: expiry,
@@ -263,6 +265,13 @@ export class NotifyEngine extends INotifyEngine {
       scp,
       act: "notify_subscription",
       app: `${DID_WEB_PREFIX}${appDomain}`,
+      mjv: "1",
+      sdk: {
+        packageManager: NOTIFY_CLIENT_PACKAGE_MANAGER,
+        packages: {
+          ...this.client.sdkVersionMap,
+        },
+      },
     };
 
     this.client.logger.info(
@@ -434,6 +443,13 @@ export class NotifyEngine extends INotifyEngine {
           app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
           lmt: limit ?? 50,
           urf: unreadFirst ?? true,
+          mjv: "1",
+          sdk: {
+            packageManager: NOTIFY_CLIENT_PACKAGE_MANAGER,
+            packages: {
+              ...this.client.sdkVersionMap,
+            },
+          },
         };
 
       const auth = await this.client.identityKeys.generateIdAuth(
@@ -1275,6 +1291,13 @@ export class NotifyEngine extends INotifyEngine {
       ksu: this.client.keyserverUrl,
       sub: composeDidPkh(accountId),
       app: allApps ? null : `did:web:${appDomain}`,
+      mjv: "1",
+      sdk: {
+        packageManager: NOTIFY_CLIENT_PACKAGE_MANAGER,
+        packages: {
+          ...this.client.sdkVersionMap,
+        },
+      },
     };
 
     const generatedAuth = await this.client.identityKeys.generateIdAuth(
@@ -1490,6 +1513,13 @@ export class NotifyEngine extends INotifyEngine {
         sub: composeDidPkh(subscription.account),
         app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
         ksu: this.client.keyserverUrl,
+        mjv: "1",
+        sdk: {
+          packageManager: NOTIFY_CLIENT_PACKAGE_MANAGER,
+          packages: {
+            ...this.client.sdkVersionMap,
+          },
+        },
       };
 
       const responseAuth = await this.client.identityKeys.generateIdAuth(
@@ -1531,6 +1561,13 @@ export class NotifyEngine extends INotifyEngine {
         sub: composeDidPkh(subscription.account),
         ksu: this.client.keyserverUrl,
         app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
+        mjv: "1",
+        sdk: {
+          packageManager: NOTIFY_CLIENT_PACKAGE_MANAGER,
+          packages: {
+            ...this.client.sdkVersionMap,
+          },
+        },
       };
 
       const deleteAuth = await this.client.identityKeys.generateIdAuth(
@@ -1578,6 +1615,13 @@ export class NotifyEngine extends INotifyEngine {
         app: `${DID_WEB_PREFIX}${subscription.metadata.appDomain}`,
         ksu: this.client.keyserverUrl,
         scp: scope.join(JWT_SCP_SEPARATOR),
+        mjv: "1",
+        sdk: {
+          packageManager: NOTIFY_CLIENT_PACKAGE_MANAGER,
+          packages: {
+            ...this.client.sdkVersionMap,
+          },
+        },
       };
 
       const updateAuth = await this.client.identityKeys.generateIdAuth(
@@ -1902,6 +1946,13 @@ export class NotifyEngine extends INotifyEngine {
         sub: composeDidPkh(subscription.account),
         iat: issuedAt,
         exp: expiry,
+        mjv: "1",
+        sdk: {
+          packageManager: NOTIFY_CLIENT_PACKAGE_MANAGER,
+          packages: {
+            ...this.client.sdkVersionMap,
+          },
+        },
       };
 
     const auth = await this.client.identityKeys.generateIdAuth(
