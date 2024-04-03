@@ -358,9 +358,9 @@ describe("Notify", () => {
 
         // Ensure all scopes have been disabled in the updated subscription.
         expect(
-          Object.values(Object.values(wallet.getActiveSubscriptions())[0].scope).find(
-            (scp) => scp.id === testScopeId
-          )?.enabled
+          Object.values(
+            Object.values(wallet.getActiveSubscriptions())[0].scope
+          ).find((scp) => scp.id === testScopeId)?.enabled
         ).toBe(true);
       });
     });
