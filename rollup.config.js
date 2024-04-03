@@ -2,6 +2,7 @@ import esbuild from "rollup-plugin-esbuild";
 import nodePolyfills from "rollup-plugin-polyfill-node";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
+import json from "@rollup/plugin-json"
 
 const input = "./src/index.ts";
 const plugins = [
@@ -10,6 +11,7 @@ const plugins = [
     browser: true,
   }),
   commonjs(),
+  json(),
   nodePolyfills(),
   esbuild({
     minify: true,
