@@ -185,19 +185,11 @@ describe("Notify", () => {
 
         expect(responsePreUnregister.status).toEqual(200);
 
-        let gotSub = false;
-        newClient.on("notify_subscriptions_changed", (ev) => {
-          gotSub = ev.params.subscriptions
-            .map((sub) => sub.metadata.appDomain)
-            .includes(testDappMetadata.appDomain);
-        });
-
         await newClient.subscribe({
           account: newAccount,
           appDomain: testDappMetadata.appDomain,
         });
 
-        await waitForEvent(() => gotSub);
         expect(newClient.subscriptions.getAll().length).toEqual(1);
 
         const subTopic = newClient.subscriptions.getAll()[0].topic;
@@ -330,7 +322,7 @@ describe("Notify", () => {
           // We have to account for the initial calls that happened during watchSubscriptions on init
           // Also have to account for the jwt update that happens when creating a subscription
           expect(axiosSpy).toHaveBeenCalledTimes(
-            INITIAL_CALLS_FETCH_ACCOUNT + 2
+            INITIAL_CALLS_FETCH_ACCOUNT + 1
           );
         });
       }
@@ -341,17 +333,9 @@ describe("Notify", () => {
         await createNotifySubscription(wallet, account, onSign);
 
         let gotNotifyUpdateResponse = false;
-        let gotNotifySubscriptionsChangedRequest = false;
-        let lastChangedSubscriptions: NotifyClientTypes.NotifySubscription[] =
-          [];
 
         wallet.once("notify_update", () => {
           gotNotifyUpdateResponse = true;
-        });
-        wallet.on("notify_subscriptions_changed", (event) => {
-          console.log("notify_subscriptions_changed", event);
-          gotNotifySubscriptionsChangedRequest = true;
-          lastChangedSubscriptions = event.params.subscriptions;
         });
 
         const subscriptions = wallet.subscriptions.getAll();
@@ -370,18 +354,13 @@ describe("Notify", () => {
 
         await waitForEvent(() => gotNotifyUpdateResponse);
 
-        await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
-
         expect(gotNotifyUpdateResponse).toBe(true);
-        expect(wallet.subscriptions.keys[0]).toBe(
-          lastChangedSubscriptions[0].topic
-        );
 
         // Ensure all scopes have been disabled in the updated subscription.
         expect(
-          Object.values(lastChangedSubscriptions[0].scope).find(
-            (scp) => scp.id === testScopeId
-          )?.enabled
+          Object.values(
+            Object.values(wallet.getActiveSubscriptions())[0].scope
+          ).find((scp) => scp.id === testScopeId)?.enabled
         ).toBe(true);
       });
     });

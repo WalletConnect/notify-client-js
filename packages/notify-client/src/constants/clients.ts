@@ -10,3 +10,5 @@ export const DEFAULT_NOTIFY_SERVER_URL = "https://notify.walletconnect.com";
 export const DEFAULT_EXPLORER_API_URL =
   "https://explorer-api.walletconnect.com/w3i/v1";
 export const DEFAULT_KEYSERVER_URL = "https://keys.walletconnect.com";
+
+export const NOTIFY_CLIENT_PACKAGE_MANAGER = "npm";

@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "clean": "rm -rf dist",
-    "build:pre": "npm run clean",
+    "build:pre": "npm run clean && sh ./scripts/update_sdk_versions.sh",
     "build:types": "tsc",
     "build:source": "rollup --config rollup.config.js",
     "build": "npm run build:pre; npm run build:source; npm run build:types",
