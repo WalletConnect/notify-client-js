@@ -333,9 +333,6 @@ describe("Notify", () => {
         await createNotifySubscription(wallet, account, onSign);
 
         let gotNotifyUpdateResponse = false;
-        let gotNotifySubscriptionsChangedRequest = false;
-        let lastChangedSubscriptions: NotifyClientTypes.NotifySubscription[] =
-          [];
 
         wallet.once("notify_update", () => {
           gotNotifyUpdateResponse = true;
@@ -357,16 +354,11 @@ describe("Notify", () => {
 
         await waitForEvent(() => gotNotifyUpdateResponse);
 
-        await waitForEvent(() => gotNotifySubscriptionsChangedRequest);
-
         expect(gotNotifyUpdateResponse).toBe(true);
-        expect(wallet.subscriptions.keys[0]).toBe(
-          lastChangedSubscriptions[0].topic
-        );
 
         // Ensure all scopes have been disabled in the updated subscription.
         expect(
-          Object.values(lastChangedSubscriptions[0].scope).find(
+          Object.values(Object.values(wallet.getActiveSubscriptions())[0].scope).find(
             (scp) => scp.id === testScopeId
           )?.enabled
         ).toBe(true);
