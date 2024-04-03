@@ -71,7 +71,7 @@ export declare namespace NotifyClientTypes {
     ksu: string; // key server url
     mjv: string; // major version on the protocol level
     sdk: {
-      packageManager: "npm" | "kotlin" | "swift";
+      packageManager: "npm";
       packages: Record<string, string>;
     }; // sdk version
   }
