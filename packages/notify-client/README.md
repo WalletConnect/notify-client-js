@@ -6,4 +6,4 @@
 
 This is the underlying client for `@web3inbox/core` and follows the specs defined [here](https://specs.walletconnect.com/2.0/specs/clients/notify/client-sdk-api).
 
-It is very terse and is a 1:1 with the aforementioned platform-agnostic spec. It is heavily recommended to use `@web3inbox/core` and (optionally) its React wrapper `@web3inbox/react` as the API of these libraries are optimized to be dev friendly and will integrate easier on the UI. This is true for both **wallets** and **web apps**.
+It is very terse and is a 1:1 with the aforementioned platform-agnostic spec. It is heavily recommended to use `@web3inbox/core` and (optionally) its React wrapper `@web3inbox/react` as the API of these libraries is optimized to be dev friendly and will integrate easier on the UI. This is true for both **wallets** and **web apps**.
