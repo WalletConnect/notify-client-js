@@ -118,6 +118,12 @@ export abstract class INotifyEngine {
     hasMore: boolean;
     hasMoreUnread: boolean;
   }>;
+
+  // get notification types for a specific subscription
+  public abstract getNotificationTypes(params: {
+    appDomain: string
+  }): NotifyClientTypes.ScopeMap
+
   // query all active subscriptions
   public abstract getActiveSubscriptions(params?: {
     account: string;

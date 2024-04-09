@@ -603,6 +603,24 @@ export class NotifyEngine extends INotifyEngine {
     this.client.messages.update(targetRecord.topic, targetRecord);
   };
 
+  public getNotificationTypes: INotifyEngine['getNotificationTypes'] = (
+    params
+  ) => {
+    this.isInitialized();
+
+    const subscriptions = this.getActiveSubscriptions()
+
+    const specifiedSubscription =
+      Object.values(subscriptions)
+	.find(subscription => subscription.metadata.appDomain === params.appDomain)
+
+    if (!specifiedSubscription) {
+      throw new Error(`[Notify] No subscription found with domain ${params.appDomain})`)
+    }
+
+    return specifiedSubscription.scope;
+  }
+
   public getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"] = (
     params
   ) => {
