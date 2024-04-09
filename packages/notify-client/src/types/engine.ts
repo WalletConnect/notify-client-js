@@ -121,8 +121,8 @@ export abstract class INotifyEngine {
 
   // get notification types for a specific subscription
   public abstract getNotificationTypes(params: {
-    appDomain: string
-  }): NotifyClientTypes.ScopeMap
+    appDomain: string;
+  }): NotifyClientTypes.ScopeMap;
 
   // query all active subscriptions
   public abstract getActiveSubscriptions(params?: {

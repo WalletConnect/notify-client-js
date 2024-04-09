@@ -693,9 +693,9 @@ describe("Notify", () => {
 
         const subscriptions = wallet.subscriptions.getAll();
 
-	wallet.on("notify_update", (ev) => {
-	  updateEvent = ev;
-	})
+        wallet.on("notify_update", (ev) => {
+          updateEvent = ev;
+        });
 
         await wallet.update({
           topic: subscriptions[0].topic,
@@ -724,7 +724,7 @@ describe("Notify", () => {
 
         let wallet1ReceivedChangedEvent = false;
         wallet1.on("notify_subscriptions_changed", () => {
-	  console.log("LISTENER????")
+          console.log("LISTENER????");
           wallet1ReceivedChangedEvent = true;
         });
 
@@ -739,14 +739,13 @@ describe("Notify", () => {
           signature: await onSign(preparedRegistration.message),
         });
 
-	console.log("Registered...")
+        console.log("Registered...");
 
         await waitForEvent(() => wallet1ReceivedChangedEvent);
 
-	console.log("Initting w2...")
+        console.log("Initting w2...");
 
         const wallet2 = await NotifyClient.init({
-
           name: "testNotifyClient2",
           logger: "error",
           keyserverUrl: DEFAULT_KEYSERVER_URL,

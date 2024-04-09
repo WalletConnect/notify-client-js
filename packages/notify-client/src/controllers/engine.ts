@@ -72,7 +72,7 @@ export class NotifyEngine extends INotifyEngine {
       // This inherently solves all "reconnection" conditions - since the socket refreshes
       this.client.core.relayer.on(RELAYER_EVENTS.connect, () => {
         this.watchLastWatchedAccountIfExists();
-      })
+      });
     }
   };
 
@@ -603,23 +603,25 @@ export class NotifyEngine extends INotifyEngine {
     this.client.messages.update(targetRecord.topic, targetRecord);
   };
 
-  public getNotificationTypes: INotifyEngine['getNotificationTypes'] = (
+  public getNotificationTypes: INotifyEngine["getNotificationTypes"] = (
     params
   ) => {
     this.isInitialized();
 
-    const subscriptions = this.getActiveSubscriptions()
+    const subscriptions = this.getActiveSubscriptions();
 
-    const specifiedSubscription =
-      Object.values(subscriptions)
-	.find(subscription => subscription.metadata.appDomain === params.appDomain)
+    const specifiedSubscription = Object.values(subscriptions).find(
+      (subscription) => subscription.metadata.appDomain === params.appDomain
+    );
 
     if (!specifiedSubscription) {
-      throw new Error(`[Notify] No subscription found with domain ${params.appDomain})`)
+      throw new Error(
+        `[Notify] No subscription found with domain ${params.appDomain})`
+      );
     }
 
     return specifiedSubscription.scope;
-  }
+  };
 
   public getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"] = (
     params
