@@ -968,6 +968,19 @@ describe("Notify", () => {
       });
     });
 
+    describe("getNotifiationTypes", () => {
+      it("Correctly fetches a dapp's scopes", async () => {
+	await createNotifySubscription(wallet, account, onSign);
+
+	expect(wallet.subscriptions.length).toEqual(1);
+
+	const sub = wallet.subscriptions.values[0];
+
+	expect(sub.scope).toEqual(testDappMetadata.scope)
+
+      })
+    })
+
     describe("Blocking functions", () => {
       it("Subscribe only resolves once a subscription succeeded and is stored", async () => {
         const preparedRegistration = await wallet.prepareRegistration({
