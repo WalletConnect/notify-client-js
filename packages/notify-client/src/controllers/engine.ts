@@ -66,6 +66,13 @@ export class NotifyEngine extends INotifyEngine {
       await this.watchLastWatchedAccountIfExists();
 
       this.initialized = true;
+
+      // After the client reconnects, we should issue a watch subscription
+      // request - per spec: https://specs.walletconnect.com/2.0/specs/clients/notify/rpc-methods
+      // This inherently solves all "reconnection" conditions - since the socket refreshes
+      this.client.core.relayer.on(RELAYER_EVENTS.connect, () => {
+        this.watchLastWatchedAccountIfExists();
+      })
     }
   };
 
