@@ -48,12 +48,17 @@ export class NotifyEngine extends INotifyEngine {
   public name = "notifyEngine";
   private initialized = false;
 
+  private lastWatchSubscriptionsCallTimestamp: number;
+
   private finishedInitialLoad = false;
 
   private didDocMap = new Map<string, NotifyClientTypes.NotifyDidDocument>();
 
   constructor(client: INotifyEngine["client"]) {
     super(client);
+
+    // -1 since it has not been called yet
+    this.lastWatchSubscriptionsCallTimestamp = 0;
   }
 
   public init: INotifyEngine["init"] = async () => {
@@ -70,8 +75,13 @@ export class NotifyEngine extends INotifyEngine {
       // After the client reconnects, we should issue a watch subscription
       // request - per spec: https://specs.walletconnect.com/2.0/specs/clients/notify/rpc-methods
       // This inherently solves all "reconnection" conditions - since the socket refreshes
+      // However - so as not to spam we maintain the 5 minute threshhold
       this.client.core.relayer.on(RELAYER_EVENTS.connect, () => {
-        this.watchLastWatchedAccountIfExists();
+	const timeSinceLastWatchSubscriptions = Date.now() - this.lastWatchSubscriptionsCallTimestamp;
+
+	if(timeSinceLastWatchSubscriptions > FIVE_MINUTES * 1_000) {
+          this.watchLastWatchedAccountIfExists();
+	}
       });
     }
   };
@@ -1268,7 +1278,11 @@ export class NotifyEngine extends INotifyEngine {
     appDomain: string,
     allApps: boolean
   ) {
+    this.lastWatchSubscriptionsCallTimestamp = Date.now();
+
     const notifyKeys = await this.resolveKeys(this.client.notifyServerUrl);
+
+
 
     // Derive req topic from did.json
     const notifyServerWatchReqTopic = await this.getNotifyServerWatchTopic(
