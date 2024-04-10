@@ -77,11 +77,12 @@ export class NotifyEngine extends INotifyEngine {
       // This inherently solves all "reconnection" conditions - since the socket refreshes
       // However - so as not to spam we maintain the 5 minute threshhold
       this.client.core.relayer.on(RELAYER_EVENTS.connect, () => {
-	const timeSinceLastWatchSubscriptions = Date.now() - this.lastWatchSubscriptionsCallTimestamp;
+        const timeSinceLastWatchSubscriptions =
+          Date.now() - this.lastWatchSubscriptionsCallTimestamp;
 
-	if(timeSinceLastWatchSubscriptions > FIVE_MINUTES * 1_000) {
+        if (timeSinceLastWatchSubscriptions > FIVE_MINUTES * 1_000) {
           this.watchLastWatchedAccountIfExists();
-	}
+        }
       });
     }
   };
@@ -1282,8 +1283,6 @@ export class NotifyEngine extends INotifyEngine {
 
     const notifyKeys = await this.resolveKeys(this.client.notifyServerUrl);
 
-
-
     // Derive req topic from did.json
     const notifyServerWatchReqTopic = await this.getNotifyServerWatchTopic(
       notifyKeys.dappPublicKey
@@ -1489,7 +1488,9 @@ export class NotifyEngine extends INotifyEngine {
       newSubscriptions
     );
 
-    await Promise.allSettled(updateSubscriptionsPromises.map(promiseCb => promiseCb()))
+    await Promise.allSettled(
+      updateSubscriptionsPromises.map((promiseCb) => promiseCb())
+    );
 
     return this.client.subscriptions.getAll();
   };
