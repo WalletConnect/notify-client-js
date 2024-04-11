@@ -15,7 +15,7 @@ import {
   isJsonRpcResponse,
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
-import { FIVE_MINUTES, ONE_DAY } from "@walletconnect/time";
+import { FIVE_MINUTES, ONE_DAY, THIRTY_MINUTES, THIRTY_SECONDS } from "@walletconnect/time";
 import { JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
@@ -82,8 +82,11 @@ export class NotifyEngine extends INotifyEngine {
         // If client has been offline for more than 5 minutes - call watch subscriptions
         const timeSinceOffline = Date.now() - this.disconnectTimer;
 
+	// Allow for margin for error
+	const timeSinceOfflineTolerance = THIRTY_SECONDS * 1_000;
+
         const offlineForMoreThan5Minutes =
-          timeSinceOffline > FIVE_MINUTES * 1_000;
+          (timeSinceOffline + timeSinceOfflineTolerance) >= FIVE_MINUTES * 1_000;
 
         this.disconnectTimer = 0;
 
@@ -94,9 +97,13 @@ export class NotifyEngine extends INotifyEngine {
         const timeSinceFirstWatchSubscriptions =
           Date.now() - this.lastWatchSubscriptionsCallTimestamp;
 
-        const clientOnlineForOverADay =
-          timeSinceFirstWatchSubscriptions > ONE_DAY * 1_000;
+	const timeSinceFirstWatchSubscriptionsTolerance = THIRTY_MINUTES * 1_000;
 
+        const clientOnlineForOverADay =
+          (timeSinceFirstWatchSubscriptions + timeSinceFirstWatchSubscriptionsTolerance) > ONE_DAY * 1_000;
+
+	// Call watch subscriptionsevery 24 hours
+	// This check will be triggered every reconnect
         if (clientOnlineForOverADay) {
           this.watchLastWatchedAccountIfExists();
           this.lastWatchSubscriptionsCallTimestamp = 0;
