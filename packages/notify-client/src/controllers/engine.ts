@@ -15,7 +15,7 @@ import {
   isJsonRpcResponse,
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
-import { FIVE_MINUTES } from "@walletconnect/time";
+import { FIVE_MINUTES, ONE_DAY } from "@walletconnect/time";
 import { JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
@@ -49,6 +49,7 @@ export class NotifyEngine extends INotifyEngine {
   private initialized = false;
 
   private lastWatchSubscriptionsCallTimestamp: number;
+  private disconnectTimer: number;
 
   private finishedInitialLoad = false;
 
@@ -59,6 +60,7 @@ export class NotifyEngine extends INotifyEngine {
 
     // -1 since it has not been called yet
     this.lastWatchSubscriptionsCallTimestamp = 0;
+    this.disconnectTimer = 0;
   }
 
   public init: INotifyEngine["init"] = async () => {
@@ -72,17 +74,34 @@ export class NotifyEngine extends INotifyEngine {
 
       this.initialized = true;
 
-      // After the client reconnects, we should issue a watch subscription
-      // request - per spec: https://specs.walletconnect.com/2.0/specs/clients/notify/rpc-methods
-      // This inherently solves all "reconnection" conditions - since the socket refreshes
-      // However - so as not to spam we maintain the 5 minute threshhold
-      this.client.core.relayer.on(RELAYER_EVENTS.connect, () => {
-        const timeSinceLastWatchSubscriptions =
-          Date.now() - this.lastWatchSubscriptionsCallTimestamp;
+      this.client.core.relayer.on(RELAYER_EVENTS.disconnect, () => {
+	this.disconnectTimer = Date.now();
+      })
 
-        if (timeSinceLastWatchSubscriptions > FIVE_MINUTES * 1_000) {
+      this.client.core.relayer.on(RELAYER_EVENTS.connect, () => {
+	// If client has been offline for more than 5 minutes - call watch subscriptions
+        const timeSinceOffline =
+          Date.now() - this.disconnectTimer;
+
+	const offlineForMoreThan5Minutes =
+	  timeSinceOffline > FIVE_MINUTES * 1_000;
+
+	this.disconnectTimer = 0;
+
+        if (offlineForMoreThan5Minutes) {
           this.watchLastWatchedAccountIfExists();
         }
+
+	const timeSinceFirstWatchSubscriptions =
+	  Date.now() - this.lastWatchSubscriptionsCallTimestamp;
+
+	const clientOnlineForOverADay =
+	  timeSinceFirstWatchSubscriptions > ONE_DAY * 1_000;
+
+	if(clientOnlineForOverADay) {
+          this.watchLastWatchedAccountIfExists();
+	  this.lastWatchSubscriptionsCallTimestamp = 0;
+	}
       });
     }
   };
