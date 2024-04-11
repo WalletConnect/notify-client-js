@@ -58,7 +58,7 @@ export class NotifyEngine extends INotifyEngine {
   constructor(client: INotifyEngine["client"]) {
     super(client);
 
-    // -1 since it has not been called yet
+    // 0 since it has not been called yet
     this.lastWatchSubscriptionsCallTimestamp = 0;
     this.disconnectTimer = 0;
   }
