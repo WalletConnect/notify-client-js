@@ -75,33 +75,32 @@ export class NotifyEngine extends INotifyEngine {
       this.initialized = true;
 
       this.client.core.relayer.on(RELAYER_EVENTS.disconnect, () => {
-	this.disconnectTimer = Date.now();
-      })
+        this.disconnectTimer = Date.now();
+      });
 
       this.client.core.relayer.on(RELAYER_EVENTS.connect, () => {
-	// If client has been offline for more than 5 minutes - call watch subscriptions
-        const timeSinceOffline =
-          Date.now() - this.disconnectTimer;
+        // If client has been offline for more than 5 minutes - call watch subscriptions
+        const timeSinceOffline = Date.now() - this.disconnectTimer;
 
-	const offlineForMoreThan5Minutes =
-	  timeSinceOffline > FIVE_MINUTES * 1_000;
+        const offlineForMoreThan5Minutes =
+          timeSinceOffline > FIVE_MINUTES * 1_000;
 
-	this.disconnectTimer = 0;
+        this.disconnectTimer = 0;
 
         if (offlineForMoreThan5Minutes) {
           this.watchLastWatchedAccountIfExists();
         }
 
-	const timeSinceFirstWatchSubscriptions =
-	  Date.now() - this.lastWatchSubscriptionsCallTimestamp;
+        const timeSinceFirstWatchSubscriptions =
+          Date.now() - this.lastWatchSubscriptionsCallTimestamp;
 
-	const clientOnlineForOverADay =
-	  timeSinceFirstWatchSubscriptions > ONE_DAY * 1_000;
+        const clientOnlineForOverADay =
+          timeSinceFirstWatchSubscriptions > ONE_DAY * 1_000;
 
-	if(clientOnlineForOverADay) {
+        if (clientOnlineForOverADay) {
           this.watchLastWatchedAccountIfExists();
-	  this.lastWatchSubscriptionsCallTimestamp = 0;
-	}
+          this.lastWatchSubscriptionsCallTimestamp = 0;
+        }
       });
     }
   };
