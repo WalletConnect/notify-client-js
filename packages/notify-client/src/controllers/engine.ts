@@ -1311,6 +1311,9 @@ export class NotifyEngine extends INotifyEngine {
       privKeyY = this.client.core.crypto.keychain.get(pubKeyY);
     }
 
+    // Force the keychain to be in sync with watched account entry.
+    await this.client.core.crypto.keychain.set(pubKeyY, privKeyY);
+
     // Generate res topic from persistent key kY
     const notifyServerWatchResTopic = hashKey(
       deriveSymKey(privKeyY, notifyKeys.dappPublicKey)
