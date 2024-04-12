@@ -80,7 +80,12 @@ export class NotifyEngine extends INotifyEngine {
       this.initialized = true;
 
       this.client.core.relayer.on(RELAYER_EVENTS.disconnect, () => {
-        this.disconnectTimer = Date.now();
+	// Do not reset the timer if we're already disconnected
+	// as multiple disconnect events are emitted even when disconnected
+	if(!this.disconnectTimer) {
+          this.disconnectTimer = Date.now();
+	}
+        
 	console.log(">>>>> Disconnect event, setting timer", this.disconnectTimer)
       });
 
