@@ -85,20 +85,9 @@ export class NotifyEngine extends INotifyEngine {
         if (!this.disconnectTimer) {
           this.disconnectTimer = Date.now();
         }
-
-        console.log(
-          ">>>>> Disconnect event, setting timer",
-          this.disconnectTimer
-        );
       });
 
       this.client.core.relayer.on(RELAYER_EVENTS.connect, () => {
-        console.log(
-          ">>>>> Connect event, Disconnect timer = ",
-          this.disconnectTimer,
-          "Time = ",
-          Date.now()
-        );
         // If client has been offline for more than 5 minutes - call watch subscriptions
         const timeSinceOffline = Date.now() - this.disconnectTimer;
 
@@ -110,15 +99,7 @@ export class NotifyEngine extends INotifyEngine {
 
         this.disconnectTimer = 0;
 
-        console.log(">>>>> Connect event, Info", {
-          timeSinceOffline,
-          offlineForMoreThan5Minutes,
-          disconnectTimer: this.disconnectTimer,
-          timeNow: Date.now(),
-        });
-
         if (offlineForMoreThan5Minutes) {
-          console.log(">>>>> Connect event, watchinng because offline");
           this.watchLastWatchedAccountIfExists();
         }
 
