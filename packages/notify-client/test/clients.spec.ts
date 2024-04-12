@@ -36,8 +36,6 @@ const hasTestProjectSecret =
 
 const projectId = process.env.TEST_PROJECT_ID;
 
-const runningLocally = Boolean(process.env.TEST_IS_LOCAL);
-
 describe("Notify", () => {
   let core: ICore;
   let wallet: INotifyClient;
@@ -686,9 +684,8 @@ describe("Notify", () => {
 
     describe("watchSubscriptions", () => {
       // TODO: Refactor this test to be 2 wallets instead of 1
-      it.skip("fires correct event update", async () => {
+      it("fires correct event update", async () => {
         let updateEvent: any = {};
-        let updatedCount = 0;
 
         await createNotifySubscription(wallet, account, onSign);
 
@@ -696,12 +693,14 @@ describe("Notify", () => {
 
         const subscriptions = wallet.subscriptions.getAll();
 
+        wallet.on("notify_update", (ev) => {
+          updateEvent = ev;
+        });
+
         await wallet.update({
           topic: subscriptions[0].topic,
           scope: [testScopeId],
         });
-
-        await waitForEvent(() => updatedCount === 3);
 
         expect(wallet.hasFinishedInitialLoad()).toEqual(true);
 
@@ -709,7 +708,7 @@ describe("Notify", () => {
       });
 
       // TODO: This test needs a refactor involving mocking event emitter
-      it.skip("automatically fires watchSubscriptions on init", async () => {
+      it("automatically fires watchSubscriptions on init", async () => {
         const storageLoc = generateClientDbName("notifyTestAutomatic");
         const wallet1 = await NotifyClient.init({
           name: "testNotifyClient1",
@@ -725,6 +724,7 @@ describe("Notify", () => {
 
         let wallet1ReceivedChangedEvent = false;
         wallet1.on("notify_subscriptions_changed", () => {
+          console.log("LISTENER????");
           wallet1ReceivedChangedEvent = true;
         });
 
@@ -734,12 +734,16 @@ describe("Notify", () => {
           allApps: false,
         });
 
-        await wallet.register({
+        await wallet1.register({
           registerParams: preparedRegistration.registerParams,
           signature: await onSign(preparedRegistration.message),
         });
 
+        console.log("Registered...");
+
         await waitForEvent(() => wallet1ReceivedChangedEvent);
+
+        console.log("Initting w2...");
 
         const wallet2 = await NotifyClient.init({
           name: "testNotifyClient2",
@@ -753,17 +757,10 @@ describe("Notify", () => {
           projectId,
         });
 
-        let wallet2ReceivedChangedEvent = false;
-        wallet2.on("notify_subscriptions_changed", () => {
-          wallet2ReceivedChangedEvent = true;
-        });
-
-        await waitForEvent(() => wallet2ReceivedChangedEvent);
-
-        expect(wallet2ReceivedChangedEvent).toEqual(true);
+        await waitForEvent(wallet2.hasFinishedInitialLoad);
       });
 
-      it.skipIf(!runningLocally)("handles multiple subscriptions", async () => {
+      it("handles multiple subscriptions", async () => {
         const wallet1 = await NotifyClient.init({
           name: "testNotifyClient1",
           logger: "error",
@@ -773,18 +770,9 @@ describe("Notify", () => {
           projectId,
         });
 
-        let wallet1UpdateCount = 0;
-
-        wallet1.on("notify_subscriptions_changed", () => {
-          wallet1UpdateCount++;
-        });
         await createNotifySubscription(wallet, account, onSign);
 
         await createNotifySubscription(wallet, account, onSign, true);
-
-        await waitForEvent(() => {
-          return wallet1UpdateCount > 2;
-        });
 
         const wallet2 = await NotifyClient.init({
           name: "debug_me",
@@ -980,6 +968,18 @@ describe("Notify", () => {
       });
     });
 
+    describe("getNotifiationTypes", () => {
+      it("Correctly fetches a dapp's scopes", async () => {
+        await createNotifySubscription(wallet, account, onSign);
+
+        expect(wallet.subscriptions.length).toEqual(1);
+
+        const sub = wallet.subscriptions.values[0];
+
+        expect(sub.scope).toEqual(testDappMetadata.scope);
+      });
+    });
+
     describe("Blocking functions", () => {
       it("Subscribe only resolves once a subscription succeeded and is stored", async () => {
         const preparedRegistration = await wallet.prepareRegistration({
@@ -1035,15 +1035,11 @@ describe("Notify", () => {
           // send messages to app1
           await sendNotifyMessage(account, "Test1");
 
-          console.log(">>>>>>>>>> sent message");
-
           wallet.on("notify_message", () => {
             gotMessage = true;
           });
 
           await waitForEvent(() => gotMessage);
-
-          console.log(">>>>>>>>>> got message");
 
           const notifs1 = wallet.getNotificationHistory({
             topic: app1Topic,
@@ -1080,7 +1076,6 @@ describe("Notify", () => {
           });
 
           expect(notifs1).resolves.toSatisfy((resolved: any) => {
-            console.log("Resolved is!", resolved);
             return resolved.notifications.length === 2;
           });
         }

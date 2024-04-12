@@ -378,6 +378,7 @@ export abstract class INotifyClient {
   public abstract update: INotifyEngine["update"];
   public abstract decryptMessage: INotifyEngine["decryptMessage"];
   public abstract getNotificationHistory: INotifyEngine["getNotificationHistory"];
+  public abstract getNotificationTypes: INotifyEngine["getNotificationTypes"];
   public abstract getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"];
   public abstract deleteSubscription: INotifyEngine["deleteSubscription"];
   public abstract markNotificationsAsRead: INotifyEngine["markNotificationsAsRead"];

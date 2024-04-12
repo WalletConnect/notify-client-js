@@ -15,7 +15,12 @@ import {
   isJsonRpcResponse,
   isJsonRpcResult,
 } from "@walletconnect/jsonrpc-utils";
-import { FIVE_MINUTES } from "@walletconnect/time";
+import {
+  FIVE_MINUTES,
+  ONE_DAY,
+  THIRTY_MINUTES,
+  THIRTY_SECONDS,
+} from "@walletconnect/time";
 import { JsonRpcRecord, RelayerTypes } from "@walletconnect/types";
 import {
   TYPE_1,
@@ -48,12 +53,19 @@ export class NotifyEngine extends INotifyEngine {
   public name = "notifyEngine";
   private initialized = false;
 
+  private lastWatchSubscriptionsCallTimestamp: number;
+  private disconnectTimer: number;
+
   private finishedInitialLoad = false;
 
   private didDocMap = new Map<string, NotifyClientTypes.NotifyDidDocument>();
 
   constructor(client: INotifyEngine["client"]) {
     super(client);
+
+    // 0 since it has not been called yet
+    this.lastWatchSubscriptionsCallTimestamp = 0;
+    this.disconnectTimer = 0;
   }
 
   public init: INotifyEngine["init"] = async () => {
@@ -66,6 +78,49 @@ export class NotifyEngine extends INotifyEngine {
       await this.watchLastWatchedAccountIfExists();
 
       this.initialized = true;
+
+      this.client.core.relayer.on(RELAYER_EVENTS.disconnect, () => {
+        // Do not reset the timer if we're already disconnected
+        // as multiple disconnect events are emitted even when disconnected
+        if (!this.disconnectTimer) {
+          this.disconnectTimer = Date.now();
+        }
+      });
+
+      this.client.core.relayer.on(RELAYER_EVENTS.connect, () => {
+        // If client has been offline for more than 5 minutes - call watch subscriptions
+        const timeSinceOffline = Date.now() - this.disconnectTimer;
+
+        // Allow for margin for error
+        const timeSinceOfflineTolerance = THIRTY_SECONDS * 1_000;
+
+        const offlineForMoreThan5Minutes =
+          timeSinceOffline + timeSinceOfflineTolerance >= FIVE_MINUTES * 1_000;
+
+        this.disconnectTimer = 0;
+
+        if (offlineForMoreThan5Minutes) {
+          this.watchLastWatchedAccountIfExists();
+        }
+
+        const timeSinceFirstWatchSubscriptions =
+          Date.now() - this.lastWatchSubscriptionsCallTimestamp;
+
+        const timeSinceFirstWatchSubscriptionsTolerance =
+          THIRTY_MINUTES * 1_000;
+
+        const clientOnlineForOverADay =
+          timeSinceFirstWatchSubscriptions +
+            timeSinceFirstWatchSubscriptionsTolerance >
+          ONE_DAY * 1_000;
+
+        // Call watch subscriptionsevery 24 hours
+        // This check will be triggered every reconnect
+        if (clientOnlineForOverADay) {
+          this.watchLastWatchedAccountIfExists();
+          this.lastWatchSubscriptionsCallTimestamp = 0;
+        }
+      });
     }
   };
 
@@ -594,6 +649,26 @@ export class NotifyEngine extends INotifyEngine {
     delete targetRecord.messages[id];
 
     this.client.messages.update(targetRecord.topic, targetRecord);
+  };
+
+  public getNotificationTypes: INotifyEngine["getNotificationTypes"] = (
+    params
+  ) => {
+    this.isInitialized();
+
+    const subscriptions = this.getActiveSubscriptions();
+
+    const specifiedSubscription = Object.values(subscriptions).find(
+      (subscription) => subscription.metadata.appDomain === params.appDomain
+    );
+
+    if (!specifiedSubscription) {
+      throw new Error(
+        `[Notify] No subscription found with domain ${params.appDomain})`
+      );
+    }
+
+    return specifiedSubscription.scope;
   };
 
   public getActiveSubscriptions: INotifyEngine["getActiveSubscriptions"] = (
@@ -1241,6 +1316,8 @@ export class NotifyEngine extends INotifyEngine {
     appDomain: string,
     allApps: boolean
   ) {
+    this.lastWatchSubscriptionsCallTimestamp = Date.now();
+
     const notifyKeys = await this.resolveKeys(this.client.notifyServerUrl);
 
     // Derive req topic from did.json
@@ -1270,6 +1347,9 @@ export class NotifyEngine extends INotifyEngine {
       pubKeyY = await this.client.core.crypto.generateKeyPair();
       privKeyY = this.client.core.crypto.keychain.get(pubKeyY);
     }
+
+    // Force the keychain to be in sync with watched account entry.
+    await this.client.core.crypto.keychain.set(pubKeyY, privKeyY);
 
     // Generate res topic from persistent key kY
     const notifyServerWatchResTopic = hashKey(
@@ -1448,14 +1528,9 @@ export class NotifyEngine extends INotifyEngine {
       newSubscriptions
     );
 
-    // Handle them sequentially because `core.relayer.subscribe` is not compatible
-    // with concurrent `relayer.subscribe` requests, as a data race occurs between the two
-    // subscriptions and its subscriber.once(SUBSCRIBER_EVENTS.created, ...) will be triggered
-    // with a wrong subscription, seeing that the topics of the two subscriptions do not match,
-    // it will not resolve.
-    for (const updateSubscriptionsPromise of updateSubscriptionsPromises) {
-      await updateSubscriptionsPromise();
-    }
+    await Promise.allSettled(
+      updateSubscriptionsPromises.map((promiseCb) => promiseCb())
+    );
 
     return this.client.subscriptions.getAll();
   };

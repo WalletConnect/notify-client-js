@@ -168,6 +168,17 @@ export class NotifyClient extends INotifyClient {
     }
   };
 
+  public getNotificationTypes: INotifyClient["getNotificationTypes"] = (
+    params
+  ) => {
+    try {
+      return this.engine.getNotificationTypes(params);
+    } catch (error: any) {
+      this.logger.error(error.message);
+      throw error;
+    }
+  };
+
   public getActiveSubscriptions: INotifyClient["getActiveSubscriptions"] = (
     params
   ) => {
