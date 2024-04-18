@@ -131,6 +131,10 @@ export class NotifyEngine extends INotifyEngine {
       return this.finishedInitialLoad;
     };
 
+  public prepareRegistrationViaRecaps: INotifyEngine['prepareRegistrationViaRecaps'] = async (params) => {
+    return this.client.identityKeys.prepareRegistrationViaRecaps(params);
+  }
+
   public prepareRegistration: INotifyEngine["prepareRegistration"] = async ({
     account,
     domain,
