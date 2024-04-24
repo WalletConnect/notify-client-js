@@ -1956,6 +1956,7 @@ export class NotifyEngine extends INotifyEngine {
     currentStatement: string,
     domain: string
   ) => {
+
     const hasSignedStatement =
       this.client.registrationData.keys.includes(account);
     if (!hasSignedStatement) {
@@ -1967,8 +1968,10 @@ export class NotifyEngine extends INotifyEngine {
 
     const signedStatement = this.client.registrationData.get(account);
 
+    const isRecapsStatement = new RegExp(`\'manage\'\: \'.*notifications\'`).test(signedStatement.statement)
+
     return (
-      signedStatement.statement !== currentStatement ||
+      (!isRecapsStatement && signedStatement.statement !== currentStatement) ||
       signedStatement.domain !== domain
     );
   };
