@@ -104,6 +104,7 @@ export declare namespace NotifyClientTypes {
   interface NotifyRegistrationParams {
     cacaoPayload: CacaoPayload;
     privateIdentityKey: Uint8Array;
+    allApps?: boolean
   }
 
   interface NotifySubscription {

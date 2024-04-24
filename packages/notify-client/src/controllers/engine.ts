@@ -132,7 +132,25 @@ export class NotifyEngine extends INotifyEngine {
     };
 
   public prepareRegistrationViaRecaps: INotifyEngine['prepareRegistrationViaRecaps'] = async (params) => {
-    return this.client.identityKeys.prepareRegistrationViaRecaps(params);
+    const baseRegisterParams = await this.client.identityKeys.prepareRegistrationViaRecaps({
+      domain: params.domain,
+      recapObject: {
+	att: {
+	  "https://notify.walletconnect.com": params.allApps? {
+	    "manage/all-apps-notifications": [{}]
+	  } : {
+	    [`manage/${params.domain}-notifications`]: [{}]
+	  }
+	}
+      }
+    });
+
+
+    return {
+      ...baseRegisterParams,
+      allApps: params.allApps ?? false
+    }
+
   }
 
   public prepareRegistration: INotifyEngine["prepareRegistration"] = async ({
@@ -144,11 +162,20 @@ export class NotifyEngine extends INotifyEngine {
       ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
       : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
 
-    return this.client.identityKeys.prepareRegistration({
+    const baseRegisterParams = await this.client.identityKeys.prepareRegistration({
       accountId: account,
       domain,
       statement,
     });
+
+    return {
+      message: baseRegisterParams.message,
+      registerParams: {
+	cacaoPayload: baseRegisterParams.registerParams.cacaoPayload,
+	privateIdentityKey: baseRegisterParams.registerParams.privateIdentityKey,
+	allApps: allApps ?? false
+      }
+    };
   };
 
   // Checks if user is registered and has up to date registration data.
@@ -182,7 +209,7 @@ export class NotifyEngine extends INotifyEngine {
       signatureType,
     });
 
-    const allApps =
+    const allApps = registerParams.allApps ||
       registerParams.cacaoPayload.statement ===
       NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS;
 
