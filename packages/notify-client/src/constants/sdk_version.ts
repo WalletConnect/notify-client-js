@@ -1,1 +1,1 @@
-export const NOTIFY_SDK_VERSION = "1.4.0-a32c253";
+export const NOTIFY_SDK_VERSION = "1.4.0-e2300fe";
