@@ -131,6 +131,30 @@ export class NotifyEngine extends INotifyEngine {
       return this.finishedInitialLoad;
     };
 
+  public prepareRegistrationWithRecaps: INotifyEngine["prepareRegistrationWithRecaps"] =
+    async (params) => {
+      const baseRegisterParams =
+        await this.client.identityKeys.prepareRegistrationWithRecaps({
+          domain: params.domain,
+          recapObject: {
+            att: {
+              "https://notify.walletconnect.com": params.allApps
+                ? {
+                    "manage/all-apps-notifications": [{}],
+                  }
+                : {
+                    [`manage/${params.domain}-notifications`]: [{}],
+                  },
+            },
+          },
+        });
+
+      return {
+        ...baseRegisterParams,
+        allApps: params.allApps ?? false,
+      };
+    };
+
   public prepareRegistration: INotifyEngine["prepareRegistration"] = async ({
     account,
     domain,
@@ -140,11 +164,22 @@ export class NotifyEngine extends INotifyEngine {
       ? NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS
       : NOTIFY_AUTHORIZATION_STATEMENT_THIS_DOMAIN;
 
-    return this.client.identityKeys.prepareRegistration({
-      accountId: account,
-      domain,
-      statement,
-    });
+    const baseRegisterParams =
+      await this.client.identityKeys.prepareRegistration({
+        accountId: account,
+        domain,
+        statement,
+      });
+
+    return {
+      message: baseRegisterParams.message,
+      registerParams: {
+        cacaoPayload: baseRegisterParams.registerParams.cacaoPayload,
+        privateIdentityKey:
+          baseRegisterParams.registerParams.privateIdentityKey,
+        allApps: allApps ?? false,
+      },
+    };
   };
 
   // Checks if user is registered and has up to date registration data.
@@ -179,8 +214,9 @@ export class NotifyEngine extends INotifyEngine {
     });
 
     const allApps =
+      registerParams.allApps ||
       registerParams.cacaoPayload.statement ===
-      NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS;
+        NOTIFY_AUTHORIZATION_STATEMENT_ALL_DOMAINS;
 
     const domain = registerParams.cacaoPayload.domain;
     const account = getCaip10FromDidPkh(registerParams.cacaoPayload.iss);
@@ -1931,8 +1967,12 @@ export class NotifyEngine extends INotifyEngine {
 
     const signedStatement = this.client.registrationData.get(account);
 
+    const isRecapsStatement = new RegExp(
+      `\'manage\'\: \'.*notifications\'`
+    ).test(signedStatement.statement);
+
     return (
-      signedStatement.statement !== currentStatement ||
+      (!isRecapsStatement && signedStatement.statement !== currentStatement) ||
       signedStatement.domain !== domain
     );
   };

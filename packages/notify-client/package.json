@@ -1,7 +1,7 @@
 {
   "name": "@walletconnect/notify-client",
   "description": "WalletConnect Notify Client",
-  "version": "1.3.1",
+  "version": "1.4.1",
   "author": "WalletConnect, Inc. <walletconnect.com>",
   "homepage": "https://github.com/walletconnect/notify-client-js/",
   "license": "Apache-2.0",
@@ -34,7 +34,7 @@
     "@walletconnect/cacao": "1.0.2",
     "@walletconnect/core": "2.12.2",
     "@walletconnect/did-jwt": "2.0.1",
-    "@walletconnect/identity-keys": "2.0.1",
+    "@walletconnect/identity-keys": "2.1.0",
     "@walletconnect/jsonrpc-utils": "1.0.7",
     "@walletconnect/time": "1.0.2",
     "@walletconnect/utils": "2.12.2",

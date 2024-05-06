@@ -201,6 +201,16 @@ export class NotifyClient extends INotifyClient {
     }
   };
 
+  public prepareRegistrationWithRecaps: INotifyClient["prepareRegistrationWithRecaps"] =
+    (params) => {
+      try {
+        return this.engine.prepareRegistrationWithRecaps(params);
+      } catch (error: any) {
+        this.logger.error(error.message);
+        throw error;
+      }
+    };
+
   public prepareRegistration: INotifyClient["prepareRegistration"] = (
     params
   ) => {

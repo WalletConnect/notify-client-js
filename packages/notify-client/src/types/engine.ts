@@ -10,6 +10,7 @@ import { INotifyClient, NotifyClientTypes } from "./client";
 import { JsonRpcTypes } from "./jsonrpc";
 import EventEmitter from "events";
 import { CacaoSignature } from "@walletconnect/cacao";
+import { IdentityKeys } from "@walletconnect/identity-keys";
 
 export interface RpcOpts {
   req: { ttl: number; tag: number };
@@ -54,6 +55,15 @@ export abstract class INotifyEngine {
   // ---------- Public Methods ------------------------------------------ //
 
   public abstract hasFinishedInitialLoad(): boolean;
+
+  public abstract prepareRegistrationWithRecaps(params: {
+    domain: string;
+    allApps?: boolean;
+  }): Promise<
+    Awaited<ReturnType<IdentityKeys["prepareRegistrationWithRecaps"]>> & {
+      allApps: boolean;
+    }
+  >;
 
   public abstract prepareRegistration(params: {
     account: string;

@@ -104,6 +104,7 @@ export declare namespace NotifyClientTypes {
   interface NotifyRegistrationParams {
     cacaoPayload: CacaoPayload;
     privateIdentityKey: Uint8Array;
+    allApps?: boolean;
   }
 
   interface NotifySubscription {
@@ -371,6 +372,7 @@ export abstract class INotifyClient {
   // ---------- Public Methods ------------------------------------------------------- //
 
   public abstract isRegistered: INotifyEngine["isRegistered"];
+  public abstract prepareRegistrationWithRecaps: INotifyEngine["prepareRegistrationWithRecaps"];
   public abstract prepareRegistration: INotifyEngine["prepareRegistration"];
   public abstract register: INotifyEngine["register"];
   public abstract unregister: INotifyEngine["unregister"];
