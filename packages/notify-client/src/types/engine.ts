@@ -56,11 +56,11 @@ export abstract class INotifyEngine {
 
   public abstract hasFinishedInitialLoad(): boolean;
 
-  public abstract prepareRegistrationViaRecaps(params: {
+  public abstract prepareRegistrationWithRecaps(params: {
     domain: string;
     allApps?: boolean;
   }): Promise<
-    Awaited<ReturnType<IdentityKeys["prepareRegistrationViaRecaps"]>> & {
+    Awaited<ReturnType<IdentityKeys["prepareRegistrationWithRecaps"]>> & {
       allApps: boolean;
     }
   >;

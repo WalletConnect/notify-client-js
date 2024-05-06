@@ -131,10 +131,10 @@ export class NotifyEngine extends INotifyEngine {
       return this.finishedInitialLoad;
     };
 
-  public prepareRegistrationViaRecaps: INotifyEngine["prepareRegistrationViaRecaps"] =
+  public prepareRegistrationWithRecaps: INotifyEngine["prepareRegistrationWithRecaps"] =
     async (params) => {
       const baseRegisterParams =
-        await this.client.identityKeys.prepareRegistrationViaRecaps({
+        await this.client.identityKeys.prepareRegistrationWithRecaps({
           domain: params.domain,
           recapObject: {
             att: {
